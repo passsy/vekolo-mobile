@@ -38,6 +38,7 @@ dependencies:
   go_router: ^14.7.2
   context_plus: ^6.0.5
   async: ^2.13.0
+  permission_handler: ^12.0.1
 
 dev_dependencies:
   flutter_test:
