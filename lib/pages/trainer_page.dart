@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math';
 import 'package:async/async.dart';
 import 'package:context_plus/context_plus.dart';
 import 'package:flutter/material.dart';
@@ -19,8 +18,6 @@ class TrainerPage extends StatefulWidget {
 
 class _TrainerPageState extends State<TrainerPage> {
   late final BleManager _bleManager;
-  Timer? _powerUpdateTimer;
-  final _random = Random();
   CancelableOperation<void>? _connectionOperation;
 
   int? _currentPower;
@@ -46,7 +43,6 @@ class _TrainerPageState extends State<TrainerPage> {
 
   @override
   void dispose() {
-    _powerUpdateTimer?.cancel();
     _connectionOperation?.cancel();
     _bleManager.disconnect();
     super.dispose();
@@ -105,23 +101,17 @@ class _TrainerPageState extends State<TrainerPage> {
   }
 
   void _startPowerUpdates() {
-    // Send immediately
-    _targetPower = 10 + _random.nextInt(191); // 10-200W (to test clamping at 25W)
+    // Send initial power
     developer.log('[TrainerPage] Initial target power: ${_targetPower}W');
     _bleManager.setTargetPower(_targetPower);
+  }
 
-    // Then every 5 seconds with random power
-    _powerUpdateTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
-      if (_bleManager.isConnected) {
-        setState(() {
-          _targetPower = 10 + _random.nextInt(191); // 10-200W (to test clamping at 25W)
-        });
-        developer.log('[TrainerPage] Setting target power to ${_targetPower}W');
-        _bleManager.setTargetPower(_targetPower);
-      } else {
-        timer.cancel();
-      }
+  void _updateTargetPower(double power) {
+    setState(() {
+      _targetPower = power.round();
     });
+    developer.log('[TrainerPage] Setting target power to ${_targetPower}W');
+    _bleManager.setTargetPower(_targetPower);
   }
 
   @override
@@ -174,12 +164,49 @@ class _TrainerPageState extends State<TrainerPage> {
                 children: [
                   const SizedBox(height: 32),
                   const Text('Trainer Data', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Target: ${_targetPower}W (random 10-200W every 5s)',
-                    style: const TextStyle(fontSize: 16, color: Colors.blue),
+                  const SizedBox(height: 24),
+                  Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.tune, color: Colors.orange),
+                            const SizedBox(width: 12),
+                            const Text('Target Power', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                            const Spacer(),
+                            Text(
+                              '${_targetPower}W',
+                              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.orange),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        Slider(
+                          value: _targetPower.toDouble(),
+                          max: 300,
+                          divisions: 60,
+                          label: '${_targetPower}W',
+                          activeColor: Colors.orange,
+                          onChanged: _updateTargetPower,
+                        ),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text('0W', style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+                            Text('300W', style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 24),
                   _buildDataCard(
                     icon: Icons.bolt,
                     label: 'Power',
