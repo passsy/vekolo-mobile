@@ -81,7 +81,7 @@ class BleManager {
                   print('[BleManager] Error setting up characteristics: $e');
                   print(stackTrace);
                   if (!_connectionCompleter!.isCompleted) {
-                    _connectionCompleter!.completeError(e as Object, stackTrace as StackTrace);
+                    _connectionCompleter!.completeError(e, stackTrace);
                   }
                   onError?.call('Failed to setup characteristics: $e');
                 }
