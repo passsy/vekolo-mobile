@@ -1,0 +1,63 @@
+{
+	"id": "GEHEdzJYZINGFYqui8eBY",
+	"authorId": "X1In6eAiMFa0k1P4Dwonh",
+	"title": "New Workout",
+	"description": "Edit this workout to make it your own. You can add power blocks, ramp blocks, intervals and more.",
+	"summary": "A custom workout by Pascal Welsch.",
+	"slug": null,
+	"category": "vo2max",
+	"completionCount": 0,
+	"duration": 600000,
+	"generated": false,
+	"plan": [
+		{
+			"id": "91yC9hdq",
+			"type": "interval",
+			"repeat": 10,
+			"parts": [
+				{
+					"id": "Pb9RcvXM",
+					"type": "power",
+					"description": "Work",
+					"duration": 30000,
+					"power": 1.42
+				},
+				{
+					"id": "bbGTcUsY",
+					"type": "power",
+					"description": "Recovery",
+					"duration": 30000,
+					"power": 0.7357142857142858
+				}
+			]
+		}
+	],
+	"tss": 25,
+	"starCount": 0,
+	"events": [
+		{
+			"id": "bp02UHQj",
+			"type": "message",
+			"parentBlockId": "91yC9hdq",
+			"relativeTimeOffset": 42500,
+			"text": "Start"
+		},
+		{
+			"id": "b8CyCEdU",
+			"type": "message",
+			"parentBlockId": "91yC9hdq",
+			"relativeTimeOffset": 79300,
+			"text": "Weiter Weiter"
+		},
+		{
+			"id": "7e5r1Zrj",
+			"type": "message",
+			"parentBlockId": "91yC9hdq",
+			"relativeTimeOffset": 109100,
+			"text": "[log] [TrainerPage] Setting target power to 135W\n[log] [BleManager] setTargetPower called with 135W"
+		}
+	],
+	"visibility": "private",
+	"createdAt": "2025-10-11T20:14:14.698Z",
+	"updatedAt": "2025-10-11T20:17:31.547Z"
+}
