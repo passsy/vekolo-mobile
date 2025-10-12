@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:reactive_forms/reactive_forms.dart';
 import 'package:state_beacon/state_beacon.dart';
 import 'package:vekolo/config/api_config.dart';
+import 'package:vekolo/widgets/user_avatar.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -163,14 +164,7 @@ class _ProfilePageState extends State<ProfilePage> {
           child: Column(
             children: [
               // Avatar
-              CircleAvatar(
-                radius: 60,
-                backgroundColor: Theme.of(context).colorScheme.primary,
-                child: Text(
-                  user.name.isNotEmpty ? user.name[0].toUpperCase() : '?',
-                  style: const TextStyle(fontSize: 48, fontWeight: FontWeight.bold, color: Colors.white),
-                ),
-              ),
+              UserAvatar(user: user, radius: 60),
               const SizedBox(height: 24),
               Text(user.name, style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),

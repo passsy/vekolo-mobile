@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:state_beacon/state_beacon.dart';
 import 'package:vekolo/config/api_config.dart';
+import 'package:vekolo/widgets/user_avatar.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -21,12 +22,10 @@ class HomePage extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(right: 8.0),
               child: IconButton(
-                icon: CircleAvatar(
+                icon: UserAvatar(
+                  user: user,
                   backgroundColor: Colors.white,
-                  child: Text(
-                    user.name.isNotEmpty ? user.name[0].toUpperCase() : '?',
-                    style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.bold),
-                  ),
+                  foregroundColor: Theme.of(context).colorScheme.primary,
                 ),
                 onPressed: () => context.push('/profile'),
                 tooltip: 'Profile',
@@ -49,7 +48,7 @@ class HomePage extends StatelessWidget {
               const Text('Connect to your smart trainer', style: TextStyle(fontSize: 20)),
               const SizedBox(height: 32),
               ElevatedButton.icon(
-                onPressed: () => context.go('/scanner'),
+                onPressed: () => context.push('/scanner'),
                 icon: const Icon(Icons.search),
                 label: const Text('Scan for Trainer'),
                 style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16)),

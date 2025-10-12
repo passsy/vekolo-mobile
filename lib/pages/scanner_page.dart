@@ -249,7 +249,7 @@ class _ScannerPageState extends State<ScannerPage> {
                             '(ID: ${device.id}, RSSI: ${device.rssi})',
                           );
                           _stopScan();
-                          context.go('/trainer?deviceId=${device.id}&deviceName=${device.name}');
+                          context.push('/trainer?deviceId=${device.id}&deviceName=${device.name}');
                         },
                       );
                     },
