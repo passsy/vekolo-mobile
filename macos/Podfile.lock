@@ -1,5 +1,10 @@
 PODS:
+  - flutter_secure_storage_macos (6.1.3):
+    - FlutterMacOS
   - FlutterMacOS (1.0.0)
+  - path_provider_foundation (0.0.1):
+    - Flutter
+    - FlutterMacOS
   - Protobuf (3.29.5)
   - reactive_ble_mobile (0.0.1):
     - Flutter
@@ -9,7 +14,9 @@ PODS:
   - SwiftProtobuf (1.31.1)
 
 DEPENDENCIES:
+  - flutter_secure_storage_macos (from `Flutter/ephemeral/.symlinks/plugins/flutter_secure_storage_macos/macos`)
   - FlutterMacOS (from `Flutter/ephemeral`)
+  - path_provider_foundation (from `Flutter/ephemeral/.symlinks/plugins/path_provider_foundation/darwin`)
   - reactive_ble_mobile (from `Flutter/ephemeral/.symlinks/plugins/reactive_ble_mobile/darwin`)
 
 SPEC REPOS:
@@ -18,13 +25,19 @@ SPEC REPOS:
     - SwiftProtobuf
 
 EXTERNAL SOURCES:
+  flutter_secure_storage_macos:
+    :path: Flutter/ephemeral/.symlinks/plugins/flutter_secure_storage_macos/macos
   FlutterMacOS:
     :path: Flutter/ephemeral
+  path_provider_foundation:
+    :path: Flutter/ephemeral/.symlinks/plugins/path_provider_foundation/darwin
   reactive_ble_mobile:
     :path: Flutter/ephemeral/.symlinks/plugins/reactive_ble_mobile/darwin
 
 SPEC CHECKSUMS:
+  flutter_secure_storage_macos: 7f45e30f838cf2659862a4e4e3ee1c347c2b3b54
   FlutterMacOS: d0db08ddef1a9af05a5ec4b724367152bb0500b1
+  path_provider_foundation: 080d55be775b7414fd5a5ef3ac137b97b097e564
   Protobuf: 164aea2ae380c3951abdc3e195220c01d17400e0
   reactive_ble_mobile: ea97709e18fa6f0b0592909725d7ae7e1c595b64
   SwiftProtobuf: e02f51c8c2df5845657aee2d4de9d61bf50ef788

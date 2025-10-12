@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:vekolo/api/api_context.dart';
 import 'package:vekolo/models/rekord.dart';
 import 'dart:developer' as developer;
 
@@ -7,9 +8,9 @@ import 'dart:developer' as developer;
 /// Gets a new access token when the current one expires.
 ///
 /// Throws [DioException] if refresh token is invalid or expired (status 401)
-Future<RefreshTokenResponse> postRefreshToken(Dio dio, {required String refreshToken}) async {
+Future<RefreshTokenResponse> postRefreshToken(ApiContext context, {required String refreshToken}) async {
   try {
-    final response = await dio.post(
+    final response = await context.dio.post(
       '/auth/token/refresh',
       data: {'refreshToken': refreshToken},
       options: Options(contentType: Headers.jsonContentType),

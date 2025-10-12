@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:vekolo/api/api_context.dart';
 import 'package:vekolo/models/rekord.dart';
 import 'dart:developer' as developer;
 
@@ -6,7 +7,7 @@ import 'dart:developer' as developer;
 ///
 /// Sends an email with a 6-digit code to create a new account.
 Future<CodeRequestResponse> postRequestSignupCode(
-  Dio dio, {
+  ApiContext context, {
   required String email,
   String? name,
   String? sex,
@@ -14,7 +15,7 @@ Future<CodeRequestResponse> postRequestSignupCode(
   int? ftp,
 }) async {
   try {
-    final response = await dio.post(
+    final response = await context.dio.post(
       '/auth/code/request',
       data: {
         'type': 'signup',

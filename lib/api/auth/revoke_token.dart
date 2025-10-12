@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:vekolo/api/api_context.dart';
 import 'package:vekolo/models/rekord.dart';
 import 'dart:developer' as developer;
 
@@ -7,9 +8,9 @@ import 'dart:developer' as developer;
 /// Invalidates the refresh token on the server.
 ///
 /// Note: Even if this fails, local tokens should still be cleared.
-Future<RevokeTokenResponse> postRevokeToken(Dio dio, {required String refreshToken}) async {
+Future<RevokeTokenResponse> postRevokeToken(ApiContext context, {required String refreshToken}) async {
   try {
-    final response = await dio.post(
+    final response = await context.dio.post(
       '/auth/token/revoke',
       data: {'refreshToken': refreshToken},
       options: Options(contentType: Headers.jsonContentType),

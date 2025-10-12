@@ -18,6 +18,8 @@ dependencies:
   dio: ^5.7.0
   flutter_secure_storage: ^9.2.2
   deep_pick: ^1.1.0
+  reactive_forms: ^18.1.1
+  state_beacon: ^1.0.0
 
 dev_dependencies:
   flutter_test:

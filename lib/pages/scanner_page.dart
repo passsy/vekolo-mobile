@@ -112,12 +112,16 @@ class _ScannerPageState extends State<ScannerPage> {
           (device) {
             final index = _devices.indexWhere((d) => d.id == device.id);
             if (index >= 0) {
-              developer.log('[ScannerPage] 🔄 Updated device: ${device.name.isEmpty ? device.id : device.name} (RSSI: ${device.rssi})');
+              developer.log(
+                '[ScannerPage] 🔄 Updated device: ${device.name.isEmpty ? device.id : device.name} (RSSI: ${device.rssi})',
+              );
               setState(() {
                 _devices[index] = device;
               });
             } else {
-              developer.log('[ScannerPage] 📱 Discovered new device: ${device.name.isEmpty ? device.id : device.name} (RSSI: ${device.rssi})');
+              developer.log(
+                '[ScannerPage] 📱 Discovered new device: ${device.name.isEmpty ? device.id : device.name} (RSSI: ${device.rssi})',
+              );
               setState(() {
                 _devices.add(device);
               });

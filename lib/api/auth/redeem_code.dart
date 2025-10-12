@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:dio/dio.dart';
+import 'package:vekolo/api/api_context.dart';
 import 'package:vekolo/models/rekord.dart';
 import 'package:vekolo/models/user.dart';
 import 'dart:developer' as developer;
@@ -8,9 +10,14 @@ import 'dart:developer' as developer;
 /// Exchanges the 6-digit code for access and refresh tokens.
 ///
 /// Throws [DioException] if code is invalid or expired (status 400)
-Future<TokenResponse> postRedeemCode(Dio dio, {required String email, required String code, String? deviceInfo}) async {
+Future<TokenResponse> postRedeemCode(
+  ApiContext context, {
+  required String email,
+  required String code,
+  String? deviceInfo,
+}) async {
   try {
-    final response = await dio.post(
+    final response = await context.dio.post(
       '/auth/token/redeem',
       data: {'email': email, 'code': code, if (deviceInfo != null) 'deviceInfo': deviceInfo},
       options: Options(contentType: Headers.jsonContentType),
@@ -30,6 +37,21 @@ Future<TokenResponse> postRedeemCode(Dio dio, {required String email, required S
     developer.log('Failed to redeem code', error: e, stackTrace: stackTrace);
     rethrow;
   }
+}
+
+/// Decode JWT payload without verification
+Map<String, dynamic> _decodeJwtPayload(String token) {
+  final parts = token.split('.');
+  if (parts.length != 3) {
+    throw FormatException('Invalid JWT token format');
+  }
+
+  // Decode the payload (middle part)
+  final payload = parts[1];
+  // Add padding if needed for base64 decoding
+  final normalized = base64Url.normalize(payload);
+  final decoded = utf8.decode(base64Url.decode(normalized));
+  return jsonDecode(decoded) as Map<String, dynamic>;
 }
 
 /// Response containing JWT tokens and user data
@@ -57,8 +79,17 @@ class TokenResponse with RekordMixin {
   /// Long-lived refresh token (6 months)
   String get refreshToken => rekord.read('refreshToken').asStringOrThrow();
 
-  /// User data from the token
-  User get user => rekord.read('user').letOrThrow((pick) => User.fromData(pick.asMapOrThrow<String, Object?>()));
+  /// User data decoded from the JWT access token
+  User get user {
+    try {
+      final payload = _decodeJwtPayload(accessToken);
+      final userData = payload['user'] as Map<String, dynamic>;
+      return User.fromData(userData);
+    } catch (e, stackTrace) {
+      developer.log('Failed to decode user from JWT', error: e, stackTrace: stackTrace);
+      rethrow;
+    }
+  }
 
   @override
   String toString() => 'TokenResponse(success: $success, user: ${user.name})';
