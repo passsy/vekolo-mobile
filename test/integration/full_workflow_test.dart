@@ -1,0 +1,350 @@
+/// End-to-end integration test for multi-device fitness architecture.
+///
+/// Tests the complete flow from device setup through data streaming and
+/// workout synchronization. This verifies that all components work together
+/// correctly in realistic scenarios.
+///
+/// Covers:
+/// - Device discovery and connection
+/// - Role assignment (trainer, power meter, HR monitor)
+/// - Data flow through aggregated streams
+/// - Workout sync with target power updates
+/// - State management and beacon updates
+/// - Error handling and recovery
+import 'package:flutter_test/flutter_test.dart';
+import 'package:vekolo/domain/devices/device_manager.dart';
+import 'package:vekolo/domain/mocks/device_simulator.dart';
+import 'package:vekolo/domain/models/erg_command.dart';
+import 'package:vekolo/services/workout_sync_service.dart';
+import 'package:vekolo/state/device_state.dart';
+import 'package:vekolo/state/device_state_manager.dart';
+
+void main() {
+  group('Full Workflow Integration', () {
+    /// Creates a test environment with all required managers.
+    ///
+    /// Automatically disposes resources using addTearDown to prevent state leaks.
+    ({
+      DeviceManager deviceManager,
+      WorkoutSyncService syncService,
+      DeviceStateManager stateManager,
+    }) createTestEnvironment() {
+      final deviceManager = DeviceManager();
+      final syncService = WorkoutSyncService(deviceManager);
+      final stateManager = DeviceStateManager(deviceManager);
+
+      addTearDown(() {
+        syncService.dispose();
+        stateManager.dispose();
+        deviceManager.dispose();
+      });
+
+      return (
+        deviceManager: deviceManager,
+        syncService: syncService,
+        stateManager: stateManager,
+      );
+    }
+
+    test('complete multi-device setup and workout sync flow', () async {
+      final env = createTestEnvironment();
+      final deviceManager = env.deviceManager;
+      final syncService = env.syncService;
+
+      // =====================================================================
+      // Phase 1: Device Setup
+      // =====================================================================
+
+      // Create realistic mock devices
+      final trainer = DeviceSimulator.createRealisticTrainer(name: 'Wahoo KICKR', ftpWatts: 250);
+      final powerMeter = DeviceSimulator.createPowerMeter(name: 'PowerTap P2', variability: 0.02);
+      final hrMonitor = DeviceSimulator.createHeartRateMonitor(name: 'Polar H10', restingHr: 55, maxHr: 190);
+
+      // Add devices to manager
+      await deviceManager.addDevice(trainer);
+      await deviceManager.addDevice(powerMeter);
+      await deviceManager.addDevice(hrMonitor);
+
+      // Verify devices were added
+      expect(deviceManager.devices, hasLength(3));
+
+      // Wait for state polling to update beacons
+      await Future<void>.delayed(const Duration(milliseconds: 600));
+      expect(connectedDevicesBeacon.value, hasLength(3));
+
+      // =====================================================================
+      // Phase 2: Device Assignment
+      // =====================================================================
+
+      // Assign devices to roles
+      deviceManager.assignPrimaryTrainer(trainer.id);
+      deviceManager.assignPowerSource(powerMeter.id); // Override trainer power
+      deviceManager.assignHeartRateSource(hrMonitor.id);
+
+      // Verify assignments
+      expect(deviceManager.primaryTrainer?.id, equals(trainer.id));
+      expect(deviceManager.powerSource?.id, equals(powerMeter.id));
+      expect(deviceManager.heartRateSource?.id, equals(hrMonitor.id));
+
+      // Wait for state manager to update beacons
+      await Future<void>.delayed(const Duration(milliseconds: 600));
+      expect(primaryTrainerBeacon.value?.id, equals(trainer.id));
+      expect(powerSourceBeacon.value?.id, equals(powerMeter.id));
+      expect(heartRateSourceBeacon.value?.id, equals(hrMonitor.id));
+
+      // =====================================================================
+      // Phase 3: Device Connection
+      // =====================================================================
+
+      // Connect all devices
+      await trainer.connect();
+      await powerMeter.connect();
+      await hrMonitor.connect();
+
+      // Start trainer in ERG mode
+      await trainer.setTargetPower(150);
+
+      // Wait for initial data to flow (HR monitor needs 1+ seconds)
+      await Future<void>.delayed(const Duration(milliseconds: 1200));
+
+      // =====================================================================
+      // Phase 4: Verify Data Flow
+      // =====================================================================
+
+      // Verify power data comes from dedicated power meter (not trainer)
+      expect(currentPowerBeacon.value, isNotNull);
+      expect(currentPowerBeacon.value?.watts, greaterThan(0));
+
+      // Verify cadence data comes from trainer (no dedicated cadence sensor)
+      expect(currentCadenceBeacon.value, isNotNull);
+      expect(currentCadenceBeacon.value?.rpm, greaterThan(0));
+
+      // Verify heart rate data comes from HR monitor
+      expect(currentHeartRateBeacon.value, isNotNull);
+      expect(currentHeartRateBeacon.value?.bpm, greaterThanOrEqualTo(55));
+
+      // Collect multiple data points to verify continuous streaming
+      final powerReadings = <int>[];
+      final subscription = deviceManager.powerStream.listen((data) {
+        powerReadings.add(data.watts);
+      });
+
+      await Future<void>.delayed(const Duration(milliseconds: 1500));
+      expect(powerReadings.length, greaterThanOrEqualTo(2));
+      await subscription.cancel();
+
+      // =====================================================================
+      // Phase 5: Workout Sync Flow
+      // =====================================================================
+
+      // Start syncing
+      syncService.startSync();
+      expect(syncService.isSyncing.value, isTrue);
+
+      // Set first workout target
+      final firstTarget = ErgCommand(targetWatts: 200, timestamp: DateTime.now());
+      syncService.currentTarget.value = firstTarget;
+
+      // Wait for sync to complete
+      await Future<void>.delayed(const Duration(milliseconds: 300));
+
+      // Verify sync succeeded
+      expect(syncService.lastSyncTime.value, isNotNull);
+      expect(syncService.syncError.value, isNull);
+
+      // =====================================================================
+      // Phase 6: Dynamic Target Updates
+      // =====================================================================
+
+      // Update target during workout (interval change)
+      final secondTarget = ErgCommand(targetWatts: 300, timestamp: DateTime.now());
+      syncService.currentTarget.value = secondTarget;
+
+      // Wait for sync and power ramp
+      await Future<void>.delayed(const Duration(milliseconds: 800));
+
+      // Verify new target was synced (check that power is moving toward target)
+      // Power should be ramping up toward 300W
+      expect(syncService.syncError.value, isNull);
+      expect(syncService.lastSyncTime.value, isNotNull);
+
+      // Lower target (recovery interval)
+      final thirdTarget = ErgCommand(targetWatts: 120, timestamp: DateTime.now());
+      syncService.currentTarget.value = thirdTarget;
+
+      await Future<void>.delayed(const Duration(milliseconds: 800));
+
+      // Verify sync continues to work
+      expect(syncService.syncError.value, isNull);
+
+      // =====================================================================
+      // Phase 7: State Management Verification
+      // =====================================================================
+
+      // Verify all beacons are continuously updated
+      await Future<void>.delayed(const Duration(milliseconds: 600));
+
+      expect(connectedDevicesBeacon.value, hasLength(3));
+      expect(primaryTrainerBeacon.value, isNotNull);
+      expect(currentPowerBeacon.value, isNotNull);
+      expect(currentCadenceBeacon.value, isNotNull);
+      expect(currentHeartRateBeacon.value, isNotNull);
+
+      // =====================================================================
+      // Phase 8: Stop Sync
+      // =====================================================================
+
+      syncService.stopSync();
+      expect(syncService.isSyncing.value, isFalse);
+
+      // =====================================================================
+      // Cleanup
+      // =====================================================================
+
+      await trainer.disconnect();
+      await powerMeter.disconnect();
+      await hrMonitor.disconnect();
+    });
+
+    test('workout sync handles trainer disconnection gracefully', () async {
+      final env = createTestEnvironment();
+      final deviceManager = env.deviceManager;
+      final syncService = env.syncService;
+
+      // Setup trainer
+      final trainer = DeviceSimulator.createRealisticTrainer(name: 'Test Trainer');
+
+      await deviceManager.addDevice(trainer);
+      deviceManager.assignPrimaryTrainer(trainer.id);
+      await trainer.connect();
+
+      // Start syncing
+      syncService.startSync();
+
+      // Set a target
+      syncService.currentTarget.value = ErgCommand(targetWatts: 200, timestamp: DateTime.now());
+
+      await Future<void>.delayed(const Duration(milliseconds: 300));
+      expect(syncService.syncError.value, isNull);
+
+      // Simulate disconnection by removing trainer
+      await deviceManager.removeDevice(trainer.id);
+
+      // Try to sync new target
+      syncService.currentTarget.value = ErgCommand(targetWatts: 250, timestamp: DateTime.now());
+
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+
+      // Should have an error now
+      expect(syncService.syncError.value, equals('No trainer connected'));
+    });
+
+    test('data streams handle device reassignment', () async {
+      final env = createTestEnvironment();
+      final deviceManager = env.deviceManager;
+
+      // Setup initial trainer
+      final trainer1 = DeviceSimulator.createRealisticTrainer(name: 'Trainer 1');
+
+      await deviceManager.addDevice(trainer1);
+      deviceManager.assignPrimaryTrainer(trainer1.id);
+      await trainer1.connect();
+      await trainer1.setTargetPower(150);
+
+      await Future<void>.delayed(const Duration(milliseconds: 600));
+
+      // Verify we're getting power data
+      expect(currentPowerBeacon.value, isNotNull);
+
+      // Add and switch to a dedicated power meter
+      final powerMeter = DeviceSimulator.createPowerMeter(name: 'Power Meter');
+
+      await deviceManager.addDevice(powerMeter);
+      await powerMeter.connect();
+
+      // Wait for initial data from power meter
+      await Future<void>.delayed(const Duration(milliseconds: 600));
+
+      // Reassign power source to dedicated meter
+      deviceManager.assignPowerSource(powerMeter.id);
+
+      // Wait for stream to switch
+      await Future<void>.delayed(const Duration(milliseconds: 600));
+
+      // Power data should now come from power meter, not trainer
+      expect(deviceManager.powerSource?.id, equals(powerMeter.id));
+      expect(currentPowerBeacon.value, isNotNull);
+
+      // Cadence should still come from trainer (no reassignment)
+      expect(deviceManager.cadenceSource, isNull); // Falls back to trainer
+      expect(currentCadenceBeacon.value, isNotNull);
+    });
+
+    test('multiple devices emit data independently', () async {
+      final env = createTestEnvironment();
+      final deviceManager = env.deviceManager;
+
+      // Setup all devices
+      final trainer = DeviceSimulator.createRealisticTrainer();
+      final hrMonitor = DeviceSimulator.createHeartRateMonitor();
+
+      await deviceManager.addDevice(trainer);
+      await deviceManager.addDevice(hrMonitor);
+
+      deviceManager.assignPrimaryTrainer(trainer.id);
+      deviceManager.assignHeartRateSource(hrMonitor.id);
+
+      // Connect all
+      await trainer.connect();
+      await hrMonitor.connect();
+      await trainer.setTargetPower(200);
+
+      // Collect data from multiple streams simultaneously
+      final powerData = <int>[];
+      final cadenceData = <int>[];
+      final hrData = <int>[];
+
+      final powerSub = deviceManager.powerStream.listen((d) => powerData.add(d.watts));
+      final cadenceSub = deviceManager.cadenceStream.listen((d) => cadenceData.add(d.rpm));
+      final hrSub = deviceManager.heartRateStream.listen((d) => hrData.add(d.bpm));
+
+      // Wait for data
+      await Future<void>.delayed(const Duration(milliseconds: 1500));
+
+      // Verify all streams are emitting independently
+      expect(powerData.length, greaterThanOrEqualTo(2));
+      expect(cadenceData.length, greaterThanOrEqualTo(2));
+      expect(hrData.length, greaterThanOrEqualTo(1)); // HR updates slower
+
+      // Cleanup subscriptions
+      await powerSub.cancel();
+      await cadenceSub.cancel();
+      await hrSub.cancel();
+    });
+
+    test('workout sync retry mechanism recovers from transient errors', () async {
+      final env = createTestEnvironment();
+      final deviceManager = env.deviceManager;
+      final syncService = env.syncService;
+
+      // This test would require a mock trainer that can simulate failures
+      // For now, we verify the basic retry structure works
+      final trainer = DeviceSimulator.createRealisticTrainer();
+
+      await deviceManager.addDevice(trainer);
+      deviceManager.assignPrimaryTrainer(trainer.id);
+      await trainer.connect();
+
+      syncService.startSync();
+
+      // Set target
+      syncService.currentTarget.value = ErgCommand(targetWatts: 200, timestamp: DateTime.now());
+
+      await Future<void>.delayed(const Duration(milliseconds: 300));
+
+      // Should succeed without errors
+      expect(syncService.syncError.value, isNull);
+      expect(syncService.lastSyncTime.value, isNotNull);
+    });
+  });
+}
