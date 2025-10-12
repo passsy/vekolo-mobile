@@ -24,11 +24,8 @@ void main() {
     /// Creates a test environment with all required managers.
     ///
     /// Automatically disposes resources using addTearDown to prevent state leaks.
-    ({
-      DeviceManager deviceManager,
-      WorkoutSyncService syncService,
-      DeviceStateManager stateManager,
-    }) createTestEnvironment() {
+    ({DeviceManager deviceManager, WorkoutSyncService syncService, DeviceStateManager stateManager})
+    createTestEnvironment() {
       final deviceManager = DeviceManager();
       final syncService = WorkoutSyncService(deviceManager);
       final stateManager = DeviceStateManager(deviceManager);
@@ -39,11 +36,7 @@ void main() {
         deviceManager.dispose();
       });
 
-      return (
-        deviceManager: deviceManager,
-        syncService: syncService,
-        stateManager: stateManager,
-      );
+      return (deviceManager: deviceManager, syncService: syncService, stateManager: stateManager);
     }
 
     test('complete multi-device setup and workout sync flow', () async {

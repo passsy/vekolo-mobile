@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:vekolo/api/vekolo_api_client.dart';
 import 'package:vekolo/config/api_config.dart';
 import 'package:vekolo/domain/devices/device_manager.dart';
-import 'package:vekolo/domain/mocks/device_simulator.dart';
 import 'package:vekolo/router.dart';
 import 'package:vekolo/services/auth_service.dart';
 import 'package:vekolo/services/ble_manager.dart';
@@ -52,21 +51,10 @@ class _MyAppState extends State<MyApp> {
           );
           authServiceRef.bindValue(context, widget.authService);
 
-          // Initialize DeviceManager with mock devices for testing
+          // Initialize DeviceManager
           deviceManagerRef.bindLazy(context, () {
             final manager = DeviceManager();
-            // Add mock devices for testing
-            final trainer = DeviceSimulator.createRealisticTrainer(name: 'Wahoo KICKR');
-            final hrm = DeviceSimulator.createHeartRateMonitor(name: 'Garmin HRM-Dual');
-            final powerMeter = DeviceSimulator.createPowerMeter(name: 'Stages Power L');
-
-            // Add devices asynchronously (not awaited to avoid blocking app startup)
-            Future.microtask(() async {
-              await manager.addDevice(trainer);
-              await manager.addDevice(hrm);
-              await manager.addDevice(powerMeter);
-            });
-
+            // Devices will be added via BLE scanning in DevicesPage
             return manager;
           });
 

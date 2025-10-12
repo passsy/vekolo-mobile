@@ -4,8 +4,7 @@ import 'package:async/async.dart';
 import 'package:vekolo/domain/devices/fitness_device.dart';
 import 'package:vekolo/domain/models/device_info.dart';
 import 'package:vekolo/domain/models/fitness_data.dart';
-import 'package:vekolo/infrastructure/ble/ftms_ble_transport.dart'
-    as transport;
+import 'package:vekolo/infrastructure/ble/ftms_ble_transport.dart' as transport;
 
 /// FTMS (Fitness Machine Service) protocol implementation.
 ///
@@ -30,9 +29,9 @@ class FtmsDevice extends FitnessDevice {
   /// The transport is initialized internally and will be disposed when
   /// [dispose] is called.
   FtmsDevice({required String deviceId, required String name})
-      : _id = deviceId,
-        _name = name,
-        _transport = transport.FtmsBleTransport(deviceId: deviceId);
+    : _id = deviceId,
+      _name = name,
+      _transport = transport.FtmsBleTransport(deviceId: deviceId);
 
   /// Creates an FTMS device with a custom transport for testing.
   ///
@@ -41,9 +40,9 @@ class FtmsDevice extends FitnessDevice {
     required String deviceId,
     required String name,
     required transport.FtmsBleTransport transport,
-  })  : _id = deviceId,
-        _name = name,
-        _transport = transport;
+  }) : _id = deviceId,
+       _name = name,
+       _transport = transport;
 
   final String _id;
   final String _name;
@@ -92,8 +91,7 @@ class FtmsDevice extends FitnessDevice {
 
   void _setupConnectionStateMapping() {
     _connectionStateSubscription?.cancel();
-    _connectionStateSubscription =
-        _transport.connectionStateStream.listen((state) {
+    _connectionStateSubscription = _transport.connectionStateStream.listen((state) {
       final domainState = _mapConnectionState(state);
       _connectionStateController?.add(domainState);
     });

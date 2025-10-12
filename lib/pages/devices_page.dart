@@ -208,7 +208,9 @@ class _DevicesPageState extends State<DevicesPage> {
                     ],
                   ),
                   const SizedBox(height: 16),
-                  Row(
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
                     children: [
                       ElevatedButton.icon(
                         onPressed: isSyncing
@@ -227,7 +229,6 @@ class _DevicesPageState extends State<DevicesPage> {
                         label: const Text('Start Sync'),
                         style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white),
                       ),
-                      const SizedBox(width: 8),
                       ElevatedButton.icon(
                         onPressed: isSyncing
                             ? () {
@@ -243,7 +244,6 @@ class _DevicesPageState extends State<DevicesPage> {
                         icon: const Icon(Icons.update),
                         label: const Text('Update Target'),
                       ),
-                      const SizedBox(width: 8),
                       ElevatedButton.icon(
                         onPressed: !isSyncing
                             ? null
@@ -671,8 +671,8 @@ class _DevicesPageState extends State<DevicesPage> {
     final dataTypeName = dataType == device_info.DeviceDataType.power
         ? 'Power'
         : dataType == device_info.DeviceDataType.cadence
-            ? 'Cadence'
-            : 'Heart Rate';
+        ? 'Cadence'
+        : 'Heart Rate';
 
     showDialog<void>(
       context: context,
@@ -714,12 +714,7 @@ class _DevicesPageState extends State<DevicesPage> {
                   },
                 ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Cancel'),
-          ),
-        ],
+        actions: [TextButton(onPressed: () => Navigator.of(dialogContext).pop(), child: const Text('Cancel'))],
       ),
     );
   }
@@ -737,9 +732,9 @@ class _DevicesPageState extends State<DevicesPage> {
     } catch (e, stackTrace) {
       developer.log('Error assigning device', name: 'DevicesPage', error: e, stackTrace: stackTrace);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to assign device: $e'), backgroundColor: Colors.red),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to assign device: $e'), backgroundColor: Colors.red));
       }
     }
   }

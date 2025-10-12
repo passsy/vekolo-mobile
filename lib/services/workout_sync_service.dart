@@ -218,7 +218,7 @@ class WorkoutSyncService {
   /// Syncs the target to the device with retry logic.
   ///
   /// This is the core sync mechanism that:
-  /// 1. Validates the trainer is available and supports ERG mode
+  /// 1. Validates the trainer is available, connected, and supports ERG mode
   /// 2. Sends the target power command to the trainer
   /// 3. On success: updates sync state and resets retry count
   /// 4. On failure: implements exponential backoff retry up to [_maxRetries]
@@ -241,6 +241,7 @@ class WorkoutSyncService {
 
     try {
       // Send command to trainer
+      // Note: setTargetPower will throw if device is not connected
       await trainer.setTargetPower(command.targetWatts);
 
       // Success - update state
@@ -253,7 +254,14 @@ class WorkoutSyncService {
       print('[WorkoutSyncService.syncTargetToDevice] Failed to set target power to ${command.targetWatts}W: $e');
       print(stackTrace);
 
-      // Retry with exponential backoff
+      // Check if it's a "device not connected" error - don't retry those
+      if (e is StateError && e.message == 'Device not connected') {
+        syncError.value = 'Device not connected';
+        _retryCount = 0;
+        return;
+      }
+
+      // Retry with exponential backoff for other errors
       if (_retryCount < _maxRetries) {
         _retryCount++;
         final delay = _retryCount; // 1s, 2s, 3s for retries 1-3

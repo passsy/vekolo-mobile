@@ -38,12 +38,7 @@ enum ConnectionState {
 /// (disconnected, connecting, connected).
 class ConnectionError {
   /// Creates a connection error record.
-  const ConnectionError({
-    required this.message,
-    required this.timestamp,
-    this.error,
-    this.stackTrace,
-  });
+  const ConnectionError({required this.message, required this.timestamp, this.error, this.stackTrace});
 
   /// Human-readable error message describing what went wrong.
   final String message;
