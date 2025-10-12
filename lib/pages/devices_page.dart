@@ -78,6 +78,7 @@ class _DevicesPageState extends State<DevicesPage> {
             title: 'POWER SOURCE',
             icon: Icons.bolt,
             assignedDevice: deviceManager.powerSource,
+            dataType: device_info.DeviceDataType.power,
           ),
           const SizedBox(height: 16),
           _buildDataSourceSection(
@@ -86,6 +87,7 @@ class _DevicesPageState extends State<DevicesPage> {
             title: 'CADENCE SOURCE',
             icon: Icons.refresh,
             assignedDevice: deviceManager.cadenceSource,
+            dataType: device_info.DeviceDataType.cadence,
           ),
           const SizedBox(height: 16),
           _buildDataSourceSection(
@@ -94,6 +96,7 @@ class _DevicesPageState extends State<DevicesPage> {
             title: 'HEART RATE',
             icon: Icons.favorite,
             assignedDevice: deviceManager.heartRateSource,
+            dataType: device_info.DeviceDataType.heartRate,
           ),
           const SizedBox(height: 24),
           const Divider(),
@@ -365,6 +368,7 @@ class _DevicesPageState extends State<DevicesPage> {
     required String title,
     required IconData icon,
     required FitnessDevice? assignedDevice,
+    required device_info.DeviceDataType dataType,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -381,12 +385,7 @@ class _DevicesPageState extends State<DevicesPage> {
           _buildDeviceCard(context, device: assignedDevice, onDisconnect: () => _handleDisconnect(assignedDevice))
         else
           OutlinedButton.icon(
-            onPressed: () {
-              // TODO: Show device picker dialog
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(const SnackBar(content: Text('Device assignment coming in Phase 4.4')));
-            },
+            onPressed: () => _showDeviceAssignmentDialog(context, deviceManager, dataType),
             icon: const Icon(Icons.add),
             label: const Text('Assign Device'),
           ),
@@ -645,6 +644,103 @@ class _DevicesPageState extends State<DevicesPage> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Failed to assign: $e'), backgroundColor: Colors.red));
+    }
+  }
+
+  // ============================================================================
+  // Device Assignment Dialog
+  // ============================================================================
+
+  void _showDeviceAssignmentDialog(
+    BuildContext context,
+    DeviceManager deviceManager,
+    device_info.DeviceDataType dataType,
+  ) {
+    final allDevices = deviceManager.devices;
+    final assignedDeviceIds = {
+      deviceManager.primaryTrainer?.id,
+      deviceManager.powerSource?.id,
+      deviceManager.cadenceSource?.id,
+      deviceManager.heartRateSource?.id,
+    }.whereType<String>().toSet();
+
+    final eligibleDevices = allDevices.where((device) {
+      return !assignedDeviceIds.contains(device.id) && device.capabilities.contains(dataType);
+    }).toList();
+
+    final dataTypeName = dataType == device_info.DeviceDataType.power
+        ? 'Power'
+        : dataType == device_info.DeviceDataType.cadence
+            ? 'Cadence'
+            : 'Heart Rate';
+
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('Assign $dataTypeName Source'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: eligibleDevices.isEmpty
+              ? Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.info_outline, size: 48, color: Colors.grey[400]),
+                      const SizedBox(height: 16),
+                      Text(
+                        'No eligible devices found.\n\nMake sure you have devices that support $dataTypeName and are not already assigned to another role.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: Colors.grey[600]),
+                      ),
+                    ],
+                  ),
+                )
+              : ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: eligibleDevices.length,
+                  itemBuilder: (context, index) {
+                    final device = eligibleDevices[index];
+                    return ListTile(
+                      leading: const Icon(Icons.bluetooth),
+                      title: Text(device.name),
+                      subtitle: Text(_formatCapabilities(device.capabilities)),
+                      trailing: const Icon(Icons.arrow_forward),
+                      onTap: () {
+                        Navigator.of(dialogContext).pop();
+                        _assignDeviceToDataType(device, dataType);
+                      },
+                    );
+                  },
+                ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Cancel'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _assignDeviceToDataType(FitnessDevice device, device_info.DeviceDataType dataType) {
+    try {
+      switch (dataType) {
+        case device_info.DeviceDataType.power:
+          _handleAssignPower(device);
+        case device_info.DeviceDataType.cadence:
+          _handleAssignCadence(device);
+        case device_info.DeviceDataType.heartRate:
+          _handleAssignHeartRate(device);
+      }
+    } catch (e, stackTrace) {
+      developer.log('Error assigning device', name: 'DevicesPage', error: e, stackTrace: stackTrace);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to assign device: $e'), backgroundColor: Colors.red),
+        );
+      }
     }
   }
 
