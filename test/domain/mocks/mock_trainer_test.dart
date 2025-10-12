@@ -1,4 +1,3 @@
-
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vekolo/domain/mocks/mock_trainer.dart';
 import 'package:vekolo/domain/models/device_info.dart';
@@ -9,10 +8,7 @@ void main() {
     late MockTrainer trainer;
 
     setUp(() {
-      trainer = MockTrainer(
-        id: 'test-001',
-        name: 'Test Trainer',
-      );
+      trainer = MockTrainer(id: 'test-001', name: 'Test Trainer');
     });
 
     tearDown(() {
@@ -49,10 +45,7 @@ void main() {
       // Give time for all state transitions
       await Future.delayed(const Duration(milliseconds: 100));
 
-      expect(states, [
-        ConnectionState.connecting,
-        ConnectionState.connected,
-      ]);
+      expect(states, [ConnectionState.connecting, ConnectionState.connected]);
 
       await subscription.cancel();
     });
@@ -70,29 +63,20 @@ void main() {
       await subscription.cancel();
     });
 
-    test('setTargetPower fails when disconnected', () async {
-      expect(
-        () => trainer.setTargetPower(200),
-        throwsA(isA<StateError>()),
-      );
+    test('setTargetPower fails when disconnected', () {
+      expect(() => trainer.setTargetPower(200), throwsA(isA<StateError>()));
     });
 
     test('setTargetPower rejects negative power', () async {
       await trainer.connect();
 
-      expect(
-        () => trainer.setTargetPower(-50),
-        throwsA(isA<ArgumentError>()),
-      );
+      expect(() => trainer.setTargetPower(-50), throwsA(isA<ArgumentError>()));
     });
 
     test('setTargetPower rejects excessive power', () async {
       await trainer.connect();
 
-      expect(
-        () => trainer.setTargetPower(2000),
-        throwsA(isA<ArgumentError>()),
-      );
+      expect(() => trainer.setTargetPower(2000), throwsA(isA<ArgumentError>()));
     });
 
     test('emits power data when target is set', () async {
@@ -206,10 +190,7 @@ void main() {
       // Give time for all state transitions
       await Future.delayed(const Duration(milliseconds: 100));
 
-      expect(states, [
-        ConnectionState.connecting,
-        ConnectionState.connected,
-      ]);
+      expect(states, [ConnectionState.connecting, ConnectionState.connected]);
 
       await subscription.cancel();
     });
@@ -232,10 +213,7 @@ void main() {
       await trainer.connect();
       trainer.dispose();
 
-      expect(
-        () => trainer.connect(),
-        throwsA(isA<StateError>()),
-      );
+      expect(() => trainer.connect(), throwsA(isA<StateError>()));
     });
   });
 }

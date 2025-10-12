@@ -7,6 +7,7 @@ import 'package:vekolo/domain/mocks/device_simulator.dart';
 import 'package:vekolo/router.dart';
 import 'package:vekolo/services/auth_service.dart';
 import 'package:vekolo/services/ble_manager.dart';
+import 'package:vekolo/services/workout_sync_service.dart';
 import 'package:vekolo/state/device_state.dart';
 
 void main() async {
@@ -54,6 +55,9 @@ class MyApp extends StatelessWidget {
 
             return manager;
           });
+
+          // Initialize WorkoutSyncService with DeviceManager dependency
+          workoutSyncServiceRef.bindLazy(context, () => WorkoutSyncService(deviceManagerRef.of(context)));
 
           return MaterialApp.router(
             title: 'Vekolo',

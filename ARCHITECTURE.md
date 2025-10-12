@@ -480,30 +480,30 @@ class DeviceSimulator {
 
 ## Implementation Order
 
-### Phase 1: Foundation
-1.  Create domain models (`fitness_data.dart`, `device_info.dart`, `erg_command.dart`)
-2.  Define `FitnessDevice` interface
-3.  Implement `DeviceManager`
-4.  Create mock implementations for testing
+### Phase 1: Foundation ✅ COMPLETED
+1.  ✅ Create domain models (`fitness_data.dart`, `device_info.dart`, `erg_command.dart`)
+2.  ✅ Define `FitnessDevice` interface
+3.  ✅ Implement `DeviceManager`
+4.  ✅ Create mock implementations for testing
 
-### Phase 2: FTMS Integration
-5.  Refactor `BleManager` → `FtmsBleTransport` (extract BLE code)
-6.  Implement `FtmsDevice` using transport
-7.  Test with real FTMS trainer
+### Phase 2: FTMS Integration ✅ COMPLETED
+5.  ✅ Refactor `BleManager` → `FtmsBleTransport` (extract BLE code)
+6.  ✅ Implement `FtmsDevice` using transport
+7.  ⏭️ Test with real FTMS trainer (deferred - can test after WorkoutSyncService)
 
-### Phase 3: Workout Sync
-8.  Implement `WorkoutSyncService`
-9.  Add retry logic
-10.  Add periodic refresh mechanism
-11.  Test with mock trainer
-12.  Test with real trainer
+### Phase 3: Workout Sync ✅ COMPLETED
+8.  ✅ Implement `WorkoutSyncService`
+9.  ✅ Add retry logic (included in WorkoutSyncService)
+10.  ✅ Add periodic refresh mechanism (included in WorkoutSyncService)
+11.  ⏭️ Test with mock trainer (integration tests - can do after UI)
+12.  ⏭️ Test with real trainer (deferred)
 
-### Phase 4: UI
-13.  Create `DevicesPage` UI
-14.  Add device scanning integration
-15.  Implement device assignment UI
-16.  Add navigation from workout page
-17.  Add connection status indicators
+### Phase 4: UI ✅ COMPLETED
+13.  ✅ Create `DevicesPage` UI
+14.  ✅ Add device scanning integration (DeviceManager wired up, mock devices for testing)
+15.  ✅ Implement device assignment UI (assignment buttons functional)
+16.  ✅ Add navigation from workout page (route added to /devices)
+17.  ✅ Add connection status indicators (StreamBuilder with connection state)
 
 ### Phase 5: Integration
 18.  Wire up all beacons and streams

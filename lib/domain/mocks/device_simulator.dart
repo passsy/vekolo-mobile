@@ -78,9 +78,7 @@ class DeviceSimulator {
   /// - Low latency (50ms)
   /// - Minimal power variability (±2%)
   /// - High accuracy
-  static MockTrainer createHighEndTrainer({
-    String name = 'Virtual KICKR',
-  }) {
+  static MockTrainer createHighEndTrainer({String name = 'Virtual KICKR'}) {
     return MockTrainer(
       id: 'mock-high-end-${DateTime.now().millisecondsSinceEpoch}',
       name: name,
@@ -96,9 +94,7 @@ class DeviceSimulator {
   /// - Standard latency (100ms)
   /// - Moderate power variability (±5%)
   /// - Good accuracy
-  static MockTrainer createMidRangeTrainer({
-    String name = 'Virtual Trainer',
-  }) {
+  static MockTrainer createMidRangeTrainer({String name = 'Virtual Trainer'}) {
     return MockTrainer(
       id: 'mock-mid-range-${DateTime.now().millisecondsSinceEpoch}',
       name: name,
@@ -113,9 +109,7 @@ class DeviceSimulator {
   /// - Higher latency (150ms)
   /// - More power variability (±8%)
   /// - Requires continuous command refresh
-  static MockTrainer createBudgetTrainer({
-    String name = 'Basic Trainer',
-  }) {
+  static MockTrainer createBudgetTrainer({String name = 'Basic Trainer'}) {
     return MockTrainer(
       id: 'mock-budget-${DateTime.now().millisecondsSinceEpoch}',
       name: name,
@@ -131,10 +125,7 @@ class DeviceSimulator {
   /// Provides power measurements without trainer control capabilities.
   /// Useful for testing multi-device scenarios where power comes from
   /// a separate sensor rather than the trainer.
-  static FitnessDevice createPowerMeter({
-    String name = 'Virtual Power Meter',
-    double variability = 0.03,
-  }) {
+  static FitnessDevice createPowerMeter({String name = 'Virtual Power Meter', double variability = 0.03}) {
     return _MockPowerMeter(
       id: 'mock-pm-${DateTime.now().millisecondsSinceEpoch}',
       name: name,
@@ -146,24 +137,15 @@ class DeviceSimulator {
   ///
   /// Provides cadence measurements without power or control.
   /// Useful for testing scenarios where cadence comes from a dedicated sensor.
-  static FitnessDevice createCadenceSensor({
-    String name = 'Virtual Cadence Sensor',
-  }) {
-    return _MockCadenceSensor(
-      id: 'mock-cad-${DateTime.now().millisecondsSinceEpoch}',
-      name: name,
-    );
+  static FitnessDevice createCadenceSensor({String name = 'Virtual Cadence Sensor'}) {
+    return _MockCadenceSensor(id: 'mock-cad-${DateTime.now().millisecondsSinceEpoch}', name: name);
   }
 
   /// Creates a heart rate monitor that only provides HR data.
   ///
   /// Provides heart rate measurements that correlate with power output.
   /// Useful for testing complete multi-device scenarios.
-  static FitnessDevice createHeartRateMonitor({
-    String name = 'Virtual HRM',
-    int restingHr = 60,
-    int maxHr = 180,
-  }) {
+  static FitnessDevice createHeartRateMonitor({String name = 'Virtual HRM', int restingHr = 60, int maxHr = 180}) {
     return _MockHeartRateMonitor(
       id: 'mock-hrm-${DateTime.now().millisecondsSinceEpoch}',
       name: name,
@@ -191,13 +173,10 @@ class DeviceSimulator {
 
 /// Mock power meter that only provides power data.
 class _MockPowerMeter extends FitnessDevice {
-  _MockPowerMeter({
-    required String id,
-    required String name,
-    required double variability,
-  })  : _id = id,
-        _name = name,
-        _variability = variability;
+  _MockPowerMeter({required String id, required String name, required double variability})
+    : _id = id,
+      _name = name,
+      _variability = variability;
 
   final String _id;
   final String _name;
@@ -278,9 +257,7 @@ class _MockPowerMeter extends FitnessDevice {
 
 /// Mock cadence sensor that only provides cadence data.
 class _MockCadenceSensor extends FitnessDevice {
-  _MockCadenceSensor({required String id, required String name})
-      : _id = id,
-        _name = name;
+  _MockCadenceSensor({required String id, required String name}) : _id = id, _name = name;
 
   final String _id;
   final String _name;
@@ -358,15 +335,11 @@ class _MockCadenceSensor extends FitnessDevice {
 
 /// Mock heart rate monitor that correlates HR with power.
 class _MockHeartRateMonitor extends FitnessDevice {
-  _MockHeartRateMonitor({
-    required String id,
-    required String name,
-    required int restingHr,
-    required int maxHr,
-  })  : _id = id,
-        _name = name,
-        _restingHr = restingHr,
-        _maxHr = maxHr;
+  _MockHeartRateMonitor({required String id, required String name, required int restingHr, required int maxHr})
+    : _id = id,
+      _name = name,
+      _restingHr = restingHr,
+      _maxHr = maxHr;
 
   final String _id;
   final String _name;

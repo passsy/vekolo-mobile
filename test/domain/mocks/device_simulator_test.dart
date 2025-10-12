@@ -5,10 +5,7 @@ import 'package:vekolo/domain/models/device_info.dart';
 void main() {
   group('DeviceSimulator', () {
     test('createRealisticTrainer creates trainer with correct properties', () {
-      final trainer = DeviceSimulator.createRealisticTrainer(
-        ftpWatts: 250,
-        variability: 0.08,
-      );
+      final trainer = DeviceSimulator.createRealisticTrainer(ftpWatts: 250, variability: 0.08);
 
       expect(trainer.type, DeviceType.trainer);
       expect(trainer.supportsErgMode, true);
@@ -98,9 +95,7 @@ void main() {
     });
 
     test('heart rate monitor connects and emits data', () async {
-      final hrm = DeviceSimulator.createHeartRateMonitor(
-        
-      );
+      final hrm = DeviceSimulator.createHeartRateMonitor();
 
       await hrm.connect();
 
@@ -115,10 +110,7 @@ void main() {
       final powerMeter = DeviceSimulator.createPowerMeter();
       await powerMeter.connect();
 
-      expect(
-        () => powerMeter.setTargetPower(100),
-        throwsA(isA<UnsupportedError>()),
-      );
+      expect(() => powerMeter.setTargetPower(100), throwsA(isA<UnsupportedError>()));
 
       await powerMeter.disconnect();
     });
@@ -127,10 +119,7 @@ void main() {
       final cadenceSensor = DeviceSimulator.createCadenceSensor();
       await cadenceSensor.connect();
 
-      expect(
-        () => cadenceSensor.setTargetPower(100),
-        throwsA(isA<UnsupportedError>()),
-      );
+      expect(() => cadenceSensor.setTargetPower(100), throwsA(isA<UnsupportedError>()));
 
       await cadenceSensor.disconnect();
     });
@@ -139,10 +128,7 @@ void main() {
       final hrm = DeviceSimulator.createHeartRateMonitor();
       await hrm.connect();
 
-      expect(
-        () => hrm.setTargetPower(100),
-        throwsA(isA<UnsupportedError>()),
-      );
+      expect(() => hrm.setTargetPower(100), throwsA(isA<UnsupportedError>()));
 
       await hrm.disconnect();
     });
@@ -157,9 +143,7 @@ void main() {
     });
 
     test('custom names are applied', () {
-      final trainer = DeviceSimulator.createRealisticTrainer(
-        name: 'Custom Trainer Name',
-      );
+      final trainer = DeviceSimulator.createRealisticTrainer(name: 'Custom Trainer Name');
 
       expect(trainer.name, 'Custom Trainer Name');
     });

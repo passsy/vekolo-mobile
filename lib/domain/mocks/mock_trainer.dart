@@ -51,12 +51,12 @@ class MockTrainer extends FitnessDevice {
     Duration refreshInterval = const Duration(seconds: 2),
     int rampStepWatts = 5,
     int rampStepIntervalMs = 200,
-  })  : _id = id,
-        _name = name,
-        _requiresContinuousRefresh = requiresContinuousRefresh,
-        _refreshInterval = refreshInterval,
-        _rampStepWatts = rampStepWatts,
-        _rampStepIntervalMs = rampStepIntervalMs;
+  }) : _id = id,
+       _name = name,
+       _requiresContinuousRefresh = requiresContinuousRefresh,
+       _refreshInterval = refreshInterval,
+       _rampStepWatts = rampStepWatts,
+       _rampStepIntervalMs = rampStepIntervalMs;
 
   final String _id;
   final String _name;
@@ -193,10 +193,7 @@ class MockTrainer extends FitnessDevice {
       final variance = _random.nextDouble() * 2 - 1; // -1 to +1
       final actualPower = max(0, (_currentPower + variance).round());
 
-      _powerController.add(PowerData(
-        watts: actualPower,
-        timestamp: DateTime.now(),
-      ));
+      _powerController.add(PowerData(watts: actualPower, timestamp: DateTime.now()));
 
       // Cancel timer if we've been at target for a while and target hasn't changed
       if (_currentPower == target && _targetPower == target) {
@@ -248,10 +245,7 @@ class MockTrainer extends FitnessDevice {
         _currentCadence = 0;
       }
 
-      _cadenceController.add(CadenceData(
-        rpm: _currentCadence,
-        timestamp: DateTime.now(),
-      ));
+      _cadenceController.add(CadenceData(rpm: _currentCadence, timestamp: DateTime.now()));
     });
   }
 
