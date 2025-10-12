@@ -3,6 +3,7 @@ import 'dart:developer' as developer;
 import 'package:context_plus/context_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
+import 'package:go_router/go_router.dart';
 import 'package:state_beacon/state_beacon.dart';
 import 'package:vekolo/domain/devices/device_manager.dart';
 import 'package:vekolo/domain/devices/fitness_device.dart';
@@ -67,6 +68,8 @@ class _DevicesPageState extends State<DevicesPage> {
         padding: const EdgeInsets.all(16),
         children: [
           _buildErgControlTestSection(context),
+          const SizedBox(height: 24),
+          _buildWorkoutPlayerTestSection(context),
           const SizedBox(height: 24),
           const Divider(),
           const SizedBox(height: 24),
@@ -334,6 +337,51 @@ class _DevicesPageState extends State<DevicesPage> {
       return '${diff.inMinutes}m ago';
     }
     return '${diff.inHours}h ago';
+  }
+
+  Widget _buildWorkoutPlayerTestSection(BuildContext context) {
+    return Card(
+      color: Colors.green[50],
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.fitness_center, size: 20, color: Colors.green),
+                const SizedBox(width: 8),
+                Text(
+                  'WORKOUT PLAYER TEST',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.bold, color: Colors.green[900]),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Test the Workout Player by running a structured workout from save.json',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.green[700]),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () => context.push('/workout-player'),
+                icon: const Icon(Icons.play_circle_filled),
+                label: const Text('Start Workout Player'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _buildPrimaryTrainerSection(BuildContext context, DeviceManager deviceManager) {
