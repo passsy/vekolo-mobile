@@ -2,12 +2,16 @@ import 'dart:developer' as developer;
 
 import 'package:context_plus/context_plus.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
 import 'package:state_beacon/state_beacon.dart';
 import 'package:vekolo/domain/devices/device_manager.dart';
 import 'package:vekolo/domain/devices/fitness_device.dart';
 import 'package:vekolo/domain/models/device_info.dart' as device_info;
 import 'package:vekolo/domain/models/erg_command.dart';
+import 'package:vekolo/domain/protocols/ftms_device.dart';
+import 'package:vekolo/infrastructure/ble/ble_scanner.dart';
 import 'package:vekolo/state/device_state.dart';
+import 'package:vekolo/utils/ble_permissions.dart';
 
 /// Page for managing connected fitness devices and assigning them to data sources.
 ///
@@ -36,6 +40,13 @@ class _DevicesPageState extends State<DevicesPage> {
   bool _isConnecting = false;
   String? _connectingDeviceId;
   double _targetPower = 100.0;
+  BleScanner? _bleScanner;
+
+  @override
+  void dispose() {
+    _bleScanner?.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -46,12 +57,7 @@ class _DevicesPageState extends State<DevicesPage> {
         title: const Text('Devices'),
         actions: [
           TextButton.icon(
-            onPressed: () {
-              // TODO: Phase 4.2 - Implement device scanning
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(const SnackBar(content: Text('Device scanning will be implemented with BLE scanner')));
-            },
+            onPressed: () => _showScanDialog(context),
             icon: const Icon(Icons.search),
             label: const Text('Scan'),
           ),
@@ -640,5 +646,224 @@ class _DevicesPageState extends State<DevicesPage> {
         context,
       ).showSnackBar(SnackBar(content: Text('Failed to assign: $e'), backgroundColor: Colors.red));
     }
+  }
+
+  // ============================================================================
+  // BLE Scanning
+  // ============================================================================
+
+  void _showScanDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => _BleScanDialog(
+        onDeviceSelected: (device) async {
+          Navigator.of(dialogContext).pop();
+          await _handleDeviceSelected(device);
+        },
+      ),
+    );
+  }
+
+  Future<void> _handleDeviceSelected(DiscoveredDevice device) async {
+    developer.log('[DevicesPage] Device selected: ${device.name} (${device.id})');
+
+    try {
+      // Create FTMS device from scanned device
+      final ftmsDevice = FtmsDevice(deviceId: device.id, name: device.name.isEmpty ? 'Unknown Device' : device.name);
+
+      // Add to device manager
+      final deviceManager = deviceManagerRef.of(context);
+      await deviceManager.addDevice(ftmsDevice);
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${ftmsDevice.name} added to devices')));
+
+      setState(() {}); // Refresh UI
+    } catch (e, stackTrace) {
+      developer.log('Error adding device', name: 'DevicesPage', error: e, stackTrace: stackTrace);
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to add device: $e'), backgroundColor: Colors.red));
+    }
+  }
+}
+
+/// Dialog for scanning and selecting BLE devices.
+class _BleScanDialog extends StatefulWidget {
+  const _BleScanDialog({required this.onDeviceSelected});
+
+  final void Function(DiscoveredDevice device) onDeviceSelected;
+
+  @override
+  State<_BleScanDialog> createState() => _BleScanDialogState();
+}
+
+class _BleScanDialogState extends State<_BleScanDialog> {
+  late final BleScanner _scanner;
+  List<DiscoveredDevice> _devices = [];
+  ScanState? _scanState;
+  bool _isInitialized = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeScanner();
+  }
+
+  Future<void> _initializeScanner() async {
+    _scanner = BleScanner();
+
+    // Listen to discovered devices
+    _scanner.discoveredDevices.listen((devices) {
+      if (mounted) {
+        setState(() {
+          _devices = devices;
+        });
+      }
+    });
+
+    // Listen to scan state
+    _scanner.scanState.listen((state) {
+      if (mounted) {
+        setState(() {
+          _scanState = state;
+        });
+      }
+    });
+
+    // Initialize and start scanning
+    await _scanner.initialize();
+    setState(() {
+      _isInitialized = true;
+    });
+
+    // Auto-start scan if ready
+    if (_scanner.bleStatus == BleStatus.ready && _scanner.permissionsGranted) {
+      await _scanner.startScan();
+    }
+  }
+
+  @override
+  void dispose() {
+    _scanner.dispose();
+    super.dispose();
+  }
+
+  Future<void> _handleScanButtonPressed() async {
+    if (_scanner.isScanning) {
+      _scanner.stopScan();
+    } else {
+      final result = await _scanner.startScan();
+      if (!result.success && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result.errorMessage ?? 'Failed to start scan'),
+            backgroundColor: Colors.red,
+            action: result.permanentlyDenied
+                ? SnackBarAction(label: 'Settings', onPressed: () => _scanner.openSettings())
+                : null,
+          ),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final canScan = _scanState?.canScan ?? false;
+    final isScanning = _scanner.isScanning;
+    final statusMessage = _scanState?.statusMessage ?? 'Initializing...';
+
+    return AlertDialog(
+      title: const Text('Scan for Devices'),
+      content: SizedBox(
+        width: double.maxFinite,
+        height: 400,
+        child: Column(
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(child: Text(statusMessage, style: Theme.of(context).textTheme.bodyMedium)),
+                const SizedBox(width: 8),
+                ElevatedButton(
+                  onPressed: _isInitialized && (canScan || isScanning) ? _handleScanButtonPressed : null,
+                  child: Text(isScanning ? 'Stop' : 'Scan'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            const Divider(),
+            Expanded(
+              child: _devices.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            canScan ? Icons.bluetooth_searching : Icons.bluetooth_disabled,
+                            size: 64,
+                            color: canScan ? Colors.grey[400] : Colors.red[300],
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            isScanning ? 'Searching for devices...' : 'No devices found',
+                            style: TextStyle(fontSize: 16, color: canScan ? Colors.grey[600] : Colors.red[400]),
+                          ),
+                          if (!canScan && _scanState != null) ...[
+                            const SizedBox(height: 16),
+                            if (!_scanState!.permissionsGranted)
+                              ElevatedButton.icon(
+                                onPressed: () async {
+                                  final messenger = ScaffoldMessenger.of(context);
+                                  final granted = await _scanner.checkAndRequestPermissions();
+                                  if (granted && mounted) {
+                                    await _scanner.startScan();
+                                  } else {
+                                    final permanentlyDenied = await BlePermissions.isAnyPermissionPermanentlyDenied();
+                                    if (permanentlyDenied && mounted) {
+                                      messenger.showSnackBar(
+                                        SnackBar(
+                                          content: const Text('Please enable permissions in app settings'),
+                                          action: SnackBarAction(
+                                            label: 'Settings',
+                                            onPressed: () => _scanner.openSettings(),
+                                          ),
+                                        ),
+                                      );
+                                    }
+                                  }
+                                },
+                                icon: const Icon(Icons.security),
+                                label: const Text('Grant Permissions'),
+                              )
+                            else if (_scanState!.bleStatus == BleStatus.poweredOff)
+                              const Text('Please turn on Bluetooth', style: TextStyle(color: Colors.red)),
+                          ],
+                        ],
+                      ),
+                    )
+                  : ListView.builder(
+                      itemCount: _devices.length,
+                      itemBuilder: (context, index) {
+                        final device = _devices[index];
+                        return ListTile(
+                          leading: const Icon(Icons.bluetooth),
+                          title: Text(device.name.isEmpty ? 'Unknown Device' : device.name),
+                          subtitle: Text('${device.id}\nRSSI: ${device.rssi}'),
+                          trailing: const Icon(Icons.arrow_forward),
+                          onTap: () => widget.onDeviceSelected(device),
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
+      ),
+      actions: [TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Close'))],
+    );
   }
 }

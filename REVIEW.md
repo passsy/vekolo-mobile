@@ -1,7 +1,7 @@
 - `DataSource` is a way to generic name
 - Isn't the `ConnectionState` `error` the same as `disconnected`? Why the distinction. Maybe save the error, somewhere else as e.g. last connection issue with a timestamp and way more info?
 - I think it is useful to use `CancelableOperation` for all connect() methods
-- // TODO: Phase 4.2 - Implement device scanning | Implement it!
+- // TODO: Phase 4.2 - Implement device scanning | DONE - BleScanner implemented with dialog UI in DevicesPage
 - Implement all other TODOs, except in example usage
 - I can't actually connect my real Kickr core. allow me to do that.
 - Rendering issue
