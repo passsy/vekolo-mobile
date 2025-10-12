@@ -19,7 +19,7 @@ void main() {
       expect(trainer.id, 'test-001');
       expect(trainer.name, 'Test Trainer');
       expect(trainer.type, DeviceType.trainer);
-      expect(trainer.capabilities, {DataSource.power, DataSource.cadence});
+      expect(trainer.capabilities, {DeviceDataType.power, DeviceDataType.cadence});
     });
 
     test('supports ERG mode', () {
@@ -40,7 +40,7 @@ void main() {
       final states = <ConnectionState>[];
       final subscription = trainer.connectionState.listen(states.add);
 
-      await trainer.connect();
+      await trainer.connect().value;
 
       // Give time for all state transitions
       await Future.delayed(const Duration(milliseconds: 100));
@@ -51,7 +51,7 @@ void main() {
     });
 
     test('disconnects successfully', () async {
-      await trainer.connect();
+      await trainer.connect().value;
 
       final states = <ConnectionState>[];
       final subscription = trainer.connectionState.listen(states.add);
@@ -68,19 +68,19 @@ void main() {
     });
 
     test('setTargetPower rejects negative power', () async {
-      await trainer.connect();
+      await trainer.connect().value;
 
       expect(() => trainer.setTargetPower(-50), throwsA(isA<ArgumentError>()));
     });
 
     test('setTargetPower rejects excessive power', () async {
-      await trainer.connect();
+      await trainer.connect().value;
 
       expect(() => trainer.setTargetPower(2000), throwsA(isA<ArgumentError>()));
     });
 
     test('emits power data when target is set', () async {
-      await trainer.connect();
+      await trainer.connect().value;
 
       final powerData = <PowerData>[];
       final subscription = trainer.powerStream!.listen(powerData.add);
@@ -97,7 +97,7 @@ void main() {
     });
 
     test('power ramps gradually to target', () async {
-      await trainer.connect();
+      await trainer.connect().value;
 
       final powerData = <PowerData>[];
       final subscription = trainer.powerStream!.listen(powerData.add);
@@ -120,7 +120,7 @@ void main() {
     });
 
     test('emits cadence data when connected', () async {
-      await trainer.connect();
+      await trainer.connect().value;
 
       final cadenceData = <CadenceData>[];
       final subscription = trainer.cadenceStream!.listen(cadenceData.add);
@@ -137,7 +137,7 @@ void main() {
     });
 
     test('cadence correlates with power', () async {
-      await trainer.connect();
+      await trainer.connect().value;
 
       final cadenceData = <CadenceData>[];
       final subscription = trainer.cadenceStream!.listen(cadenceData.add);
@@ -159,7 +159,7 @@ void main() {
     });
 
     test('power stops when disconnected', () async {
-      await trainer.connect();
+      await trainer.connect().value;
 
       final powerData = <PowerData>[];
       final subscription = trainer.powerStream!.listen(powerData.add);
@@ -179,13 +179,13 @@ void main() {
     });
 
     test('can reconnect after disconnect', () async {
-      await trainer.connect();
+      await trainer.connect().value;
       await trainer.disconnect();
 
       final states = <ConnectionState>[];
       final subscription = trainer.connectionState.listen(states.add);
 
-      await trainer.connect();
+      await trainer.connect().value;
 
       // Give time for all state transitions
       await Future.delayed(const Duration(milliseconds: 100));
@@ -210,10 +210,10 @@ void main() {
     });
 
     test('dispose prevents further operations', () async {
-      await trainer.connect();
+      await trainer.connect().value;
       trainer.dispose();
 
-      expect(() => trainer.connect(), throwsA(isA<StateError>()));
+      expect(() => trainer.connect().value, throwsA(isA<StateError>()));
     });
   });
 }

@@ -22,6 +22,7 @@ library;
 import 'dart:async';
 import 'dart:math';
 
+import 'package:async/async.dart';
 import 'package:vekolo/domain/devices/fitness_device.dart';
 import 'package:vekolo/domain/mocks/mock_trainer.dart';
 import 'package:vekolo/domain/models/device_info.dart';
@@ -186,6 +187,7 @@ class _MockPowerMeter extends FitnessDevice {
   final _connectionController = StreamController<ConnectionState>.broadcast();
 
   ConnectionState _state = ConnectionState.disconnected;
+  ConnectionError? _lastConnectionError;
   Timer? _dataTimer;
   final _random = Random();
   final int _basePower = 150; // Simulated power
@@ -200,28 +202,54 @@ class _MockPowerMeter extends FitnessDevice {
   DeviceType get type => DeviceType.powerMeter;
 
   @override
-  Set<DataSource> get capabilities => {DataSource.power};
+  Set<DeviceDataType> get capabilities => {DeviceDataType.power};
 
   @override
   Stream<ConnectionState> get connectionState => _connectionController.stream;
 
   @override
-  Future<void> connect() async {
+  ConnectionError? get lastConnectionError => _lastConnectionError;
+
+  @override
+  CancelableOperation<void> connect() {
+    return CancelableOperation.fromFuture(
+      _connectImpl(),
+      onCancel: () {
+        _state = ConnectionState.disconnected;
+        _connectionController.add(_state);
+      },
+    );
+  }
+
+  Future<void> _connectImpl() async {
     if (_state == ConnectionState.connected) return;
     _state = ConnectionState.connecting;
     _connectionController.add(_state);
 
-    await Future.delayed(const Duration(milliseconds: 300));
+    try {
+      await Future.delayed(const Duration(milliseconds: 300));
 
-    _state = ConnectionState.connected;
-    _connectionController.add(_state);
+      _state = ConnectionState.connected;
+      _connectionController.add(_state);
+      _lastConnectionError = null;
 
-    // Start emitting power data
-    _dataTimer = Timer.periodic(const Duration(milliseconds: 500), (_) {
-      final variance = (_random.nextDouble() * 2 - 1) * _variability * _basePower;
-      final power = max(0, (_basePower + variance).round());
-      _powerController.add(PowerData(watts: power, timestamp: DateTime.now()));
-    });
+      // Start emitting power data
+      _dataTimer = Timer.periodic(const Duration(milliseconds: 500), (_) {
+        final variance = (_random.nextDouble() * 2 - 1) * _variability * _basePower;
+        final power = max(0, (_basePower + variance).round());
+        _powerController.add(PowerData(watts: power, timestamp: DateTime.now()));
+      });
+    } catch (e, stackTrace) {
+      _lastConnectionError = ConnectionError(
+        message: 'Failed to connect: $e',
+        timestamp: DateTime.now(),
+        error: e,
+        stackTrace: stackTrace,
+      );
+      _state = ConnectionState.disconnected;
+      _connectionController.add(_state);
+      rethrow;
+    }
   }
 
   @override
@@ -266,6 +294,7 @@ class _MockCadenceSensor extends FitnessDevice {
   final _connectionController = StreamController<ConnectionState>.broadcast();
 
   ConnectionState _state = ConnectionState.disconnected;
+  ConnectionError? _lastConnectionError;
   Timer? _dataTimer;
   final _random = Random();
 
@@ -279,27 +308,53 @@ class _MockCadenceSensor extends FitnessDevice {
   DeviceType get type => DeviceType.cadenceSensor;
 
   @override
-  Set<DataSource> get capabilities => {DataSource.cadence};
+  Set<DeviceDataType> get capabilities => {DeviceDataType.cadence};
 
   @override
   Stream<ConnectionState> get connectionState => _connectionController.stream;
 
   @override
-  Future<void> connect() async {
+  ConnectionError? get lastConnectionError => _lastConnectionError;
+
+  @override
+  CancelableOperation<void> connect() {
+    return CancelableOperation.fromFuture(
+      _connectImpl(),
+      onCancel: () {
+        _state = ConnectionState.disconnected;
+        _connectionController.add(_state);
+      },
+    );
+  }
+
+  Future<void> _connectImpl() async {
     if (_state == ConnectionState.connected) return;
     _state = ConnectionState.connecting;
     _connectionController.add(_state);
 
-    await Future.delayed(const Duration(milliseconds: 300));
+    try {
+      await Future.delayed(const Duration(milliseconds: 300));
 
-    _state = ConnectionState.connected;
-    _connectionController.add(_state);
+      _state = ConnectionState.connected;
+      _connectionController.add(_state);
+      _lastConnectionError = null;
 
-    // Start emitting cadence data
-    _dataTimer = Timer.periodic(const Duration(milliseconds: 500), (_) {
-      final cadence = 80 + _random.nextInt(15); // 80-95 RPM
-      _cadenceController.add(CadenceData(rpm: cadence, timestamp: DateTime.now()));
-    });
+      // Start emitting cadence data
+      _dataTimer = Timer.periodic(const Duration(milliseconds: 500), (_) {
+        final cadence = 80 + _random.nextInt(15); // 80-95 RPM
+        _cadenceController.add(CadenceData(rpm: cadence, timestamp: DateTime.now()));
+      });
+    } catch (e, stackTrace) {
+      _lastConnectionError = ConnectionError(
+        message: 'Failed to connect: $e',
+        timestamp: DateTime.now(),
+        error: e,
+        stackTrace: stackTrace,
+      );
+      _state = ConnectionState.disconnected;
+      _connectionController.add(_state);
+      rethrow;
+    }
   }
 
   @override
@@ -350,6 +405,7 @@ class _MockHeartRateMonitor extends FitnessDevice {
   final _connectionController = StreamController<ConnectionState>.broadcast();
 
   ConnectionState _state = ConnectionState.disconnected;
+  ConnectionError? _lastConnectionError;
   Timer? _dataTimer;
   final _random = Random();
 
@@ -363,30 +419,56 @@ class _MockHeartRateMonitor extends FitnessDevice {
   DeviceType get type => DeviceType.heartRateMonitor;
 
   @override
-  Set<DataSource> get capabilities => {DataSource.heartRate};
+  Set<DeviceDataType> get capabilities => {DeviceDataType.heartRate};
 
   @override
   Stream<ConnectionState> get connectionState => _connectionController.stream;
 
   @override
-  Future<void> connect() async {
+  ConnectionError? get lastConnectionError => _lastConnectionError;
+
+  @override
+  CancelableOperation<void> connect() {
+    return CancelableOperation.fromFuture(
+      _connectImpl(),
+      onCancel: () {
+        _state = ConnectionState.disconnected;
+        _connectionController.add(_state);
+      },
+    );
+  }
+
+  Future<void> _connectImpl() async {
     if (_state == ConnectionState.connected) return;
     _state = ConnectionState.connecting;
     _connectionController.add(_state);
 
-    await Future.delayed(const Duration(milliseconds: 300));
+    try {
+      await Future.delayed(const Duration(milliseconds: 300));
 
-    _state = ConnectionState.connected;
-    _connectionController.add(_state);
+      _state = ConnectionState.connected;
+      _connectionController.add(_state);
+      _lastConnectionError = null;
 
-    // Start emitting HR data (simulated at resting HR initially)
-    _dataTimer = Timer.periodic(const Duration(seconds: 1), (_) {
-      // Simulate HR between resting and moderate effort
-      final baseHr = _restingHr + (_maxHr - _restingHr) * 0.4; // ~40% effort
-      final variance = _random.nextInt(6) - 3; // ±3 BPM
-      final hr = (baseHr + variance).round().clamp(_restingHr, _maxHr);
-      _hrController.add(HeartRateData(bpm: hr, timestamp: DateTime.now()));
-    });
+      // Start emitting HR data (simulated at resting HR initially)
+      _dataTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+        // Simulate HR between resting and moderate effort
+        final baseHr = _restingHr + (_maxHr - _restingHr) * 0.4; // ~40% effort
+        final variance = _random.nextInt(6) - 3; // ±3 BPM
+        final hr = (baseHr + variance).round().clamp(_restingHr, _maxHr);
+        _hrController.add(HeartRateData(bpm: hr, timestamp: DateTime.now()));
+      });
+    } catch (e, stackTrace) {
+      _lastConnectionError = ConnectionError(
+        message: 'Failed to connect: $e',
+        timestamp: DateTime.now(),
+        error: e,
+        stackTrace: stackTrace,
+      );
+      _state = ConnectionState.disconnected;
+      _connectionController.add(_state);
+      rethrow;
+    }
   }
 
   @override

@@ -473,17 +473,17 @@ class _DevicesPageState extends State<DevicesPage> {
                           onPressed: () => _handleAssignPrimaryTrainer(device),
                           child: const Text('Assign as Trainer'),
                         ),
-                      if (device.capabilities.contains(device_info.DataSource.heartRate))
+                      if (device.capabilities.contains(device_info.DeviceDataType.heartRate))
                         OutlinedButton(
                           onPressed: () => _handleAssignHeartRate(device),
                           child: const Text('Assign to HR'),
                         ),
-                      if (device.capabilities.contains(device_info.DataSource.power))
+                      if (device.capabilities.contains(device_info.DeviceDataType.power))
                         OutlinedButton(
                           onPressed: () => _handleAssignPower(device),
                           child: const Text('Assign to Power'),
                         ),
-                      if (device.capabilities.contains(device_info.DataSource.cadence))
+                      if (device.capabilities.contains(device_info.DeviceDataType.cadence))
                         OutlinedButton(
                           onPressed: () => _handleAssignCadence(device),
                           child: const Text('Assign to Cadence'),
@@ -528,13 +528,13 @@ class _DevicesPageState extends State<DevicesPage> {
     );
   }
 
-  String _formatCapabilities(Set<device_info.DataSource> capabilities) {
+  String _formatCapabilities(Set<device_info.DeviceDataType> capabilities) {
     if (capabilities.isEmpty) return 'No capabilities';
 
     final parts = <String>[];
-    if (capabilities.contains(device_info.DataSource.power)) parts.add('Power');
-    if (capabilities.contains(device_info.DataSource.cadence)) parts.add('Cadence');
-    if (capabilities.contains(device_info.DataSource.heartRate)) parts.add('Heart Rate');
+    if (capabilities.contains(device_info.DeviceDataType.power)) parts.add('Power');
+    if (capabilities.contains(device_info.DeviceDataType.cadence)) parts.add('Cadence');
+    if (capabilities.contains(device_info.DeviceDataType.heartRate)) parts.add('Heart Rate');
 
     return parts.join(' • ');
   }
@@ -550,7 +550,7 @@ class _DevicesPageState extends State<DevicesPage> {
     });
 
     try {
-      await device.connect();
+      await device.connect().value;
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${device.name} connected')));
     } catch (e, stackTrace) {

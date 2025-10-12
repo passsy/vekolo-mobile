@@ -109,7 +109,7 @@ class FtmsBleTransport {
                   if (!_connectionCompleter!.isCompleted) {
                     _connectionCompleter!.completeError(e, stackTrace);
                   }
-                  _connectionStateController.add(ConnectionState.error);
+                  _handleDisconnection();
                 }
               } else if (update.connectionState == DeviceConnectionState.disconnected) {
                 if (!_connectionCompleter!.isCompleted) {
@@ -124,7 +124,7 @@ class FtmsBleTransport {
               if (!_connectionCompleter!.isCompleted) {
                 _connectionCompleter!.completeError(e, stackTrace);
               }
-              _connectionStateController.add(ConnectionState.error);
+              _handleDisconnection();
             },
           );
 
@@ -138,7 +138,7 @@ class FtmsBleTransport {
     } catch (e, stackTrace) {
       print('[FtmsBleTransport] Failed to connect: $e');
       print(stackTrace);
-      _connectionStateController.add(ConnectionState.error);
+      _handleDisconnection();
       rethrow;
     }
   }
@@ -447,7 +447,4 @@ enum ConnectionState {
 
   /// Device is connected and ready.
   connected,
-
-  /// Connection error occurred.
-  error,
 }

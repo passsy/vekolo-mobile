@@ -29,13 +29,46 @@ enum ConnectionState {
 
   /// Successfully connected and ready.
   connected,
-
-  /// Connection failed or encountered an error.
-  error,
 }
 
-/// Type of data a device can provide.
-enum DataSource {
+/// Information about a connection error.
+///
+/// Stores details about connection failures separately from the connection state.
+/// This allows tracking error history while keeping the state machine simple
+/// (disconnected, connecting, connected).
+class ConnectionError {
+  /// Creates a connection error record.
+  const ConnectionError({
+    required this.message,
+    required this.timestamp,
+    this.error,
+    this.stackTrace,
+  });
+
+  /// Human-readable error message describing what went wrong.
+  final String message;
+
+  /// When the error occurred.
+  final DateTime timestamp;
+
+  /// The underlying error object, if available.
+  final Object? error;
+
+  /// Stack trace for debugging, if available.
+  final StackTrace? stackTrace;
+
+  @override
+  String toString() {
+    return 'ConnectionError(message: $message, timestamp: $timestamp)';
+  }
+}
+
+/// Type of fitness data a device can provide.
+///
+/// Represents the specific measurements a device is capable of producing.
+/// Used by [DeviceInfo] to indicate device capabilities and by [DeviceManager]
+/// to assign devices to specific data source roles.
+enum DeviceDataType {
   /// Power measurement in watts.
   power,
 
@@ -65,12 +98,12 @@ class DeviceInfo {
 
   /// Set of data sources this device can provide.
   ///
-  /// A trainer might provide [DataSource.power] and [DataSource.cadence],
-  /// while a heart rate monitor provides only [DataSource.heartRate].
-  final Set<DataSource> capabilities;
+  /// A trainer might provide [DeviceDataType.power] and [DeviceDataType.cadence],
+  /// while a heart rate monitor provides only [DeviceDataType.heartRate].
+  final Set<DeviceDataType> capabilities;
 
   /// Creates a copy with optional field replacements.
-  DeviceInfo copyWith({String? id, String? name, DeviceType? type, Set<DataSource>? capabilities}) {
+  DeviceInfo copyWith({String? id, String? name, DeviceType? type, Set<DeviceDataType>? capabilities}) {
     return DeviceInfo(
       id: id ?? this.id,
       name: name ?? this.name,

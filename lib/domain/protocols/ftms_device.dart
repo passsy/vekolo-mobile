@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:async/async.dart';
 import 'package:vekolo/domain/devices/fitness_device.dart';
 import 'package:vekolo/domain/models/device_info.dart';
 import 'package:vekolo/domain/models/fitness_data.dart';
@@ -51,6 +52,7 @@ class FtmsDevice extends FitnessDevice {
   // Connection state stream controller for mapping transport states to domain states
   StreamController<ConnectionState>? _connectionStateController;
   StreamSubscription<transport.ConnectionState>? _connectionStateSubscription;
+  ConnectionError? _lastConnectionError;
 
   // ============================================================================
   // Identity Properties
@@ -66,7 +68,7 @@ class FtmsDevice extends FitnessDevice {
   DeviceType get type => DeviceType.trainer;
 
   @override
-  Set<DataSource> get capabilities => {DataSource.power, DataSource.cadence};
+  Set<DeviceDataType> get capabilities => {DeviceDataType.power, DeviceDataType.cadence};
 
   // ============================================================================
   // Connection Management
@@ -84,6 +86,9 @@ class FtmsDevice extends FitnessDevice {
     );
     return _connectionStateController!.stream;
   }
+
+  @override
+  ConnectionError? get lastConnectionError => _lastConnectionError;
 
   void _setupConnectionStateMapping() {
     _connectionStateSubscription?.cancel();
@@ -103,14 +108,32 @@ class FtmsDevice extends FitnessDevice {
         return ConnectionState.connecting;
       case transport.ConnectionState.connected:
         return ConnectionState.connected;
-      case transport.ConnectionState.error:
-        return ConnectionState.error;
     }
   }
 
   @override
-  Future<void> connect() async {
-    await _transport.connect();
+  CancelableOperation<void> connect() {
+    return CancelableOperation.fromFuture(
+      _connectImpl(),
+      onCancel: () async {
+        await _transport.disconnect();
+      },
+    );
+  }
+
+  Future<void> _connectImpl() async {
+    try {
+      await _transport.connect();
+      _lastConnectionError = null;
+    } catch (e, stackTrace) {
+      _lastConnectionError = ConnectionError(
+        message: 'Failed to connect to FTMS device: $e',
+        timestamp: DateTime.now(),
+        error: e,
+        stackTrace: stackTrace,
+      );
+      rethrow;
+    }
   }
 
   @override

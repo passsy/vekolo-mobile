@@ -62,7 +62,7 @@ void main() {
       deviceManager.assignPrimaryTrainer(trainer.id);
 
       // Connect and start generating power data
-      await trainer.connect();
+      await trainer.connect().value;
       await trainer.setTargetPower(200);
 
       // Wait for data to flow through
@@ -79,7 +79,7 @@ void main() {
       deviceManager.assignPrimaryTrainer(trainer.id);
 
       // Connect and start generating cadence data
-      await trainer.connect();
+      await trainer.connect().value;
       await trainer.setTargetPower(200);
 
       // Wait for data to flow through
@@ -109,7 +109,7 @@ void main() {
       deviceManager.assignHeartRateSource(hrMonitor.id);
 
       // Connect to start generating HR data
-      await hrMonitor.connect();
+      await hrMonitor.connect().value;
 
       // Wait for data to flow through
       await Future<void>.delayed(const Duration(milliseconds: 1100));
@@ -123,7 +123,7 @@ void main() {
 
       await deviceManager.addDevice(trainer);
       deviceManager.assignPrimaryTrainer(trainer.id);
-      await trainer.connect();
+      await trainer.connect().value;
       await trainer.setTargetPower(200);
 
       // Wait for data to flow

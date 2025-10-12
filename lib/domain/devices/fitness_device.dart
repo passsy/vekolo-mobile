@@ -16,6 +16,7 @@
 /// that behave realistically without requiring actual hardware.
 library;
 
+import 'package:async/async.dart';
 import 'package:vekolo/domain/models/device_info.dart';
 import 'package:vekolo/domain/models/fitness_data.dart';
 
@@ -51,12 +52,12 @@ abstract class FitnessDevice {
 
   /// Set of data sources this device can provide.
   ///
-  /// A trainer might provide both [DataSource.power] and [DataSource.cadence],
-  /// while a heart rate monitor provides only [DataSource.heartRate].
+  /// A trainer might provide both [DeviceDataType.power] and [DeviceDataType.cadence],
+  /// while a heart rate monitor provides only [DeviceDataType.heartRate].
   ///
   /// Used by [DeviceManager] to determine valid device assignments for each
   /// data source role (primary trainer, power source, cadence source, HR source).
-  Set<DataSource> get capabilities;
+  Set<DeviceDataType> get capabilities;
 
   // ============================================================================
   // Connection Management
@@ -70,15 +71,27 @@ abstract class FitnessDevice {
   /// The stream must emit the current state immediately upon subscription.
   Stream<ConnectionState> get connectionState;
 
+  /// The last connection error that occurred, if any.
+  ///
+  /// This is set when a connection attempt fails and the device returns to
+  /// [ConnectionState.disconnected]. Check this after a failed connection
+  /// to understand what went wrong.
+  ///
+  /// Returns `null` if no error has occurred or if the last connection was successful.
+  ConnectionError? get lastConnectionError;
+
   /// Initiates connection to the device.
   ///
   /// This method handles protocol-specific connection setup but delegates
   /// actual Bluetooth operations to the transport layer.
   ///
+  /// Returns a [CancelableOperation] that can be cancelled during connection.
+  /// Cancelling will stop the connection attempt and clean up resources.
+  ///
   /// Throws an exception if connection fails. Updates [connectionState] stream
   /// to reflect progress ([ConnectionState.connecting] → [ConnectionState.connected]
-  /// or [ConnectionState.error]).
-  Future<void> connect();
+  /// or back to [ConnectionState.disconnected] on failure).
+  CancelableOperation<void> connect();
 
   /// Disconnects from the device.
   ///
@@ -94,7 +107,7 @@ abstract class FitnessDevice {
 
   /// Stream of power measurements if this device provides power data.
   ///
-  /// Returns `null` if [capabilities] does not include [DataSource.power].
+  /// Returns `null` if [capabilities] does not include [DeviceDataType.power].
   /// When non-null, emits [PowerData] updates at device-specific intervals
   /// (typically 1-4 Hz).
   ///
@@ -104,7 +117,7 @@ abstract class FitnessDevice {
 
   /// Stream of cadence measurements if this device provides cadence data.
   ///
-  /// Returns `null` if [capabilities] does not include [DataSource.cadence].
+  /// Returns `null` if [capabilities] does not include [DeviceDataType.cadence].
   /// When non-null, emits [CadenceData] updates at device-specific intervals
   /// (typically 1-4 Hz).
   ///
@@ -114,7 +127,7 @@ abstract class FitnessDevice {
 
   /// Stream of heart rate measurements if this device provides HR data.
   ///
-  /// Returns `null` if [capabilities] does not include [DataSource.heartRate].
+  /// Returns `null` if [capabilities] does not include [DeviceDataType.heartRate].
   /// When non-null, emits [HeartRateData] updates at device-specific intervals
   /// (typically 1 Hz for most HR monitors).
   ///

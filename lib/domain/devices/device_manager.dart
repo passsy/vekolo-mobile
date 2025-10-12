@@ -211,7 +211,7 @@ class DeviceManager {
   void assignPowerSource(String deviceId) {
     final device = _findDevice(deviceId);
 
-    if (!device.capabilities.contains(DataSource.power)) {
+    if (!device.capabilities.contains(DeviceDataType.power)) {
       throw ArgumentError('Device $deviceId does not provide power data');
     }
 
@@ -228,7 +228,7 @@ class DeviceManager {
   void assignCadenceSource(String deviceId) {
     final device = _findDevice(deviceId);
 
-    if (!device.capabilities.contains(DataSource.cadence)) {
+    if (!device.capabilities.contains(DeviceDataType.cadence)) {
       throw ArgumentError('Device $deviceId does not provide cadence data');
     }
 
@@ -245,7 +245,7 @@ class DeviceManager {
   void assignHeartRateSource(String deviceId) {
     final device = _findDevice(deviceId);
 
-    if (!device.capabilities.contains(DataSource.heartRate)) {
+    if (!device.capabilities.contains(DeviceDataType.heartRate)) {
       throw ArgumentError('Device $deviceId does not provide heart rate data');
     }
 

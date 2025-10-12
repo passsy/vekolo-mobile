@@ -97,9 +97,9 @@ void main() {
       // =====================================================================
 
       // Connect all devices
-      await trainer.connect();
-      await powerMeter.connect();
-      await hrMonitor.connect();
+      await trainer.connect().value;
+      await powerMeter.connect().value;
+      await hrMonitor.connect().value;
 
       // Start trainer in ERG mode
       await trainer.setTargetPower(150);
@@ -216,7 +216,7 @@ void main() {
 
       await deviceManager.addDevice(trainer);
       deviceManager.assignPrimaryTrainer(trainer.id);
-      await trainer.connect();
+      await trainer.connect().value;
 
       // Start syncing
       syncService.startSync();
@@ -248,7 +248,7 @@ void main() {
 
       await deviceManager.addDevice(trainer1);
       deviceManager.assignPrimaryTrainer(trainer1.id);
-      await trainer1.connect();
+      await trainer1.connect().value;
       await trainer1.setTargetPower(150);
 
       await Future<void>.delayed(const Duration(milliseconds: 600));
@@ -260,7 +260,7 @@ void main() {
       final powerMeter = DeviceSimulator.createPowerMeter(name: 'Power Meter');
 
       await deviceManager.addDevice(powerMeter);
-      await powerMeter.connect();
+      await powerMeter.connect().value;
 
       // Wait for initial data from power meter
       await Future<void>.delayed(const Duration(milliseconds: 600));
@@ -295,8 +295,8 @@ void main() {
       deviceManager.assignHeartRateSource(hrMonitor.id);
 
       // Connect all
-      await trainer.connect();
-      await hrMonitor.connect();
+      await trainer.connect().value;
+      await hrMonitor.connect().value;
       await trainer.setTargetPower(200);
 
       // Collect data from multiple streams simultaneously
@@ -333,7 +333,7 @@ void main() {
 
       await deviceManager.addDevice(trainer);
       deviceManager.assignPrimaryTrainer(trainer.id);
-      await trainer.connect();
+      await trainer.connect().value;
 
       syncService.startSync();
 

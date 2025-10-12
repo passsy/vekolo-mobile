@@ -9,7 +9,7 @@ void main() {
 
       expect(trainer.type, DeviceType.trainer);
       expect(trainer.supportsErgMode, true);
-      expect(trainer.capabilities, {DataSource.power, DataSource.cadence});
+      expect(trainer.capabilities, {DeviceDataType.power, DeviceDataType.cadence});
       expect(trainer.requiresContinuousRefresh, false);
     });
 
@@ -44,7 +44,7 @@ void main() {
 
       expect(powerMeter.type, DeviceType.powerMeter);
       expect(powerMeter.supportsErgMode, false);
-      expect(powerMeter.capabilities, {DataSource.power});
+      expect(powerMeter.capabilities, {DeviceDataType.power});
       expect(powerMeter.powerStream, isNotNull);
       expect(powerMeter.cadenceStream, isNull);
       expect(powerMeter.heartRateStream, isNull);
@@ -55,7 +55,7 @@ void main() {
 
       expect(cadenceSensor.type, DeviceType.cadenceSensor);
       expect(cadenceSensor.supportsErgMode, false);
-      expect(cadenceSensor.capabilities, {DataSource.cadence});
+      expect(cadenceSensor.capabilities, {DeviceDataType.cadence});
       expect(cadenceSensor.powerStream, isNull);
       expect(cadenceSensor.cadenceStream, isNotNull);
       expect(cadenceSensor.heartRateStream, isNull);
@@ -66,7 +66,7 @@ void main() {
 
       expect(hrm.type, DeviceType.heartRateMonitor);
       expect(hrm.supportsErgMode, false);
-      expect(hrm.capabilities, {DataSource.heartRate});
+      expect(hrm.capabilities, {DeviceDataType.heartRate});
       expect(hrm.powerStream, isNull);
       expect(hrm.cadenceStream, isNull);
       expect(hrm.heartRateStream, isNotNull);
@@ -75,7 +75,7 @@ void main() {
     test('power meter connects and emits data', () async {
       final powerMeter = DeviceSimulator.createPowerMeter();
 
-      await powerMeter.connect();
+      await powerMeter.connect().value;
 
       final powerData = await powerMeter.powerStream!.first;
       expect(powerData.watts, greaterThan(0));
@@ -86,7 +86,7 @@ void main() {
     test('cadence sensor connects and emits data', () async {
       final cadenceSensor = DeviceSimulator.createCadenceSensor();
 
-      await cadenceSensor.connect();
+      await cadenceSensor.connect().value;
 
       final cadenceData = await cadenceSensor.cadenceStream!.first;
       expect(cadenceData.rpm, greaterThan(0));
@@ -97,7 +97,7 @@ void main() {
     test('heart rate monitor connects and emits data', () async {
       final hrm = DeviceSimulator.createHeartRateMonitor();
 
-      await hrm.connect();
+      await hrm.connect().value;
 
       final hrData = await hrm.heartRateStream!.first;
       expect(hrData.bpm, greaterThanOrEqualTo(60));
@@ -108,7 +108,7 @@ void main() {
 
     test('power meter throws when setting target power', () async {
       final powerMeter = DeviceSimulator.createPowerMeter();
-      await powerMeter.connect();
+      await powerMeter.connect().value;
 
       expect(() => powerMeter.setTargetPower(100), throwsA(isA<UnsupportedError>()));
 
@@ -117,7 +117,7 @@ void main() {
 
     test('cadence sensor throws when setting target power', () async {
       final cadenceSensor = DeviceSimulator.createCadenceSensor();
-      await cadenceSensor.connect();
+      await cadenceSensor.connect().value;
 
       expect(() => cadenceSensor.setTargetPower(100), throwsA(isA<UnsupportedError>()));
 
@@ -126,7 +126,7 @@ void main() {
 
     test('heart rate monitor throws when setting target power', () async {
       final hrm = DeviceSimulator.createHeartRateMonitor();
-      await hrm.connect();
+      await hrm.connect().value;
 
       expect(() => hrm.setTargetPower(100), throwsA(isA<UnsupportedError>()));
 

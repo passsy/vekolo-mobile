@@ -22,6 +22,7 @@ library;
 import 'dart:async';
 import 'dart:math';
 
+import 'package:async/async.dart';
 import 'package:vekolo/domain/devices/fitness_device.dart';
 import 'package:vekolo/domain/models/device_info.dart';
 import 'package:vekolo/domain/models/fitness_data.dart';
@@ -75,6 +76,7 @@ class MockTrainer extends FitnessDevice {
   int _targetPower = 0;
   int _currentCadence = 0;
   ConnectionState _state = ConnectionState.disconnected;
+  ConnectionError? _lastConnectionError;
   Timer? _rampTimer;
   Timer? _cadenceTimer;
   final _random = Random();
@@ -94,25 +96,49 @@ class MockTrainer extends FitnessDevice {
   DeviceType get type => DeviceType.trainer;
 
   @override
-  Set<DataSource> get capabilities => {DataSource.power, DataSource.cadence};
+  Set<DeviceDataType> get capabilities => {DeviceDataType.power, DeviceDataType.cadence};
 
   @override
   Stream<ConnectionState> get connectionState => _connectionController.stream;
 
   @override
-  Future<void> connect() async {
+  ConnectionError? get lastConnectionError => _lastConnectionError;
+
+  @override
+  CancelableOperation<void> connect() {
+    return CancelableOperation.fromFuture(
+      _connectImpl(),
+      onCancel: () {
+        _updateConnectionState(ConnectionState.disconnected);
+      },
+    );
+  }
+
+  Future<void> _connectImpl() async {
     if (_disposed) throw StateError('Device has been disposed');
     if (_state == ConnectionState.connected) return;
 
     _updateConnectionState(ConnectionState.connecting);
 
-    // Simulate connection delay (realistic BLE discovery and pairing)
-    await Future.delayed(const Duration(milliseconds: 500));
+    try {
+      // Simulate connection delay (realistic BLE discovery and pairing)
+      await Future.delayed(const Duration(milliseconds: 500));
 
-    _updateConnectionState(ConnectionState.connected);
+      _updateConnectionState(ConnectionState.connected);
+      _lastConnectionError = null; // Clear any previous error
 
-    // Start simulating cadence updates (realistic pedaling)
-    _startCadenceSimulation();
+      // Start simulating cadence updates (realistic pedaling)
+      _startCadenceSimulation();
+    } catch (e, stackTrace) {
+      _lastConnectionError = ConnectionError(
+        message: 'Failed to connect: $e',
+        timestamp: DateTime.now(),
+        error: e,
+        stackTrace: stackTrace,
+      );
+      _updateConnectionState(ConnectionState.disconnected);
+      rethrow;
+    }
   }
 
   @override
