@@ -18,6 +18,11 @@ class HomePage extends StatelessWidget {
         title: const Text('Vekolo'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.devices),
+            onPressed: () => context.push('/devices'),
+            tooltip: 'Manage Devices',
+          ),
           if (user != null)
             Padding(
               padding: const EdgeInsets.only(right: 8.0),
