@@ -2,18 +2,84 @@
   "master": {
     "tasks": [
       {
-        "id": 1,
+        "id": "1",
         "title": "Create BleDeviceInspector Service",
         "description": "Implement service to connect to BLE devices and collect comprehensive GATT data for unknown device reporting",
         "details": "Create `lib/services/ble_device_inspector.dart` using existing flutter_reactive_ble. Service should: connect to device by deviceId, discover all services/characteristics/descriptors, read properties and values (handle errors gracefully), capture advertisement data, generate human-readable TXT report with all collected data. Include connection timeout (30s), characteristic read timeout (10s), and proper error handling with developer.log(error, stackTrace). Continue collection even if some reads fail.",
         "testStrategy": "Unit tests with mock BLE devices, test connection failures, partial data collection, timeout scenarios, and TXT report format validation",
         "priority": "high",
         "dependencies": [],
-        "status": "pending",
-        "subtasks": []
+        "status": "done",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Create core BleDeviceInspector class structure",
+            "description": "Create the main BleDeviceInspector class with constructor, dependencies, and method signatures",
+            "dependencies": [],
+            "details": "Create lib/services/ble_device_inspector.dart with FlutterReactiveBle dependency injection, constructor accepting optional FlutterReactiveBle instance for testing, and method signatures for connectAndInspect, _discoverServices, _readCharacteristics, _generateReport methods. Include proper imports for dart:async, dart:developer, flutter_reactive_ble, and ble_permissions.\n<info added on 2025-10-16T22:51:24.981Z>\nLet me analyze the codebase to understand the current implementation and provide specific details for the subtask update.Now let me check the existing BLE patterns in the codebase to see how connection and timeouts are handled elsewhere:Now let me examine the git status to understand what still needs to be done:Based on my analysis of the codebase and the user's request, I can see that:\n\n1. The BleDeviceInspector class has been successfully created with the complete implementation\n2. The connection logic with timeouts has already been implemented following the existing patterns from ftms_ble_transport.dart\n3. The user is confirming that subtask 1.1 is now complete and ready to move to the next subtask (1.2)\n\nHowever, there's a small issue in the current implementation that I noticed - the descriptor reading logic is using the wrong method (it should use readDescriptor, not readCharacteristic).\n\nSuccessfully implemented complete BleDeviceInspector class structure with proper connection logic and timeout handling. Connection implementation follows existing patterns from ftms_ble_transport.dart with 30-second connection timeout using Completer pattern, proper StreamSubscription management, and comprehensive error handling with developer.log() and stackTrace. The _connectToDevice() method at lines 97-140 handles connection state monitoring, timeout scenarios, and graceful disconnection. All internal data models (_ServiceInfo, _CharacteristicInfo, _DescriptorInfo) are properly implemented with characteristic reading using 10-second timeouts and error capture. Note: discovered minor bug in descriptor reading at line 266 - currently uses readCharacteristic instead of readDescriptor, should be fixed in next subtask.\n</info added on 2025-10-16T22:51:24.981Z>",
+            "status": "done",
+            "testStrategy": "Unit tests with mock FlutterReactiveBle to verify class instantiation and method signatures",
+            "parentId": "undefined",
+            "updatedAt": "2025-10-16T22:51:32.883Z"
+          },
+          {
+            "id": 2,
+            "title": "Implement BLE connection and timeout handling",
+            "description": "Add device connection logic with 30-second timeout and proper error handling",
+            "dependencies": [
+              1
+            ],
+            "details": "Implement connectToDevice method using FlutterReactiveBle.connectToDevice with 30-second timeout. Handle ConnectionStateUpdate stream, manage connection state tracking, implement timeout cancellation logic. Use developer.log for error logging with stackTrace parameter following project patterns. Handle BLE status checks and permission validation using existing BlePermissions utility.\n<info added on 2025-10-16T22:52:39.274Z>\nI'll analyze the codebase first to understand the current BLE connection implementation and then provide the update.Based on my analysis of the codebase, I can see that the connection logic has indeed been implemented in the `_connectToDevice` method (lines 97-140) of the BleDeviceInspector class. The implementation follows the same patterns as `ftms_ble_transport.dart` and includes all the requested features. Here's the update for the subtask:\n\nTask marked complete - implementation verified. The `_connectToDevice` method successfully implements all requirements: uses Completer pattern for async connection state management, listens to ConnectionStateUpdate stream from FlutterReactiveBle.connectToDevice(), implements 30-second timeout with .timeout() method, includes proper error handling with developer.log(error, stackTrace) following project conventions, and handles graceful disconnection on connection failures. Code follows established patterns from ftms_ble_transport.dart including Completer-based async handling and comprehensive error logging.\n</info added on 2025-10-16T22:52:39.274Z>",
+            "status": "done",
+            "testStrategy": "Test connection success, timeout scenarios, permission failures, and error handling with mock BLE devices",
+            "parentId": "undefined",
+            "updatedAt": "2025-10-16T22:52:56.178Z"
+          },
+          {
+            "id": 3,
+            "title": "Implement GATT service discovery and data collection",
+            "description": "Add comprehensive GATT service, characteristic, and descriptor discovery with data reading",
+            "dependencies": [
+              2
+            ],
+            "details": "Implement discoverAllServices using FlutterReactiveBle.discoverAllServices, iterate through all discovered services and characteristics, read characteristic properties (read, write, notify, indicate), attempt to read characteristic values with 10-second individual timeouts, discover and read descriptors. Handle read failures gracefully and continue collection process. Store all collected data in structured format for report generation.\n<info added on 2025-10-16T22:53:21.275Z>\nI'll analyze the codebase to understand the current implementation and provide an accurate update for the GATT discovery subtask.Based on analyzing the implementation in the BleDeviceInspector service, I can see that the GATT discovery functionality has been fully implemented. The user's request confirms that the implementation is complete and working as specified. Here's the update text that should be appended to the subtask details:\n\nImplementation completed successfully. The _discoverServices method (lines 142-207) fully implements GATT discovery using flutter_reactive_ble's discoverServices() API. The implementation correctly iterates through all discovered services, characteristics, and descriptors, calls _readCharacteristic() for readable characteristics with 10-second timeout handling, calls _readDescriptor() for all descriptors, implements graceful error handling that captures errors per-characteristic without stopping the collection process, and stores all data in structured _ServiceInfo/_CharacteristicInfo/_DescriptorInfo models. All read operations are properly wrapped in try-catch blocks with developer.log() calls that include both error and stackTrace parameters for comprehensive debugging. The graceful degradation strategy ensures complete data collection even when individual reads fail.\n</info added on 2025-10-16T22:53:21.275Z>",
+            "status": "done",
+            "testStrategy": "Test service discovery, characteristic reading with various property combinations, timeout handling, and graceful error recovery",
+            "parentId": "undefined",
+            "updatedAt": "2025-10-16T22:53:36.545Z"
+          },
+          {
+            "id": 4,
+            "title": "Implement advertisement data capture",
+            "description": "Add functionality to capture and store BLE advertisement data during device discovery",
+            "dependencies": [
+              1
+            ],
+            "details": "Integrate with BleScanner or implement custom scanning to capture DiscoveredDevice advertisement data including device name, manufacturer data, service UUIDs, RSSI, and other advertisement fields. Store advertisement data alongside GATT data for comprehensive device reporting. Handle cases where advertisement data may not be available during inspection phase.\n<info added on 2025-10-16T22:54:13.682Z>\nI'll analyze the codebase to understand the current implementation and provide an accurate update.Implementation completed successfully. The `inspectDevice()` method now properly accepts and stores advertisement data through `advertisementData` (Map<Uuid, List<int>>) and `rssi` parameters passed from scan results. Data is stored in `_advertisementData` and `_rssi` private fields (lines 40-41) and integrated into the TXT report generation with proper hex and ASCII formatting (lines 321-332). The implementation maintains clean separation between scan-time advertisement data and connection-time GATT service data, allowing for comprehensive device reporting even when connection-time inspection may be limited.\n</info added on 2025-10-16T22:54:13.682Z>",
+            "status": "done",
+            "testStrategy": "Test advertisement data capture, handling missing data, and integration with device inspection workflow",
+            "parentId": "undefined",
+            "updatedAt": "2025-10-16T22:54:28.957Z"
+          },
+          {
+            "id": 5,
+            "title": "Implement TXT report generation",
+            "description": "Create human-readable TXT report generation from collected device data",
+            "dependencies": [
+              3,
+              4
+            ],
+            "details": "Implement generateReport method that formats collected GATT and advertisement data into human-readable TXT format. Include device overview, advertisement data section, services and characteristics breakdown with UUIDs, properties, and values. Format UUIDs consistently, handle binary data encoding (hex), include timestamps and inspection metadata. Ensure report is comprehensive and suitable for unknown device analysis.\n<info added on 2025-10-16T22:54:56.555Z>\nI'll analyze the codebase to understand the BLE device inspection implementation and then provide the update for the subtask.Based on the analysis of the BLE device inspector code, I can see that the _generateReport method has been fully implemented spanning lines 294-490 with comprehensive functionality. Here's the update for the subtask:\n\nImplementation completed with _generateReport method (lines 296-393) containing comprehensive TXT report generation. Features include: structured header/footer with separator lines (═══), device information section with deviceId, name, RSSI, timestamps, duration calculation, and error reporting. Advertisement data section formats service UUIDs with hex and ASCII representation. GATT services breakdown shows all discovered services with primary/secondary type designation, characteristics with properties (Read, Write, WriteNoResp, Notify, Indicate), values in hex+ASCII format, descriptors, and error handling for failed reads. Helper methods implemented: _formatBytes() for hex conversion, _formatAscii() for printable character display, _formatProperties() for characteristic capabilities, _formatTimestamp() for ISO format display, _getKnownServiceName() and _getKnownCharacteristicName() for common BLE UUID identification including Generic Access, Device Information, Heart Rate, Battery Service, and fitness equipment services. Report structure ensures human readability for unknown device analysis with proper spacing and separators.\n</info added on 2025-10-16T22:54:56.555Z>",
+            "status": "done",
+            "testStrategy": "Test report generation with various device data combinations, verify formatting consistency, and validate report completeness",
+            "parentId": "undefined",
+            "updatedAt": "2025-10-16T22:55:08.597Z"
+          }
+        ],
+        "updatedAt": "2025-10-16T23:03:00.038Z"
       },
       {
-        "id": 2,
+        "id": "2",
         "title": "Create UnknownDeviceReportPage - Scanning UI",
         "description": "Implement page with BLE scanning functionality and device selection interface",
         "details": "Create `lib/pages/unknown_device_report_page.dart` that auto-starts BLE scan on load with NO service filters (scan all devices). Display explanatory text, loading indicator, and list of discovered devices showing name/Unknown Device, RSSI indicator, deviceId. Handle Bluetooth permissions, disabled state, provide scan restart functionality. Use existing flutter_reactive_ble patterns from scanner_page.dart. Sort devices by RSSI strength, debounce updates (200ms).",
@@ -24,20 +90,20 @@
         "subtasks": []
       },
       {
-        "id": 3,
+        "id": "3",
         "title": "Implement Data Collection and Review UI",
         "description": "Complete UnknownDeviceReportPage with device connection, data collection, and submission interface",
         "details": "Extend UnknownDeviceReportPage to handle device selection, show connection loading overlay, call BleDeviceInspector service, generate TXT file in memory, transition to review state. Include optional notes field using reactive_forms (FormGroup with 'notes' control), preview first 10 lines of collected data, submit button. Handle connection failures with retry options and graceful error recovery.",
         "testStrategy": "Test device connection flow, data collection success/failure scenarios, form validation, preview functionality, and error handling",
         "priority": "high",
         "dependencies": [
-          1
+          "1"
         ],
         "status": "pending",
         "subtasks": []
       },
       {
-        "id": 4,
+        "id": "4",
         "title": "Create API Client for Device Reporting",
         "description": "Implement API client method to submit unknown device reports to backend",
         "details": "Create `lib/api/devices/report_unknown_device.dart` following existing pattern from update_profile.dart. Implement postReportUnknownDevice() using multipart/form-data with dio's FormData, include Authorization header (Bearer token), handle deviceId, deviceName, notes, reportFileContent parameters. Create ReportUnknownDeviceResponse with Rekord parsing for success, message, reportId fields. Add method to VekoloApiClient and export from vekolo_api_client.dart.",
@@ -48,94 +114,98 @@
         "subtasks": []
       },
       {
-        "id": 5,
+        "id": "5",
         "title": "Integrate Scanner Page Navigation",
         "description": "Add 'My device is not listed' button to ScannerPage and configure routing",
         "details": "Add button at bottom of device list in ScannerPage (around line 257) with text 'My device is not listed'. Button should navigate to '/unknown-device' using context.go(). Add route configuration to router.dart: '/unknown-device' → UnknownDeviceReportPage. Ensure button styling is consistent with app design. After successful report submission, navigate back to '/scanner'.",
         "testStrategy": "Test navigation flow, button placement and styling, route configuration, and back navigation after submission",
         "priority": "medium",
         "dependencies": [
-          2,
-          3
+          "2",
+          "3"
         ],
         "status": "pending",
         "subtasks": []
       },
       {
-        "id": 6,
+        "id": "6",
         "title": "Implement Comprehensive Error Handling",
         "description": "Add robust error handling and user feedback across all states of the unknown device reporting flow",
         "details": "Implement error handling for: Bluetooth disabled (show error + 'Open Settings' button), permission denial, no devices found ('No devices found' + 'Scan Again'), connection timeouts (retry options), partial data collection (continue with available data), backend upload failures (retry with data in memory), network offline scenarios. All errors logged with developer.log(error, stackTrace). Include appropriate loading states and success messaging.",
         "testStrategy": "Test all error scenarios, permission edge cases, network conditions, retry mechanisms, and user feedback clarity",
         "priority": "medium",
         "dependencies": [
-          2,
-          3,
-          4
+          "2",
+          "3",
+          "4"
         ],
         "status": "pending",
         "subtasks": []
       },
       {
-        "id": 7,
+        "id": "7",
         "title": "Implement Complete API Integration",
         "description": "Connect UnknownDeviceReportPage with API client for device report submission",
         "details": "Integrate report submission in UnknownDeviceReportPage using the API client from task 4. Handle loading states during submission, success responses with reportId, error responses with appropriate user feedback. Implement retry mechanism for failed submissions while keeping collected data in memory. Show success message and navigate back to ScannerPage on successful submission.",
         "testStrategy": "Test end-to-end submission flow, success/failure handling, retry functionality, and navigation after submission",
         "priority": "medium",
         "dependencies": [
-          3,
-          4
+          "3",
+          "4"
         ],
         "status": "pending",
         "subtasks": []
       },
       {
-        "id": 8,
+        "id": "8",
         "title": "Add Device Report Data Models",
         "description": "Create data models for device report submission and response handling",
         "details": "Create models for device report data structure including DeviceReportData class with deviceId, deviceName, notes, reportContent fields. Implement proper serialization/deserialization using existing Rekord patterns. Create ReportUnknownDeviceResponse model with success, message, reportId fields following the API specification. Ensure proper error handling and validation.",
         "testStrategy": "Test model serialization, deserialization, validation, and integration with API client",
         "priority": "low",
         "dependencies": [
-          4
+          "4"
         ],
         "status": "pending",
         "subtasks": []
       },
       {
-        "id": 9,
+        "id": "9",
         "title": "Optimize BLE Data Collection Performance",
         "description": "Optimize GATT data collection for better performance and reliability",
         "details": "Enhance BleDeviceInspector to batch characteristic reads, implement parallel service discovery where possible, add progress indicators for long-running collections, optimize memory usage for large GATT trees. Add configurable timeouts and retry mechanisms for unreliable devices. Implement data compression for large reports if needed.",
         "testStrategy": "Performance testing with various device types, memory usage monitoring, timeout handling, and user experience validation",
         "priority": "low",
         "dependencies": [
-          1
+          "1"
         ],
         "status": "pending",
         "subtasks": []
       },
       {
-        "id": 10,
+        "id": "10",
         "title": "End-to-End Testing and Validation",
         "description": "Comprehensive testing of the complete unknown device reporting flow",
         "details": "Test complete user journey: Scanner → 'My device is not listed' → scan → select device → collect data → review → submit → success → back to scanner. Test with various BLE device types (full GATT data, restricted characteristics, minimal data), connection failures, backend errors, network issues, Bluetooth state changes. Validate TXT file format readability and backend data reception. Test edge cases and user cancellation scenarios.",
         "testStrategy": "Manual testing with real BLE devices, automated integration tests, error scenario validation, and user experience verification",
         "priority": "medium",
         "dependencies": [
-          5,
-          6,
-          7
+          "5",
+          "6",
+          "7"
         ],
         "status": "pending",
         "subtasks": []
       }
     ],
     "metadata": {
-      "created": "2025-10-16T22:39:52.992Z",
-      "updated": "2025-10-16T22:39:52.992Z",
-      "description": "Tasks for master context"
+      "version": "1.0.0",
+      "lastModified": "2025-10-16T23:03:00.038Z",
+      "taskCount": 10,
+      "completedCount": 1,
+      "tags": [
+        "master"
+      ]
     }
   }
 }
