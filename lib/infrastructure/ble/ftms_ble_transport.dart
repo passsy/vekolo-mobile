@@ -41,6 +41,7 @@ class FtmsBleTransport {
   final List<Uint8List> _commandQueue = [];
   Uint8List? _sendingCommand;
   DateTime _lastSentCommandTime = DateTime.now();
+  Timer? _retryTimer;
 
   // Data stream controllers
   final _powerController = StreamController<PowerData>.broadcast();
@@ -327,8 +328,14 @@ class FtmsBleTransport {
       return;
     }
 
-    // Rate limiting
-    if (DateTime.now().difference(_lastSentCommandTime) < _bluetoothDebounce) {
+    // Rate limiting with scheduled retry
+    final timeSinceLastCommand = DateTime.now().difference(_lastSentCommandTime);
+    if (timeSinceLastCommand < _bluetoothDebounce) {
+      // Schedule retry after debounce period if not already scheduled
+      if (_retryTimer == null || !_retryTimer!.isActive) {
+        final remainingDebounce = _bluetoothDebounce - timeSinceLastCommand;
+        _retryTimer = Timer(remainingDebounce, _sendNextCommand);
+      }
       return;
     }
 
@@ -408,9 +415,11 @@ class FtmsBleTransport {
     _connectionSubscription?.cancel();
     _indoorBikeDataSubscription?.cancel();
     _controlPointSubscription?.cancel();
+    _retryTimer?.cancel();
     _connectionSubscription = null;
     _indoorBikeDataSubscription = null;
     _controlPointSubscription = null;
+    _retryTimer = null;
     _commandQueue.clear();
     _sendingCommand = null;
     _connectionCompleter = null;
@@ -431,6 +440,7 @@ class FtmsBleTransport {
     _connectionSubscription?.cancel();
     _indoorBikeDataSubscription?.cancel();
     _controlPointSubscription?.cancel();
+    _retryTimer?.cancel();
     _powerController.close();
     _cadenceController.close();
     _connectionStateController.close();
