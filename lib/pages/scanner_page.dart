@@ -255,6 +255,21 @@ class _ScannerPageState extends State<ScannerPage> {
                     },
                   ),
           ),
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: OutlinedButton.icon(
+              onPressed: () {
+                developer.log('[ScannerPage] Navigating to unknown device report page');
+                context.go('/unknown-device');
+              },
+              icon: const Icon(Icons.help_outline),
+              label: const Text('My device is not listed'),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                minimumSize: const Size(double.infinity, 48),
+              ),
+            ),
+          ),
         ],
       ),
     );

@@ -6,6 +6,7 @@ import 'package:vekolo/pages/home_page.dart';
 import 'package:vekolo/pages/profile_page.dart';
 import 'package:vekolo/pages/scanner_page.dart';
 import 'package:vekolo/pages/trainer_page.dart';
+import 'package:vekolo/pages/unknown_device_report_page.dart';
 import 'package:vekolo/pages/workout_player_page.dart';
 
 final router = GoRouter(
@@ -24,6 +25,7 @@ final router = GoRouter(
         return TrainerPage(deviceId: deviceId, deviceName: deviceName);
       },
     ),
+    GoRoute(path: '/unknown-device', builder: (context, state) => const UnknownDeviceReportPage()),
     GoRoute(path: '/workout-player', builder: (context, state) => const WorkoutPlayerPage()),
   ],
 );
