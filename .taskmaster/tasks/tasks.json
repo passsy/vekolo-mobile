@@ -1,0 +1,141 @@
+{
+  "master": {
+    "tasks": [
+      {
+        "id": 1,
+        "title": "Create BleDeviceInspector Service",
+        "description": "Implement service to connect to BLE devices and collect comprehensive GATT data for unknown device reporting",
+        "details": "Create `lib/services/ble_device_inspector.dart` using existing flutter_reactive_ble. Service should: connect to device by deviceId, discover all services/characteristics/descriptors, read properties and values (handle errors gracefully), capture advertisement data, generate human-readable TXT report with all collected data. Include connection timeout (30s), characteristic read timeout (10s), and proper error handling with developer.log(error, stackTrace). Continue collection even if some reads fail.",
+        "testStrategy": "Unit tests with mock BLE devices, test connection failures, partial data collection, timeout scenarios, and TXT report format validation",
+        "priority": "high",
+        "dependencies": [],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 2,
+        "title": "Create UnknownDeviceReportPage - Scanning UI",
+        "description": "Implement page with BLE scanning functionality and device selection interface",
+        "details": "Create `lib/pages/unknown_device_report_page.dart` that auto-starts BLE scan on load with NO service filters (scan all devices). Display explanatory text, loading indicator, and list of discovered devices showing name/Unknown Device, RSSI indicator, deviceId. Handle Bluetooth permissions, disabled state, provide scan restart functionality. Use existing flutter_reactive_ble patterns from scanner_page.dart. Sort devices by RSSI strength, debounce updates (200ms).",
+        "testStrategy": "Test BLE scanning, permission handling, device list updates, Bluetooth disabled scenarios, and user interaction flows",
+        "priority": "high",
+        "dependencies": [],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 3,
+        "title": "Implement Data Collection and Review UI",
+        "description": "Complete UnknownDeviceReportPage with device connection, data collection, and submission interface",
+        "details": "Extend UnknownDeviceReportPage to handle device selection, show connection loading overlay, call BleDeviceInspector service, generate TXT file in memory, transition to review state. Include optional notes field using reactive_forms (FormGroup with 'notes' control), preview first 10 lines of collected data, submit button. Handle connection failures with retry options and graceful error recovery.",
+        "testStrategy": "Test device connection flow, data collection success/failure scenarios, form validation, preview functionality, and error handling",
+        "priority": "high",
+        "dependencies": [
+          1
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 4,
+        "title": "Create API Client for Device Reporting",
+        "description": "Implement API client method to submit unknown device reports to backend",
+        "details": "Create `lib/api/devices/report_unknown_device.dart` following existing pattern from update_profile.dart. Implement postReportUnknownDevice() using multipart/form-data with dio's FormData, include Authorization header (Bearer token), handle deviceId, deviceName, notes, reportFileContent parameters. Create ReportUnknownDeviceResponse with Rekord parsing for success, message, reportId fields. Add method to VekoloApiClient and export from vekolo_api_client.dart.",
+        "testStrategy": "Test API calls with valid/invalid data, authentication handling, multipart upload, error responses, and response parsing",
+        "priority": "medium",
+        "dependencies": [],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 5,
+        "title": "Integrate Scanner Page Navigation",
+        "description": "Add 'My device is not listed' button to ScannerPage and configure routing",
+        "details": "Add button at bottom of device list in ScannerPage (around line 257) with text 'My device is not listed'. Button should navigate to '/unknown-device' using context.go(). Add route configuration to router.dart: '/unknown-device' → UnknownDeviceReportPage. Ensure button styling is consistent with app design. After successful report submission, navigate back to '/scanner'.",
+        "testStrategy": "Test navigation flow, button placement and styling, route configuration, and back navigation after submission",
+        "priority": "medium",
+        "dependencies": [
+          2,
+          3
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 6,
+        "title": "Implement Comprehensive Error Handling",
+        "description": "Add robust error handling and user feedback across all states of the unknown device reporting flow",
+        "details": "Implement error handling for: Bluetooth disabled (show error + 'Open Settings' button), permission denial, no devices found ('No devices found' + 'Scan Again'), connection timeouts (retry options), partial data collection (continue with available data), backend upload failures (retry with data in memory), network offline scenarios. All errors logged with developer.log(error, stackTrace). Include appropriate loading states and success messaging.",
+        "testStrategy": "Test all error scenarios, permission edge cases, network conditions, retry mechanisms, and user feedback clarity",
+        "priority": "medium",
+        "dependencies": [
+          2,
+          3,
+          4
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 7,
+        "title": "Implement Complete API Integration",
+        "description": "Connect UnknownDeviceReportPage with API client for device report submission",
+        "details": "Integrate report submission in UnknownDeviceReportPage using the API client from task 4. Handle loading states during submission, success responses with reportId, error responses with appropriate user feedback. Implement retry mechanism for failed submissions while keeping collected data in memory. Show success message and navigate back to ScannerPage on successful submission.",
+        "testStrategy": "Test end-to-end submission flow, success/failure handling, retry functionality, and navigation after submission",
+        "priority": "medium",
+        "dependencies": [
+          3,
+          4
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 8,
+        "title": "Add Device Report Data Models",
+        "description": "Create data models for device report submission and response handling",
+        "details": "Create models for device report data structure including DeviceReportData class with deviceId, deviceName, notes, reportContent fields. Implement proper serialization/deserialization using existing Rekord patterns. Create ReportUnknownDeviceResponse model with success, message, reportId fields following the API specification. Ensure proper error handling and validation.",
+        "testStrategy": "Test model serialization, deserialization, validation, and integration with API client",
+        "priority": "low",
+        "dependencies": [
+          4
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 9,
+        "title": "Optimize BLE Data Collection Performance",
+        "description": "Optimize GATT data collection for better performance and reliability",
+        "details": "Enhance BleDeviceInspector to batch characteristic reads, implement parallel service discovery where possible, add progress indicators for long-running collections, optimize memory usage for large GATT trees. Add configurable timeouts and retry mechanisms for unreliable devices. Implement data compression for large reports if needed.",
+        "testStrategy": "Performance testing with various device types, memory usage monitoring, timeout handling, and user experience validation",
+        "priority": "low",
+        "dependencies": [
+          1
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 10,
+        "title": "End-to-End Testing and Validation",
+        "description": "Comprehensive testing of the complete unknown device reporting flow",
+        "details": "Test complete user journey: Scanner → 'My device is not listed' → scan → select device → collect data → review → submit → success → back to scanner. Test with various BLE device types (full GATT data, restricted characteristics, minimal data), connection failures, backend errors, network issues, Bluetooth state changes. Validate TXT file format readability and backend data reception. Test edge cases and user cancellation scenarios.",
+        "testStrategy": "Manual testing with real BLE devices, automated integration tests, error scenario validation, and user experience verification",
+        "priority": "medium",
+        "dependencies": [
+          5,
+          6,
+          7
+        ],
+        "status": "pending",
+        "subtasks": []
+      }
+    ],
+    "metadata": {
+      "created": "2025-10-16T22:39:52.992Z",
+      "updated": "2025-10-16T22:39:52.992Z",
+      "description": "Tasks for master context"
+    }
+  }
+}
