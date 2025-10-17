@@ -93,17 +93,14 @@ class _LoginPageState extends State<LoginPage> {
 
       // Store tokens
       final authService = authServiceRef.of(context);
-      await authService.saveTokens(
-        accessToken: response.accessToken,
-        refreshToken: response.refreshToken,
-        user: response.user,
-      );
+      await authService.saveTokens(accessToken: response.accessToken, refreshToken: response.refreshToken);
 
       if (!mounted) return;
 
       // Navigate to home
       context.go('/');
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Welcome back, ${response.user.name}!')));
+      final user = response.accessToken.parseUser();
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Welcome back, ${user.name}!')));
     } catch (e, stackTrace) {
       if (!mounted) return;
 

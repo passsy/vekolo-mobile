@@ -1,3 +1,4 @@
+import 'package:vekolo/api/auth/redeem_code.dart';
 import 'package:vekolo/models/rekord.dart';
 
 class User with RekordMixin {
@@ -53,6 +54,11 @@ class User with RekordMixin {
   String get email => rekord.read('email').asStringOrThrow();
   bool get emailVerified => rekord.read('emailVerified').asBoolOrThrow();
 
+  /// Can be 'free' or 'pro'
+  ///
+  /// There is no distinction between monthly and yearly subscribers
+  String get plan => rekord.read('plan').asStringOrThrow();
+
   // Profile settings
   String get activityVisibility => rekord.read('activityVisibility').asStringOrThrow();
   String get profileVisibility => rekord.read('profileVisibility').asStringOrThrow();
@@ -74,28 +80,6 @@ class User with RekordMixin {
   String get totalDistanceCount => rekord.read('totalDistanceCount').asStringOrThrow();
   int get totalDurationCount => rekord.read('totalDurationCount').asIntOrThrow();
 
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'activityVisibility': activityVisibility,
-      'email': email,
-      'emailVerified': emailVerified,
-      'name': name,
-      'profileVisibility': profileVisibility,
-      'avatar': avatar,
-      'ftp': ftp,
-      'measurementPreference': measurementPreference,
-      'weight': weight,
-      'sex': sex,
-      'stravaId': stravaId,
-      'stravaSync': stravaSync,
-      'stravaUsername': stravaUsername,
-      'totalActivitiesCount': totalActivitiesCount,
-      'totalDistanceCount': totalDistanceCount,
-      'totalDurationCount': totalDurationCount,
-    };
-  }
-
   @override
   bool operator ==(Object other) =>
       identical(this, other) || other is User && runtimeType == other.runtimeType && id == other.id;
@@ -108,3 +92,10 @@ class User with RekordMixin {
 }
 
 class UserInit {}
+
+extension UserInitExt on UserInit {
+  User fromAccessToken(AccessToken accessToken) {
+    final user = pick(accessToken.decode(), 'user').asMapOrThrow<String, Object?>();
+    return User.fromData(user);
+  }
+}

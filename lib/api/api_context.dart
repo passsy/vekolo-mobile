@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:vekolo/api/vekolo_api_client.dart';
 
 /// Context object passed to all API request methods
 ///
@@ -10,7 +11,7 @@ class ApiContext {
 
   /// Callback for retrieving the current access token
   /// Returns null if no user is authenticated
-  final Future<String?> Function() getAccessToken;
+  final Future<AccessToken?> Function() getAccessToken;
 
   const ApiContext({required this.dio, required this.getAccessToken});
 }

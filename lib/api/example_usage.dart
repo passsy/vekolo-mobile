@@ -12,6 +12,7 @@ void main() async {
   // Initialize the client with your base URL
   final client = VekoloApiClient(
     baseUrl: 'https://your-domain.com', // or http://localhost:3000 for dev
+    tokenProvider: () async => null, // No token initially
   );
 
   // Example 1: Sign up flow
@@ -66,7 +67,8 @@ Future<void> signupFlow(VekoloApiClient client) async {
     );
 
     // Step 4: Access nested User object through Rekord
-    final user = tokenResponse.user;
+    final accessToken = tokenResponse.accessToken;
+    final user = accessToken.parseUser();
 
     print('Logged in as ${user.name}');
     print('Email: ${user.email}');
@@ -113,7 +115,7 @@ Future<void> loginFlow(VekoloApiClient client) async {
     );
 
     // Rekord pattern makes nested access clean
-    print('Logged in as ${tokenResponse.user.name}');
+    print('Logged in as ${tokenResponse.accessToken.parseUser().name}');
 
     // TODO: Store these tokens in flutter_secure_storage
   } catch (e, stackTrace) {

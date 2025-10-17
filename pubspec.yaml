@@ -20,6 +20,7 @@ dependencies:
   deep_pick: ^1.1.0
   reactive_forms: ^18.1.1
   state_beacon: ^1.0.0
+  clock: ^1.0.0
 
 dev_dependencies:
   flutter_test:

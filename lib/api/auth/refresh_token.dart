@@ -11,11 +11,28 @@ Future<RefreshTokenResponse> postRefreshToken(ApiContext context, {required Stri
   final response = await context.dio.post(
     '/auth/token/refresh',
     data: {'refreshToken': refreshToken},
-    options: Options(contentType: Headers.jsonContentType),
+    options: Options(
+      contentType: Headers.jsonContentType,
+      headers: {
+        'Accept': ['application/json'],
+      },
+    ),
   );
 
   if (response.statusCode == 401) {
     // TODO check if default error exception (with body) would be enough to parse that case in the UI
+    //
+    // {
+    //   "error" : true,
+    //   "url" : "https://vekolo-development.up.railway.app/auth/token/refresh",
+    //   "statusCode" : 401,
+    //   "statusMessage" : "Invalid or expired refresh token",
+    //   "message" : "Invalid or expired refresh token",
+    //   "data" : {
+    //     "errorCode" : "915205"
+    //   }
+    // }
+    // TODO logout the user somewhere when this happens
     throw DioException(
       requestOptions: response.requestOptions,
       response: response,

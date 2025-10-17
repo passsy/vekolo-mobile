@@ -108,17 +108,15 @@ class _SignupPageState extends State<SignupPage> {
 
       // Store tokens
       final authService = authServiceRef.of(context);
-      await authService.saveTokens(
-        accessToken: response.accessToken,
-        refreshToken: response.refreshToken,
-        user: response.user,
-      );
+      await authService.saveTokens(accessToken: response.accessToken, refreshToken: response.refreshToken);
 
       if (!mounted) return;
 
       // Navigate to home
       context.go('/');
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Welcome, ${response.user.name}!')));
+
+      final user = response.accessToken.parseUser();
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Welcome, ${user.name}!')));
     } catch (e, stackTrace) {
       if (!mounted) return;
 

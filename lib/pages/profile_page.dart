@@ -64,6 +64,15 @@ class _ProfilePageState extends State<ProfilePage> {
 
     try {
       final authService = authServiceRef.of(context);
+      try {
+        final refreshToken = await authService.getRefreshToken();
+        final response = await authService.apiClient().refreshToken(refreshToken: refreshToken!.jwt);
+        print(response);
+      } catch (e) {
+        print('Token refresh error: $e');
+      }
+      return;
+
       final apiClient = apiClientRef.of(context);
       final messenger = ScaffoldMessenger.of(context);
       final user = authService.currentUser.value;
@@ -182,7 +191,36 @@ class _ProfilePageState extends State<ProfilePage> {
               Text(user.name, style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
               Text(user.email, style: TextStyle(fontSize: 16, color: Colors.grey[600])),
-              const SizedBox(height: 48),
+              const SizedBox(height: 12),
+              // Plan badge
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: user.plan == 'pro' ? Colors.amber.withValues(alpha: 0.2) : Colors.grey.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: user.plan == 'pro' ? Colors.amber : Colors.grey, width: 1.5),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      user.plan == 'pro' ? Icons.workspace_premium : Icons.person,
+                      size: 16,
+                      color: user.plan == 'pro' ? Colors.amber[700] : Colors.grey[700],
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      user.plan.toUpperCase(),
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: user.plan == 'pro' ? Colors.amber[700] : Colors.grey[700],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 36),
 
               // Stats Cards
               ReactiveForm(

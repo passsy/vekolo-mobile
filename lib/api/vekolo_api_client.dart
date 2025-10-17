@@ -28,26 +28,21 @@ export 'package:vekolo/api/user/update_profile.dart';
 /// - lib/api/auth/revoke_token.dart
 class VekoloApiClient {
   final String baseUrl;
-  final Dio _dio;
-  late final ApiContext _apiContext;
 
   VekoloApiClient({
     required this.baseUrl,
-    Dio? dio,
-    bool enableLogging = true,
-    Future<String?> Function()? tokenProvider,
-  }) : _dio = dio ?? Dio() {
-    // Create ApiContext with the same Dio instance
-    _apiContext = ApiContext(dio: _dio, getAccessToken: tokenProvider ?? () async => null);
+    required Future<AccessToken?> Function() tokenProvider,
+    List<Interceptor> interceptors = const [],
+  }) {
+    final Dio _dio = Dio();
+    context = ApiContext(dio: _dio, getAccessToken: tokenProvider);
 
     _dio.options.baseUrl = baseUrl;
     _dio.options.validateStatus = (status) => status != null && status < 500;
-
-    // Add pretty logging interceptor for debugging
-    if (enableLogging) {
-      _dio.interceptors.add(PrettyLogInterceptor(logMode: LogMode.unexpectedResponses));
-    }
+    _dio.interceptors.addAll(interceptors);
   }
+
+  late final ApiContext context;
 
   // Auth endpoints
 
@@ -61,35 +56,35 @@ class VekoloApiClient {
     int? weight,
     int? ftp,
   }) {
-    return postRequestSignupCode(_apiContext, email: email, name: name, sex: sex, weight: weight, ftp: ftp);
+    return postRequestSignupCode(context, email: email, name: name, sex: sex, weight: weight, ftp: ftp);
   }
 
   /// Request a magic code for login
   ///
   /// `POST /auth/code/request`
   Future<CodeRequestResponse> requestLoginCode({required String email}) {
-    return postRequestLoginCode(_apiContext, email: email);
+    return postRequestLoginCode(context, email: email);
   }
 
   /// Redeem a magic code for JWT tokens
   ///
   /// `POST /auth/token/redeem`
   Future<TokenResponse> redeemCode({required String email, required String code, String? deviceInfo}) {
-    return postRedeemCode(_apiContext, email: email, code: code, deviceInfo: deviceInfo);
+    return postRedeemCode(context, email: email, code: code, deviceInfo: deviceInfo);
   }
 
   /// Refresh an access token
   ///
   /// `POST /auth/token/refresh`
   Future<RefreshTokenResponse> refreshToken({required String refreshToken}) {
-    return postRefreshToken(_apiContext, refreshToken: refreshToken);
+    return postRefreshToken(context, refreshToken: refreshToken);
   }
 
   /// Revoke a refresh token (logout)
   ///
   /// `POST /auth/token/revoke`
   Future<RevokeTokenResponse> revokeToken({required String refreshToken}) {
-    return postRevokeToken(_apiContext, refreshToken: refreshToken);
+    return postRevokeToken(context, refreshToken: refreshToken);
   }
 
   // User endpoints
@@ -98,6 +93,6 @@ class VekoloApiClient {
   ///
   /// `POST /api/user/update`
   Future<UpdateProfileResponse> updateProfile({int? ftp, int? weight, String? name, String? email}) {
-    return postUpdateProfile(_apiContext, ftp: ftp, weight: weight, name: name, email: email);
+    return postUpdateProfile(context, ftp: ftp, weight: weight, name: name, email: email);
   }
 }

@@ -1,9 +1,9 @@
 import 'dart:convert';
-import 'dart:developer' as developer;
 import 'package:dio/dio.dart';
 import 'package:vekolo/api/api_context.dart';
 import 'package:vekolo/models/rekord.dart';
 import 'package:vekolo/models/user.dart';
+import 'package:clock/clock.dart';
 
 /// Redeem a magic code for JWT tokens
 ///
@@ -34,21 +34,6 @@ Future<TokenResponse> postRedeemCode(
   return TokenResponse.init.fromResponse(response);
 }
 
-/// Decode JWT payload without verification
-Map<String, dynamic> _decodeJwtPayload(String token) {
-  final parts = token.split('.');
-  if (parts.length != 3) {
-    throw FormatException('Invalid JWT token format');
-  }
-
-  // Decode the payload (middle part)
-  final payload = parts[1];
-  // Add padding if needed for base64 decoding
-  final normalized = base64Url.normalize(payload);
-  final decoded = utf8.decode(base64Url.decode(normalized));
-  return jsonDecode(decoded) as Map<String, dynamic>;
-}
-
 /// Response containing JWT tokens and user data
 class TokenResponse with RekordMixin {
   TokenResponse.fromData(Map<String, Object?> data) : rekord = Rekord(data);
@@ -68,26 +53,14 @@ class TokenResponse with RekordMixin {
 
   bool get success => rekord.read('success').asBoolOrThrow();
 
-  /// JWT access token (12h validity)
-  String get accessToken => rekord.read('accessToken').asStringOrThrow();
+  /// JWT access token (6h validity)
+  AccessToken get accessToken => AccessToken(rekord.read('accessToken').asStringOrThrow());
 
   /// Long-lived refresh token (6 months)
-  String get refreshToken => rekord.read('refreshToken').asStringOrThrow();
-
-  /// User data decoded from the JWT access token
-  User get user {
-    try {
-      final payload = _decodeJwtPayload(accessToken);
-      final userData = payload['user'] as Map<String, dynamic>;
-      return User.fromData(userData);
-    } catch (e, stackTrace) {
-      developer.log('Failed to decode user from JWT', error: e, stackTrace: stackTrace);
-      rethrow;
-    }
-  }
+  RefreshToken get refreshToken => RefreshToken(rekord.read('refreshToken').asStringOrThrow());
 
   @override
-  String toString() => 'TokenResponse(success: $success, user: ${user.name})';
+  String toString() => 'TokenResponse(success: $success, user: ${accessToken.decode()})';
 }
 
 class TokenResponseInit {}
@@ -97,3 +70,36 @@ extension TokenResponseInitExt on TokenResponseInit {
     return TokenResponse.fromData(response.data as Map<String, Object?>);
   }
 }
+
+extension type AccessToken(String jwt) {
+  /// Decode JWT payload without verification
+  Map<String, dynamic> decode() {
+    final parts = jwt.split('.');
+    if (parts.length != 3) {
+      throw FormatException('Invalid JWT token format');
+    }
+
+    // Decode the payload (middle part)
+    final payload = parts[1];
+    // Add padding if needed for base64 decoding
+    final normalized = base64Url.normalize(payload);
+    final decoded = utf8.decode(base64Url.decode(normalized));
+    return jsonDecode(decoded) as Map<String, dynamic>;
+  }
+
+  /// might be moved into a separate id token later
+  User parseUser() {
+    return User.init.fromAccessToken(this);
+  }
+
+  DateTime get expiryDate {
+    final payload = decode();
+    final exp = payload['exp'];
+    if (exp is int) {
+      return DateTime.fromMillisecondsSinceEpoch(exp * 1000);
+    }
+    throw FormatException('Invalid or missing exp claim in JWT token');
+  }
+}
+
+extension type RefreshToken(String jwt) {}

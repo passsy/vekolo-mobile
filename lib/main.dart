@@ -1,5 +1,6 @@
 import 'package:context_plus/context_plus.dart';
 import 'package:flutter/material.dart';
+import 'package:vekolo/api/pretty_log_interceptor.dart';
 import 'package:vekolo/api/vekolo_api_client.dart';
 import 'package:vekolo/config/api_config.dart';
 import 'package:vekolo/domain/devices/device_manager.dart';
@@ -10,26 +11,19 @@ import 'package:vekolo/services/workout_sync_service.dart';
 import 'package:vekolo/state/device_state.dart';
 import 'package:vekolo/state/device_state_manager.dart';
 
-void main() async {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // Initialize AuthService and load saved auth state
-  final authService = AuthService();
-  await authService.initialize();
-
-  runApp(MyApp(authService: authService));
+  runApp(VekoloApp());
 }
 
-class MyApp extends StatefulWidget {
-  final AuthService authService;
-
-  const MyApp({super.key, required this.authService});
+class VekoloApp extends StatefulWidget {
+  const VekoloApp({super.key});
 
   @override
-  State<MyApp> createState() => _MyAppState();
+  State<VekoloApp> createState() => _VekoloAppState();
 }
 
-class _MyAppState extends State<MyApp> {
+class _VekoloAppState extends State<VekoloApp> {
   DeviceStateManager? _deviceStateManager;
 
   @override
@@ -43,20 +37,29 @@ class _MyAppState extends State<MyApp> {
     return ContextRef.root(
       child: Builder(
         builder: (context) {
+          late final VekoloApiClient apiClient;
+          final authService = authServiceRef.bindValue(context, AuthService(apiClient: () => apiClient));
+          // TODO move in init method
+          authService.initialize();
+
           // Bind services
-          bleManagerRef.bindLazy(context, () => BleManager());
-          apiClientRef.bindLazy(
+          apiClient = apiClientRef.bindValue(
             context,
-            () => VekoloApiClient(baseUrl: ApiConfig.baseUrl, tokenProvider: () => widget.authService.getAccessToken()),
+            VekoloApiClient(
+              baseUrl: ApiConfig.baseUrl,
+              interceptors: [
+                PrettyLogInterceptor(logMode: LogMode.unexpectedResponses),
+                authService.apiInterceptor,
+              ],
+              tokenProvider: () async {
+                return await authService.getAccessToken();
+              },
+            ),
           );
-          authServiceRef.bindValue(context, widget.authService);
 
           // Initialize DeviceManager
-          deviceManagerRef.bindLazy(context, () {
-            final manager = DeviceManager();
-            // Devices will be added via BLE scanning in DevicesPage
-            return manager;
-          });
+          bleManagerRef.bindLazy(context, () => BleManager());
+          deviceManagerRef.bindLazy(context, () => DeviceManager());
 
           // Initialize WorkoutSyncService with DeviceManager dependency
           workoutSyncServiceRef.bindLazy(context, () => WorkoutSyncService(deviceManagerRef.of(context)));

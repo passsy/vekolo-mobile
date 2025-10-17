@@ -1,4 +1,5 @@
 import 'dart:collection';
+import 'dart:developer' as developer;
 
 import 'package:deep_pick/deep_pick.dart' as deep_pick;
 
@@ -81,7 +82,8 @@ class Rekord {
   ///
   /// This provides access to the raw data without allowing modifications.
   Map<String, Object?> asMap() {
-    return UnmodifiableMapView<String, Object?>(_data);
+    final easyToDebugCopy = Map.of(_data);
+    return UnmodifiableMapView<String, Object?>(easyToDebugCopy);
   }
 
   /// Converts all nested [Rekord] and [RekordMixin] objects to plain maps
@@ -128,7 +130,7 @@ class Rekord {
   /// final tags = rekord.read('tags').asListOrEmpty();
   /// ```
   deep_pick.Pick get read {
-    return deep_pick.Pick(_data);
+    return deep_pick.Pick(_data).withContext('rekord', asMap());
   }
 
   @override
