@@ -1,5 +1,4 @@
 import 'package:context_plus/context_plus.dart';
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:reactive_forms/reactive_forms.dart';
@@ -17,7 +16,7 @@ class _SignupPageState extends State<SignupPage> {
   final form = FormGroup({
     'email': FormControl<String>(validators: [Validators.required, Validators.email]),
     'name': FormControl<String>(),
-    'sex': FormControl<String>(value: 'm'),
+    'sex': FormControl<String>(validators: [Validators.required]),
     'weight': FormControl<int>(),
     'ftp': FormControl<int>(),
     'code': FormControl<String>(),
@@ -28,8 +27,8 @@ class _SignupPageState extends State<SignupPage> {
   String? _errorMessage;
 
   Future<void> _requestCode() async {
-    if (!form.control('email').valid) {
-      form.control('email').markAsTouched();
+    if (!form.valid) {
+      form.markAllAsTouched();
       return;
     }
 
@@ -188,18 +187,86 @@ class _SignupPageState extends State<SignupPage> {
                   readOnly: _codeSent || _isLoading,
                 ),
                 const SizedBox(height: 16),
-                ReactiveDropdownField<String>(
-                  formControlName: 'sex',
-                  decoration: const InputDecoration(
-                    labelText: 'Gender',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.wc),
-                  ),
-                  readOnly: _codeSent || _isLoading,
-                  items: const [
-                    DropdownMenuItem(value: 'm', child: Text('Male')),
-                    DropdownMenuItem(value: 'f', child: Text('Female')),
-                    DropdownMenuItem(value: 'd', child: Text('Diverse')),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Gender *', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+                    const SizedBox(height: 8),
+                    ReactiveValueListenableBuilder<String>(
+                      formControlName: 'sex',
+                      builder: (context, control, child) {
+                        final hasError = control.invalid && control.touched;
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: OutlinedButton.icon(
+                                    onPressed: (_codeSent || _isLoading) ? null : () => control.value = 'm',
+                                    icon: Icon(control.value == 'm' ? Icons.check_circle : Icons.circle_outlined),
+                                    label: const Text('Male'),
+                                    style: OutlinedButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(vertical: 12),
+                                      backgroundColor: control.value == 'm' ? Colors.blue.withValues(alpha: 0.1) : null,
+                                      side: BorderSide(
+                                        color: hasError
+                                            ? Colors.red
+                                            : (control.value == 'm' ? Colors.blue : Colors.grey),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: OutlinedButton.icon(
+                                    onPressed: (_codeSent || _isLoading) ? null : () => control.value = 'f',
+                                    icon: Icon(control.value == 'f' ? Icons.check_circle : Icons.circle_outlined),
+                                    label: const Text('Female'),
+                                    style: OutlinedButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(vertical: 12),
+                                      backgroundColor: control.value == 'f' ? Colors.pink.withValues(alpha: 0.1) : null,
+                                      side: BorderSide(
+                                        color: hasError
+                                            ? Colors.red
+                                            : (control.value == 'f' ? Colors.pink : Colors.grey),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: OutlinedButton.icon(
+                                    onPressed: (_codeSent || _isLoading) ? null : () => control.value = 'd',
+                                    icon: Icon(control.value == 'd' ? Icons.check_circle : Icons.circle_outlined),
+                                    label: const Text('Diverse'),
+                                    style: OutlinedButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(vertical: 12),
+                                      backgroundColor: control.value == 'd'
+                                          ? Colors.purple.withValues(alpha: 0.1)
+                                          : null,
+                                      side: BorderSide(
+                                        color: hasError
+                                            ? Colors.red
+                                            : (control.value == 'd' ? Colors.purple : Colors.grey),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            if (hasError)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 8, left: 12),
+                                child: Text(
+                                  'Please select your gender',
+                                  style: TextStyle(color: Colors.red[700], fontSize: 12),
+                                ),
+                              ),
+                          ],
+                        );
+                      },
+                    ),
                   ],
                 ),
                 const SizedBox(height: 16),

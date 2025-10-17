@@ -1,7 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:vekolo/api/api_context.dart';
 import 'package:vekolo/models/rekord.dart';
-import 'dart:developer' as developer;
 
 /// Revoke a refresh token (logout)
 ///
@@ -9,18 +8,13 @@ import 'dart:developer' as developer;
 ///
 /// Note: Even if this fails, local tokens should still be cleared.
 Future<RevokeTokenResponse> postRevokeToken(ApiContext context, {required String refreshToken}) async {
-  try {
-    final response = await context.dio.post(
-      '/auth/token/revoke',
-      data: {'refreshToken': refreshToken},
-      options: Options(contentType: Headers.jsonContentType),
-    );
+  final response = await context.dio.post(
+    '/auth/token/revoke',
+    data: {'refreshToken': refreshToken},
+    options: Options(contentType: Headers.jsonContentType),
+  );
 
-    return RevokeTokenResponse.fromData(response.data as Map<String, Object?>);
-  } catch (e, stackTrace) {
-    developer.log('Failed to revoke token', error: e, stackTrace: stackTrace);
-    rethrow;
-  }
+  return RevokeTokenResponse.init.fromResponse(response);
 }
 
 /// Response for token revocation
@@ -49,3 +43,9 @@ class RevokeTokenResponse with RekordMixin {
 }
 
 class RevokeTokenResponseInit {}
+
+extension RevokeTokenResponseInitExt on RevokeTokenResponseInit {
+  RevokeTokenResponse fromResponse(Response response) {
+    return RevokeTokenResponse.fromData(response.data as Map<String, Object?>);
+  }
+}

@@ -54,6 +54,7 @@ String extractDioErrorMessage(
     case DioExceptionType.badCertificate:
       return 'Security error. Please check your connection.';
     case DioExceptionType.unknown:
+    // ignore: unreachable_switch_default, keep in case new enum values are added
     default:
       return fallbackMessage ?? 'An unexpected error occurred. Please try again.';
   }

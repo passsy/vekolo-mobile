@@ -1,7 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:vekolo/api/api_context.dart';
 import 'package:vekolo/models/rekord.dart';
-import 'dart:developer' as developer;
 
 /// Request a magic code for signup
 ///
@@ -14,24 +13,19 @@ Future<CodeRequestResponse> postRequestSignupCode(
   int? weight,
   int? ftp,
 }) async {
-  try {
-    final response = await context.dio.post(
-      '/auth/code/request',
-      data: {
-        'type': 'signup',
-        'email': email,
-        if (name != null) 'name': name,
-        if (sex != null) 'sex': sex,
-        if (weight != null) 'weight': weight,
-        if (ftp != null) 'ftp': ftp,
-      },
-      options: Options(contentType: Headers.jsonContentType),
-    );
-    return CodeRequestResponse.fromData(response.data as Map<String, Object?>);
-  } catch (e, stackTrace) {
-    developer.log('Failed to request signup code', error: e, stackTrace: stackTrace);
-    rethrow;
-  }
+  final response = await context.dio.post(
+    '/auth/code/request',
+    data: {
+      'type': 'signup',
+      'email': email,
+      if (name != null) 'name': name,
+      if (sex != null) 'sex': sex,
+      if (weight != null) 'weight': weight,
+      if (ftp != null) 'ftp': ftp,
+    },
+    options: Options(contentType: Headers.jsonContentType, validateStatus: (status) => status == 200),
+  );
+  return CodeRequestResponse.init.fromResponse(response);
 }
 
 /// Response for code request (signup/login)
@@ -68,3 +62,9 @@ class CodeRequestResponse with RekordMixin {
 }
 
 class CodeRequestResponseInit {}
+
+extension CodeRequestResponseInitExt on CodeRequestResponseInit {
+  CodeRequestResponse fromResponse(Response response) {
+    return CodeRequestResponse.fromData(response.data as Map<String, Object?>);
+  }
+}

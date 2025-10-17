@@ -1,7 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:vekolo/api/api_context.dart';
 import 'package:vekolo/models/rekord.dart';
-import 'dart:developer' as developer;
 
 /// Refresh an access token
 ///
@@ -9,27 +8,23 @@ import 'dart:developer' as developer;
 ///
 /// Throws [DioException] if refresh token is invalid or expired (status 401)
 Future<RefreshTokenResponse> postRefreshToken(ApiContext context, {required String refreshToken}) async {
-  try {
-    final response = await context.dio.post(
-      '/auth/token/refresh',
-      data: {'refreshToken': refreshToken},
-      options: Options(contentType: Headers.jsonContentType),
+  final response = await context.dio.post(
+    '/auth/token/refresh',
+    data: {'refreshToken': refreshToken},
+    options: Options(contentType: Headers.jsonContentType),
+  );
+
+  if (response.statusCode == 401) {
+    // TODO check if default error exception (with body) would be enough to parse that case in the UI
+    throw DioException(
+      requestOptions: response.requestOptions,
+      response: response,
+      type: DioExceptionType.badResponse,
+      message: 'Invalid or expired refresh token',
     );
-
-    if (response.statusCode == 401) {
-      throw DioException(
-        requestOptions: response.requestOptions,
-        response: response,
-        type: DioExceptionType.badResponse,
-        message: 'Invalid or expired refresh token',
-      );
-    }
-
-    return RefreshTokenResponse.fromData(response.data as Map<String, Object?>);
-  } catch (e, stackTrace) {
-    developer.log('Failed to refresh token', error: e, stackTrace: stackTrace);
-    rethrow;
   }
+
+  return RefreshTokenResponse.init.fromResponse(response);
 }
 
 /// Response containing a new access token
@@ -57,3 +52,9 @@ class RefreshTokenResponse with RekordMixin {
 }
 
 class RefreshTokenResponseInit {}
+
+extension RefreshTokenResponseInitExt on RefreshTokenResponseInit {
+  RefreshTokenResponse fromResponse(Response response) {
+    return RefreshTokenResponse.fromData(response.data as Map<String, Object?>);
+  }
+}

@@ -1,9 +1,9 @@
 import 'dart:convert';
+import 'dart:developer' as developer;
 import 'package:dio/dio.dart';
 import 'package:vekolo/api/api_context.dart';
 import 'package:vekolo/models/rekord.dart';
 import 'package:vekolo/models/user.dart';
-import 'dart:developer' as developer;
 
 /// Redeem a magic code for JWT tokens
 ///
@@ -16,27 +16,22 @@ Future<TokenResponse> postRedeemCode(
   required String code,
   String? deviceInfo,
 }) async {
-  try {
-    final response = await context.dio.post(
-      '/auth/token/redeem',
-      data: {'email': email, 'code': code, if (deviceInfo != null) 'deviceInfo': deviceInfo},
-      options: Options(contentType: Headers.jsonContentType),
+  final response = await context.dio.post(
+    '/auth/token/redeem',
+    data: {'email': email, 'code': code, if (deviceInfo != null) 'deviceInfo': deviceInfo},
+    options: Options(contentType: Headers.jsonContentType),
+  );
+
+  if (response.statusCode == 400) {
+    throw DioException(
+      requestOptions: response.requestOptions,
+      response: response,
+      type: DioExceptionType.badResponse,
+      message: 'Invalid or expired magic code',
     );
-
-    if (response.statusCode == 400) {
-      throw DioException(
-        requestOptions: response.requestOptions,
-        response: response,
-        type: DioExceptionType.badResponse,
-        message: 'Invalid or expired magic code',
-      );
-    }
-
-    return TokenResponse.fromData(response.data as Map<String, Object?>);
-  } catch (e, stackTrace) {
-    developer.log('Failed to redeem code', error: e, stackTrace: stackTrace);
-    rethrow;
   }
+
+  return TokenResponse.init.fromResponse(response);
 }
 
 /// Decode JWT payload without verification
@@ -96,3 +91,9 @@ class TokenResponse with RekordMixin {
 }
 
 class TokenResponseInit {}
+
+extension TokenResponseInitExt on TokenResponseInit {
+  TokenResponse fromResponse(Response response) {
+    return TokenResponse.fromData(response.data as Map<String, Object?>);
+  }
+}
