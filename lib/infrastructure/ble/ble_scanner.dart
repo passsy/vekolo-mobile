@@ -1,12 +1,12 @@
 import 'dart:async';
 import 'dart:developer' as developer;
 
-import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
+import 'package:flutter_blue_plus/flutter_blue_plus.dart' as fbp;
 import 'package:vekolo/utils/ble_permissions.dart';
 
 /// Service for scanning and discovering FTMS-compatible BLE devices.
 ///
-/// This service wraps flutter_reactive_ble to provide a clean API for
+/// This service wraps flutter_blue_plus to provide a clean API for
 /// scanning for fitness devices that support the FTMS (Fitness Machine Service)
 /// protocol. It handles permission checks, Bluetooth status monitoring, and
 /// device discovery.
@@ -27,18 +27,16 @@ import 'package:vekolo/utils/ble_permissions.dart';
 /// scanner.stopScan();
 /// ```
 class BleScanner {
-  BleScanner({FlutterReactiveBle? ble}) : _ble = ble ?? FlutterReactiveBle();
-
-  final FlutterReactiveBle _ble;
+  BleScanner();
 
   /// FTMS service UUID (Fitness Machine Service)
-  static final ftmsServiceUuid = Uuid.parse('00001826-0000-1000-8000-00805f9b34fb');
+  static final ftmsServiceUuid = fbp.Guid('00001826-0000-1000-8000-00805f9b34fb');
 
   // Scan state
-  StreamSubscription<DiscoveredDevice>? _scanSubscription;
-  StreamSubscription<BleStatus>? _bleStatusSubscription;
+  StreamSubscription<List<fbp.ScanResult>>? _scanSubscription;
+  StreamSubscription<fbp.BluetoothAdapterState>? _bleStatusSubscription;
   bool _isScanning = false;
-  BleStatus _bleStatus = BleStatus.unknown;
+  fbp.BluetoothAdapterState _bleStatus = fbp.BluetoothAdapterState.unknown;
   bool _permissionsGranted = false;
 
   // Discovered devices map (deviceId -> DiscoveredDevice)
@@ -60,7 +58,7 @@ class BleScanner {
   Stream<ScanState> get scanState => _scanStateController.stream;
 
   /// Current BLE status.
-  BleStatus get bleStatus => _bleStatus;
+  fbp.BluetoothAdapterState get bleStatus => _bleStatus;
 
   /// Whether a scan is currently active.
   bool get isScanning => _isScanning;
@@ -79,14 +77,17 @@ class BleScanner {
   Future<void> initialize() async {
     developer.log('[BleScanner] Initializing scanner');
 
+    // Get initial BLE status
+    _bleStatus = await fbp.FlutterBluePlus.adapterState.first;
+
     // Listen to BLE status changes
-    _bleStatusSubscription = _ble.statusStream.listen((status) async {
+    _bleStatusSubscription = fbp.FlutterBluePlus.adapterState.listen((status) async {
       developer.log('[BleScanner] BLE status changed to: $status');
       _bleStatus = status;
       _emitScanState();
 
       // Check and request permissions when BLE becomes ready
-      if (status == BleStatus.ready || status == BleStatus.unauthorized) {
+      if (status == fbp.BluetoothAdapterState.on || status == fbp.BluetoothAdapterState.unauthorized) {
         await checkAndRequestPermissions();
       }
     });
@@ -140,7 +141,7 @@ class BleScanner {
     developer.log('[BleScanner] Start scan requested');
 
     // Check BLE status
-    if (_bleStatus != BleStatus.ready) {
+    if (_bleStatus != fbp.BluetoothAdapterState.on) {
       developer.log('[BleScanner] Cannot start scan, BLE status is: $_bleStatus');
       return ScanResult.bleNotReady(_bleStatus);
     }
@@ -168,27 +169,49 @@ class BleScanner {
     _emitScanState();
     _emitDevices();
 
-    _scanSubscription = _ble
-        .scanForDevices(withServices: [ftmsServiceUuid], scanMode: ScanMode.lowLatency)
-        .listen(
-          (device) {
-            final isNew = !_discoveredDevices.containsKey(device.id);
-            _discoveredDevices[device.id] = device;
+    try {
+      // Start scanning with flutter_blue_plus
+      await fbp.FlutterBluePlus.startScan(
+        withServices: [ftmsServiceUuid],
+        timeout: const Duration(seconds: 60),
+      );
+
+      // Listen to scan results
+      _scanSubscription = fbp.FlutterBluePlus.scanResults.listen(
+        (results) {
+          for (final result in results) {
+            final deviceId = result.device.remoteId.str;
+            final isNew = !_discoveredDevices.containsKey(deviceId);
+
+            // Convert ScanResult to DiscoveredDevice
+            _discoveredDevices[deviceId] = DiscoveredDevice(
+              id: deviceId,
+              name: result.device.platformName,
+              rssi: result.rssi,
+              serviceUuids: result.advertisementData.serviceUuids,
+            );
 
             if (isNew) {
               developer.log(
-                '[BleScanner] Discovered new device: ${device.name.isEmpty ? device.id : device.name} '
-                '(RSSI: ${device.rssi})',
+                '[BleScanner] Discovered new device: ${result.device.platformName.isEmpty ? deviceId : result.device.platformName} '
+                '(RSSI: ${result.rssi})',
               );
             }
 
             _emitDevices();
-          },
-          onError: (Object e, StackTrace stackTrace) {
-            developer.log('[BleScanner] Scan error: $e', error: e, stackTrace: stackTrace);
-            stopScan();
-          },
-        );
+          }
+        },
+        onError: (Object e, StackTrace stackTrace) {
+          developer.log('[BleScanner] Scan error: $e', error: e, stackTrace: stackTrace);
+          stopScan();
+        },
+      );
+    } catch (e, stackTrace) {
+      developer.log('[BleScanner] Failed to start scan: $e', error: e, stackTrace: stackTrace);
+      _isScanning = false;
+      _emitScanState();
+      return ScanResult.bleNotReady(_bleStatus);
+    }
 
     return ScanResult.success();
   }
@@ -196,12 +219,13 @@ class BleScanner {
   /// Stops the current scan.
   ///
   /// Does nothing if no scan is active.
-  void stopScan() {
+  Future<void> stopScan() async {
     if (!_isScanning) return;
 
     developer.log('[BleScanner] Stopping BLE scan (found ${_discoveredDevices.length} device(s))');
-    _scanSubscription?.cancel();
+    await _scanSubscription?.cancel();
     _scanSubscription = null;
+    await fbp.FlutterBluePlus.stopScan();
     _isScanning = false;
     _emitScanState();
   }
@@ -238,22 +262,23 @@ class ScanState {
   const ScanState({required this.isScanning, required this.bleStatus, required this.permissionsGranted});
 
   final bool isScanning;
-  final BleStatus bleStatus;
+  final fbp.BluetoothAdapterState bleStatus;
   final bool permissionsGranted;
 
   /// Whether the scanner is ready to scan.
-  bool get canScan => bleStatus == BleStatus.ready && permissionsGranted;
+  bool get canScan => bleStatus == fbp.BluetoothAdapterState.on && permissionsGranted;
 
   /// Human-readable status message.
   String get statusMessage {
-    if (bleStatus != BleStatus.ready) {
+    if (bleStatus != fbp.BluetoothAdapterState.on) {
       return switch (bleStatus) {
-        BleStatus.unknown => 'Initializing Bluetooth...',
-        BleStatus.unsupported => 'Bluetooth is not supported on this device',
-        BleStatus.unauthorized => 'Bluetooth permission required',
-        BleStatus.poweredOff => 'Bluetooth is turned off',
-        BleStatus.locationServicesDisabled => 'Location services required',
-        BleStatus.ready => 'Ready',
+        fbp.BluetoothAdapterState.unknown => 'Initializing Bluetooth...',
+        fbp.BluetoothAdapterState.unavailable => 'Bluetooth is not supported on this device',
+        fbp.BluetoothAdapterState.unauthorized => 'Bluetooth permission required',
+        fbp.BluetoothAdapterState.turningOn => 'Bluetooth is turning on...',
+        fbp.BluetoothAdapterState.off => 'Bluetooth is turned off',
+        fbp.BluetoothAdapterState.turningOff => 'Bluetooth is turning off...',
+        fbp.BluetoothAdapterState.on => 'Ready',
       };
     }
 
@@ -271,14 +296,15 @@ class ScanResult {
 
   factory ScanResult.success() => const ScanResult._(success: true);
 
-  factory ScanResult.bleNotReady(BleStatus status) {
+  factory ScanResult.bleNotReady(fbp.BluetoothAdapterState status) {
     final message = switch (status) {
-      BleStatus.unknown => 'Bluetooth is initializing',
-      BleStatus.unsupported => 'Bluetooth is not supported on this device',
-      BleStatus.unauthorized => 'Bluetooth permission is required',
-      BleStatus.poweredOff => 'Please turn on Bluetooth',
-      BleStatus.locationServicesDisabled => 'Please enable location services',
-      BleStatus.ready => 'Ready',
+      fbp.BluetoothAdapterState.unknown => 'Bluetooth is initializing',
+      fbp.BluetoothAdapterState.unavailable => 'Bluetooth is not supported on this device',
+      fbp.BluetoothAdapterState.unauthorized => 'Bluetooth permission is required',
+      fbp.BluetoothAdapterState.turningOn => 'Bluetooth is turning on...',
+      fbp.BluetoothAdapterState.off => 'Please turn on Bluetooth',
+      fbp.BluetoothAdapterState.turningOff => 'Bluetooth is turning off...',
+      fbp.BluetoothAdapterState.on => 'Ready',
     };
     return ScanResult._(success: false, errorMessage: message, bleStatus: status);
   }
@@ -295,6 +321,24 @@ class ScanResult {
 
   final bool success;
   final String? errorMessage;
-  final BleStatus? bleStatus;
+  final fbp.BluetoothAdapterState? bleStatus;
   final bool permanentlyDenied;
+}
+
+/// Represents a discovered BLE device.
+///
+/// This class wraps device information from flutter_blue_plus to provide
+/// a consistent API across the codebase.
+class DiscoveredDevice {
+  const DiscoveredDevice({
+    required this.id,
+    required this.name,
+    required this.rssi,
+    required this.serviceUuids,
+  });
+
+  final String id;
+  final String name;
+  final int rssi;
+  final List<fbp.Guid> serviceUuids;
 }

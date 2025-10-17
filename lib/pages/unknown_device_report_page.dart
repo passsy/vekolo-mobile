@@ -1,7 +1,6 @@
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
-import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
 import 'package:reactive_forms/reactive_forms.dart';
+import 'package:vekolo/infrastructure/ble/ble_scanner.dart';
 import 'dart:developer' as developer;
 
 /// Page state enum for managing UI flow
@@ -90,8 +89,6 @@ class _UnknownDeviceReportPageState extends State<UnknownDeviceReportPage> {
       id: id,
       name: name,
       rssi: rssi,
-      serviceData: const {},
-      manufacturerData: Uint8List(0),
       serviceUuids: const [],
     );
   }
@@ -391,9 +388,6 @@ End of Report
 
   /// Builds the review state UI
   Widget _buildReviewState() {
-    final dataLines = _collectedData.split('\n');
-    final previewLines = dataLines.take(10).join('\n');
-
     return SingleChildScrollView(
       child: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -415,30 +409,26 @@ End of Report
               ),
               const SizedBox(height: 24),
               const Text(
-                'Data Preview (first 10 lines):',
+                'Data Preview:',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
               ),
               const SizedBox(height: 8),
               Container(
                 width: double.infinity,
+                height: 300,
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: Colors.grey[100],
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: Colors.grey[300]!),
                 ),
-                child: Text(
-                  previewLines,
-                  style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
+                child: SingleChildScrollView(
+                  child: Text(
+                    _collectedData,
+                    style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
+                  ),
                 ),
               ),
-              if (dataLines.length > 10) ...[
-                const SizedBox(height: 8),
-                Text(
-                  '... and ${dataLines.length - 10} more lines',
-                  style: TextStyle(fontSize: 12, color: Colors.grey[600], fontStyle: FontStyle.italic),
-                ),
-              ],
               const SizedBox(height: 24),
               const Text(
                 'Additional Information (optional):',

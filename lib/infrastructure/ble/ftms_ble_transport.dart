@@ -3,7 +3,7 @@ import 'dart:developer' as developer;
 import 'dart:typed_data';
 
 import 'package:async/async.dart';
-import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
+import 'package:flutter_blue_plus/flutter_blue_plus.dart' as fbp;
 import 'package:vekolo/domain/models/fitness_data.dart';
 
 /// Bluetooth transport layer for FTMS (Fitness Machine Service) protocol.
@@ -16,26 +16,29 @@ import 'package:vekolo/domain/models/fitness_data.dart';
 /// and FTMS protocol parsing. Used by [FtmsDevice] for protocol implementation.
 class FtmsBleTransport {
   /// Creates an FTMS BLE transport for the specified device.
-  FtmsBleTransport({required this.deviceId, FlutterReactiveBle? ble}) : _ble = ble ?? FlutterReactiveBle();
-
-  final FlutterReactiveBle _ble;
+  FtmsBleTransport({required this.deviceId});
 
   /// BLE device ID to connect to.
   final String deviceId;
 
   // FTMS service and characteristic UUIDs
-  static final _ftmsServiceUuid = Uuid.parse('00001826-0000-1000-8000-00805f9b34fb');
-  static final _indoorBikeDataUuid = Uuid.parse('00002AD2-0000-1000-8000-00805f9b34fb');
-  static final _controlPointUuid = Uuid.parse('00002AD9-0000-1000-8000-00805f9b34fb');
+  static final _ftmsServiceUuid = fbp.Guid('00001826-0000-1000-8000-00805f9b34fb');
+  static final _indoorBikeDataUuid = fbp.Guid('00002AD2-0000-1000-8000-00805f9b34fb');
+  static final _controlPointUuid = fbp.Guid('00002AD9-0000-1000-8000-00805f9b34fb');
+
+  // BLE device reference
+  fbp.BluetoothDevice? _device;
 
   static const _bluetoothTimeout = Duration(milliseconds: 5000);
   static const _bluetoothDebounce = Duration(milliseconds: 250);
 
   // Connection state
-  StreamSubscription<ConnectionStateUpdate>? _connectionSubscription;
+  StreamSubscription<fbp.BluetoothConnectionState>? _connectionSubscription;
   StreamSubscription<List<int>>? _indoorBikeDataSubscription;
   StreamSubscription<List<int>>? _controlPointSubscription;
   Completer<void>? _connectionCompleter;
+  fbp.BluetoothCharacteristic? _indoorBikeDataChar;
+  fbp.BluetoothCharacteristic? _controlPointChar;
 
   // Command queue
   final List<Uint8List> _commandQueue = [];
@@ -86,51 +89,68 @@ class FtmsBleTransport {
       _connectionStateController.add(ConnectionState.connecting);
 
       // Create a completer to track connection completion
-      _connectionCompleter = Completer<void>();
+      final completer = Completer<void>();
+      _connectionCompleter = completer;
+
+      // Get the device from system devices or connected devices
+      final devices = fbp.FlutterBluePlus.connectedDevices;
+      _device = devices.firstWhere(
+        (d) => d.remoteId.str == deviceId,
+        orElse: () => fbp.BluetoothDevice.fromId(deviceId),
+      );
+
+      // Track if we've ever connected to distinguish initial state from disconnection
+      var hasConnected = false;
 
       // Listen to connection state changes
-      _connectionSubscription = _ble
-          .connectToDevice(id: deviceId, connectionTimeout: const Duration(seconds: 10))
-          .listen(
-            (update) async {
-              developer.log('[FtmsBleTransport] Connection state: ${update.connectionState}');
+      _connectionSubscription = _device!.connectionState.listen(
+        (state) async {
+          developer.log('[FtmsBleTransport] Connection state: $state');
 
-              if (update.connectionState == DeviceConnectionState.connected) {
-                _connectionStateController.add(ConnectionState.connected);
-                try {
-                  await _setupCharacteristics();
-                  // Connection successful, complete the future
-                  if (!_connectionCompleter!.isCompleted) {
-                    developer.log('[FtmsBleTransport] Connection completed successfully');
-                    _connectionCompleter!.complete();
-                  }
-                } catch (e, stackTrace) {
-                  print('[FtmsBleTransport] Error setting up characteristics: $e');
-                  print(stackTrace);
-                  if (!_connectionCompleter!.isCompleted) {
-                    _connectionCompleter!.completeError(e, stackTrace);
-                  }
-                  _handleDisconnection();
-                }
-              } else if (update.connectionState == DeviceConnectionState.disconnected) {
-                if (!_connectionCompleter!.isCompleted) {
-                  _connectionCompleter!.completeError('Device disconnected before connection completed');
-                }
-                _handleDisconnection();
+          if (state == fbp.BluetoothConnectionState.connected) {
+            hasConnected = true;
+            _connectionStateController.add(ConnectionState.connected);
+            try {
+              await _setupCharacteristics();
+              // Connection successful, complete the future
+              if (!completer.isCompleted) {
+                developer.log('[FtmsBleTransport] Connection completed successfully');
+                completer.complete();
               }
-            },
-            onError: (Object e, StackTrace stackTrace) {
-              print('[FtmsBleTransport] Connection error: $e');
+            } catch (e, stackTrace) {
+              print('[FtmsBleTransport] Error setting up characteristics: $e');
               print(stackTrace);
-              if (!_connectionCompleter!.isCompleted) {
-                _connectionCompleter!.completeError(e, stackTrace);
+              if (!completer.isCompleted) {
+                completer.completeError(e, stackTrace);
               }
               _handleDisconnection();
-            },
-          );
+            }
+          } else if (state == fbp.BluetoothConnectionState.disconnected) {
+            // Only handle disconnection if we had successfully connected before
+            // This prevents initial "disconnected" state from canceling the connection
+            if (hasConnected) {
+              if (!completer.isCompleted) {
+                completer.completeError('Device disconnected unexpectedly');
+              }
+              _handleDisconnection();
+            }
+          }
+        },
+        onError: (Object e, StackTrace stackTrace) {
+          print('[FtmsBleTransport] Connection error: $e');
+          print(stackTrace);
+          if (!completer.isCompleted) {
+            completer.completeError(e, stackTrace);
+          }
+          _handleDisconnection();
+        },
+      );
+
+      // Connect to the device
+      await _device!.connect(timeout: const Duration(seconds: 10));
 
       // Wait for connection to complete with timeout
-      await _connectionCompleter!.future.timeout(
+      await completer.future.timeout(
         const Duration(seconds: 15),
         onTimeout: () {
           throw TimeoutException('Connection timed out after 15 seconds');
@@ -148,43 +168,55 @@ class FtmsBleTransport {
     try {
       developer.log('[FtmsBleTransport] Setting up characteristics');
 
-      // Subscribe to indoor bike data
-      final indoorBikeCharacteristic = QualifiedCharacteristic(
-        serviceId: _ftmsServiceUuid,
-        characteristicId: _indoorBikeDataUuid,
-        deviceId: deviceId,
+      // Discover services
+      final services = await _device!.discoverServices();
+      developer.log('[FtmsBleTransport] Discovered ${services.length} services');
+
+      // Find FTMS service
+      final ftmsService = services.firstWhere(
+        (s) => s.uuid == _ftmsServiceUuid,
+        orElse: () => throw Exception('FTMS service not found'),
       );
 
-      _indoorBikeDataSubscription = _ble
-          .subscribeToCharacteristic(indoorBikeCharacteristic)
-          .listen(
-            (data) {
-              _parseIndoorBikeData(Uint8List.fromList(data));
-            },
-            onError: (e, stackTrace) {
-              print('[FtmsBleTransport] Indoor bike data error: $e');
-              print(stackTrace);
-            },
-          );
+      developer.log('[FtmsBleTransport] Found FTMS service with ${ftmsService.characteristics.length} characteristics');
+
+      // Find indoor bike data characteristic
+      _indoorBikeDataChar = ftmsService.characteristics.firstWhere(
+        (c) => c.uuid == _indoorBikeDataUuid,
+        orElse: () => throw Exception('Indoor bike data characteristic not found'),
+      );
+
+      // Find control point characteristic
+      _controlPointChar = ftmsService.characteristics.firstWhere(
+        (c) => c.uuid == _controlPointUuid,
+        orElse: () => throw Exception('Control point characteristic not found'),
+      );
+
+      developer.log('[FtmsBleTransport] Found required characteristics');
+
+      // Subscribe to indoor bike data
+      await _indoorBikeDataChar!.setNotifyValue(true);
+      _indoorBikeDataSubscription = _indoorBikeDataChar!.lastValueStream.listen(
+        (data) {
+          _parseIndoorBikeData(Uint8List.fromList(data));
+        },
+        onError: (e, stackTrace) {
+          print('[FtmsBleTransport] Indoor bike data error: $e');
+          print(stackTrace);
+        },
+      );
 
       // Subscribe to control point responses
-      final controlPointCharacteristic = QualifiedCharacteristic(
-        serviceId: _ftmsServiceUuid,
-        characteristicId: _controlPointUuid,
-        deviceId: deviceId,
+      await _controlPointChar!.setNotifyValue(true);
+      _controlPointSubscription = _controlPointChar!.lastValueStream.listen(
+        (data) {
+          _handleControlPointResponse(Uint8List.fromList(data));
+        },
+        onError: (e, stackTrace) {
+          print('[FtmsBleTransport] Control point error: $e');
+          print(stackTrace);
+        },
       );
-
-      _controlPointSubscription = _ble
-          .subscribeToCharacteristic(controlPointCharacteristic)
-          .listen(
-            (data) {
-              _handleControlPointResponse(Uint8List.fromList(data));
-            },
-            onError: (e, stackTrace) {
-              print('[FtmsBleTransport] Control point error: $e');
-              print(stackTrace);
-            },
-          );
 
       developer.log('[FtmsBleTransport] Characteristics setup complete');
     } catch (e, stackTrace) {
@@ -355,14 +387,8 @@ class FtmsBleTransport {
       developer.log('[FtmsBleTransport] 📤 Sending: Command 0x${opCode.toRadixString(16)}');
     }
 
-    final characteristic = QualifiedCharacteristic(
-      serviceId: _ftmsServiceUuid,
-      characteristicId: _controlPointUuid,
-      deviceId: deviceId,
-    );
-
     try {
-      await _ble.writeCharacteristicWithResponse(characteristic, value: _sendingCommand!);
+      await _controlPointChar!.write(_sendingCommand!, withoutResponse: false);
     } catch (e, stackTrace) {
       print('[FtmsBleTransport] Error sending command: $e');
       print(stackTrace);
@@ -423,14 +449,24 @@ class FtmsBleTransport {
     _commandQueue.clear();
     _sendingCommand = null;
     _connectionCompleter = null;
-    _connectionStateController.add(ConnectionState.disconnected);
+
+    // Only add event if stream controller is not closed
+    if (!_connectionStateController.isClosed) {
+      _connectionStateController.add(ConnectionState.disconnected);
+    }
   }
 
   /// Disconnects from the FTMS device.
   ///
   /// Cancels all subscriptions and clears command queue.
   Future<void> disconnect() async {
-    _handleDisconnection();
+    try {
+      if (_device != null) {
+        await _device!.disconnect();
+      }
+    } finally {
+      _handleDisconnection();
+    }
   }
 
   /// Disposes of all resources.

@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:developer' as developer;
 
-import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
+import 'package:flutter_blue_plus/flutter_blue_plus.dart' as fbp;
 
 /// Service for inspecting unknown BLE devices and collecting comprehensive GATT data.
 ///
@@ -15,14 +15,12 @@ import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
 /// final report = await inspector.inspectDevice(
 ///   deviceId: 'XX:XX:XX:XX:XX:XX',
 ///   deviceName: 'Unknown Device',
-///   advertisementData: scanResult.serviceData,
+///   advertisementData: scanResult.advertisementData.serviceData,
 /// );
 /// print(report);
 /// ```
 class BleDeviceInspector {
-  BleDeviceInspector({FlutterReactiveBle? ble}) : _ble = ble ?? FlutterReactiveBle();
-
-  final FlutterReactiveBle _ble;
+  BleDeviceInspector();
 
   /// Timeout for BLE connection attempts.
   static const _connectionTimeout = Duration(seconds: 30);
@@ -31,13 +29,14 @@ class BleDeviceInspector {
   static const _characteristicReadTimeout = Duration(seconds: 10);
 
   // Connection state
-  StreamSubscription<ConnectionStateUpdate>? _connectionSubscription;
+  StreamSubscription<fbp.BluetoothConnectionState>? _connectionSubscription;
+  fbp.BluetoothDevice? _device;
 
   /// Data collected during inspection.
   final List<_ServiceInfo> _services = [];
   String? _deviceName;
   String? _deviceId;
-  Map<Uuid, List<int>>? _advertisementData;
+  Map<fbp.Guid, List<int>>? _advertisementData;
   int? _rssi;
   DateTime? _inspectionStartTime;
   DateTime? _inspectionEndTime;
@@ -55,7 +54,7 @@ class BleDeviceInspector {
   Future<String> inspectDevice({
     required String deviceId,
     String? deviceName,
-    Map<Uuid, List<int>>? advertisementData,
+    Map<fbp.Guid, List<int>>? advertisementData,
     int? rssi,
   }) async {
     _inspectionStartTime = DateTime.now();
@@ -95,30 +94,38 @@ class BleDeviceInspector {
 
     final completer = Completer<void>();
 
-    _connectionSubscription = _ble
-        .connectToDevice(id: deviceId, connectionTimeout: _connectionTimeout)
-        .listen(
-          (update) {
-            developer.log('[BleDeviceInspector] Connection state: ${update.connectionState}');
+    // Get or create device
+    final devices = fbp.FlutterBluePlus.connectedDevices;
+    _device = devices.firstWhere(
+      (d) => d.remoteId.str == deviceId,
+      orElse: () => fbp.BluetoothDevice.fromId(deviceId),
+    );
 
-            if (update.connectionState == DeviceConnectionState.connected) {
-              if (!completer.isCompleted) {
-                developer.log('[BleDeviceInspector] Connected successfully');
-                completer.complete();
-              }
-            } else if (update.connectionState == DeviceConnectionState.disconnected) {
-              if (!completer.isCompleted) {
-                completer.completeError('Device disconnected before connection completed');
-              }
-            }
-          },
-          onError: (Object e, StackTrace stackTrace) {
-            developer.log('[BleDeviceInspector] Connection error: $e', error: e, stackTrace: stackTrace);
-            if (!completer.isCompleted) {
-              completer.completeError(e, stackTrace);
-            }
-          },
-        );
+    _connectionSubscription = _device!.connectionState.listen(
+      (state) {
+        developer.log('[BleDeviceInspector] Connection state: $state');
+
+        if (state == fbp.BluetoothConnectionState.connected) {
+          if (!completer.isCompleted) {
+            developer.log('[BleDeviceInspector] Connected successfully');
+            completer.complete();
+          }
+        } else if (state == fbp.BluetoothConnectionState.disconnected) {
+          if (!completer.isCompleted) {
+            completer.completeError('Device disconnected before connection completed');
+          }
+        }
+      },
+      onError: (Object e, StackTrace stackTrace) {
+        developer.log('[BleDeviceInspector] Connection error: $e', error: e, stackTrace: stackTrace);
+        if (!completer.isCompleted) {
+          completer.completeError(e, stackTrace);
+        }
+      },
+    );
+
+    // Connect to device
+    await _device!.connect(timeout: _connectionTimeout);
 
     await completer.future.timeout(
       _connectionTimeout,
@@ -133,42 +140,66 @@ class BleDeviceInspector {
     developer.log('[BleDeviceInspector] Discovering services...');
 
     try {
-      await _ble.discoverAllServices(deviceId);
-      final services = await _ble.getDiscoveredServices(deviceId);
+      final services = await _device!.discoverServices();
       developer.log('[BleDeviceInspector] Found ${services.length} service(s)');
 
       for (final service in services) {
-        developer.log('[BleDeviceInspector] Processing service: ${service.id}');
+        developer.log('[BleDeviceInspector] Processing service: ${service.uuid}');
 
         final serviceInfo = _ServiceInfo(
-          uuid: service.id,
-          // Note: isPrimary property not available in flutter_reactive_ble 5.4.0
-          isPrimary: true,
+          uuid: service.uuid,
+          isPrimary: service.isPrimary,
         );
 
         // Process each characteristic
         for (final characteristic in service.characteristics) {
-          developer.log('[BleDeviceInspector] Processing characteristic: ${characteristic.id}');
+          developer.log('[BleDeviceInspector] Processing characteristic: ${characteristic.uuid}');
 
           final charInfo = _CharacteristicInfo(
-            uuid: characteristic.id,
-            isReadable: characteristic.isReadable,
-            isWritableWithResponse: characteristic.isWritableWithResponse,
-            isWritableWithoutResponse: characteristic.isWritableWithoutResponse,
-            isNotifiable: characteristic.isNotifiable,
-            isIndicatable: characteristic.isIndicatable,
+            uuid: characteristic.uuid,
+            isReadable: characteristic.properties.read,
+            isWritableWithResponse: characteristic.properties.write,
+            isWritableWithoutResponse: characteristic.properties.writeWithoutResponse,
+            isNotifiable: characteristic.properties.notify,
+            isIndicatable: characteristic.properties.indicate,
           );
 
           // Try to read characteristic value if readable
-          if (characteristic.isReadable) {
-            await _readCharacteristic(deviceId, service.id, characteristic.id, charInfo);
+          if (characteristic.properties.read) {
+            await _readCharacteristic(characteristic, charInfo);
           } else {
-            developer.log('[BleDeviceInspector] Characteristic ${characteristic.id} is not readable');
+            developer.log('[BleDeviceInspector] Characteristic ${characteristic.uuid} is not readable');
           }
 
-          // Note: Descriptor discovery not directly supported in flutter_reactive_ble 5.4.0
-          // Descriptors would need to be discovered using platform-specific code
-          // For now, we skip descriptor reading to focus on services and characteristics
+          // Process descriptors
+          for (final descriptor in characteristic.descriptors) {
+            developer.log('[BleDeviceInspector] Processing descriptor: ${descriptor.uuid}');
+            final descriptorInfo = _DescriptorInfo(uuid: descriptor.uuid);
+
+            try {
+              final value = await descriptor.read().timeout(
+                _characteristicReadTimeout,
+                onTimeout: () {
+                  developer.log('[BleDeviceInspector] Read timeout for descriptor ${descriptor.uuid}');
+                  return <int>[];
+                },
+              );
+
+              if (value.isNotEmpty) {
+                descriptorInfo.value = value;
+                developer.log('[BleDeviceInspector] Read ${value.length} byte(s) from descriptor ${descriptor.uuid}');
+              }
+            } catch (e, stackTrace) {
+              developer.log(
+                '[BleDeviceInspector] Failed to read descriptor ${descriptor.uuid}: $e',
+                error: e,
+                stackTrace: stackTrace,
+              );
+              descriptorInfo.readError = e.toString();
+            }
+
+            charInfo.descriptors.add(descriptorInfo);
+          }
 
           serviceInfo.characteristics.add(charInfo);
         }
@@ -185,35 +216,25 @@ class BleDeviceInspector {
 
   /// Reads a characteristic value with timeout and error handling.
   Future<void> _readCharacteristic(
-    String deviceId,
-    Uuid serviceId,
-    Uuid characteristicId,
+    fbp.BluetoothCharacteristic characteristic,
     _CharacteristicInfo charInfo,
   ) async {
     try {
-      final qualifiedChar = QualifiedCharacteristic(
-        serviceId: serviceId,
-        characteristicId: characteristicId,
-        deviceId: deviceId,
+      final value = await characteristic.read().timeout(
+        _characteristicReadTimeout,
+        onTimeout: () {
+          developer.log('[BleDeviceInspector] Read timeout for characteristic ${characteristic.uuid}');
+          return <int>[];
+        },
       );
-
-      final value = await _ble
-          .readCharacteristic(qualifiedChar)
-          .timeout(
-            _characteristicReadTimeout,
-            onTimeout: () {
-              developer.log('[BleDeviceInspector] Read timeout for characteristic $characteristicId');
-              return <int>[];
-            },
-          );
 
       if (value.isNotEmpty) {
         charInfo.value = value;
-        developer.log('[BleDeviceInspector] Read ${value.length} byte(s) from $characteristicId');
+        developer.log('[BleDeviceInspector] Read ${value.length} byte(s) from ${characteristic.uuid}');
       }
     } catch (e, stackTrace) {
       developer.log(
-        '[BleDeviceInspector] Failed to read characteristic $characteristicId: $e',
+        '[BleDeviceInspector] Failed to read characteristic ${characteristic.uuid}: $e',
         error: e,
         stackTrace: stackTrace,
       );
@@ -226,6 +247,9 @@ class BleDeviceInspector {
     developer.log('[BleDeviceInspector] Disconnecting');
     await _connectionSubscription?.cancel();
     _connectionSubscription = null;
+    if (_device != null) {
+      await _device!.disconnect();
+    }
   }
 
   /// Generates a human-readable TXT report from collected data.
@@ -361,7 +385,7 @@ class BleDeviceInspector {
   }
 
   /// Returns known service name for common UUIDs.
-  String _getKnownServiceName(Uuid uuid) {
+  String _getKnownServiceName(fbp.Guid uuid) {
     final knownServices = {
       '00001800-0000-1000-8000-00805f9b34fb': 'Generic Access',
       '00001801-0000-1000-8000-00805f9b34fb': 'Generic Attribute',
@@ -372,11 +396,11 @@ class BleDeviceInspector {
       '00001818-0000-1000-8000-00805f9b34fb': 'Cycling Power',
       '00001826-0000-1000-8000-00805f9b34fb': 'Fitness Machine Service (FTMS)',
     };
-    return knownServices[uuid.toString()] ?? 'Unknown';
+    return knownServices[uuid.toString().toLowerCase()] ?? 'Unknown';
   }
 
   /// Returns known characteristic name for common UUIDs.
-  String _getKnownCharacteristicName(Uuid uuid) {
+  String _getKnownCharacteristicName(fbp.Guid uuid) {
     final knownChars = {
       '00002a00-0000-1000-8000-00805f9b34fb': 'Device Name',
       '00002a01-0000-1000-8000-00805f9b34fb': 'Appearance',
@@ -394,7 +418,7 @@ class BleDeviceInspector {
       '00002ad2-0000-1000-8000-00805f9b34fb': 'Indoor Bike Data',
       '00002ad9-0000-1000-8000-00805f9b34fb': 'Fitness Machine Control Point',
     };
-    return knownChars[uuid.toString()] ?? 'Unknown';
+    return knownChars[uuid.toString().toLowerCase()] ?? 'Unknown';
   }
 
   /// Disposes resources.
@@ -407,7 +431,7 @@ class BleDeviceInspector {
 class _ServiceInfo {
   _ServiceInfo({required this.uuid, required this.isPrimary});
 
-  final Uuid uuid;
+  final fbp.Guid uuid;
   final bool isPrimary;
   final List<_CharacteristicInfo> characteristics = [];
 }
@@ -423,7 +447,7 @@ class _CharacteristicInfo {
     required this.isIndicatable,
   });
 
-  final Uuid uuid;
+  final fbp.Guid uuid;
   final bool isReadable;
   final bool isWritableWithResponse;
   final bool isWritableWithoutResponse;
@@ -438,7 +462,7 @@ class _CharacteristicInfo {
 class _DescriptorInfo {
   _DescriptorInfo({required this.uuid});
 
-  final Uuid uuid;
+  final fbp.Guid uuid;
   List<int>? value;
   String? readError;
 }

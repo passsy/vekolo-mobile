@@ -2,7 +2,7 @@ import 'dart:developer' as developer;
 
 import 'package:context_plus/context_plus.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
+import 'package:flutter_blue_plus/flutter_blue_plus.dart' as fbp;
 import 'package:go_router/go_router.dart';
 import 'package:state_beacon/state_beacon.dart';
 import 'package:vekolo/domain/devices/device_manager.dart';
@@ -880,7 +880,7 @@ class _BleScanDialogState extends State<_BleScanDialog> {
     });
 
     // Auto-start scan if ready
-    if (_scanner.bleStatus == BleStatus.ready && _scanner.permissionsGranted) {
+    if (_scanner.bleStatus == fbp.BluetoothAdapterState.on && _scanner.permissionsGranted) {
       await _scanner.startScan();
     }
   }
@@ -979,7 +979,7 @@ class _BleScanDialogState extends State<_BleScanDialog> {
                                 icon: const Icon(Icons.security),
                                 label: const Text('Grant Permissions'),
                               )
-                            else if (_scanState!.bleStatus == BleStatus.poweredOff)
+                            else if (_scanState!.bleStatus == fbp.BluetoothAdapterState.off)
                               const Text('Please turn on Bluetooth', style: TextStyle(color: Colors.red)),
                           ],
                         ],
