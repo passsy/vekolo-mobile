@@ -1,4 +1,5 @@
 import 'package:context_plus/context_plus.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -24,6 +25,44 @@ class _LoginPageState extends State<LoginPage> {
   bool _isLoading = false;
   bool _codeSent = false;
   String? _errorMessage;
+
+  /// Extracts a user-friendly error message from a DioException
+  String _extractErrorMessage(DioException error) {
+    final statusCode = error.response?.statusCode;
+
+    // Try to extract error message from API response
+    if (error.response?.data != null && error.response!.data is Map) {
+      final data = error.response!.data as Map<String, dynamic>;
+      if (data['message'] != null) {
+        final message = data['message'] as String;
+        return 'Error ($statusCode): $message';
+      }
+    }
+
+    // Fallback to generic error messages based on error type
+    switch (error.type) {
+      case DioExceptionType.connectionTimeout:
+      case DioExceptionType.sendTimeout:
+      case DioExceptionType.receiveTimeout:
+        return 'Connection timeout. Please check your internet connection.';
+      case DioExceptionType.connectionError:
+        return 'Unable to connect to the server. Please check your internet connection.';
+      case DioExceptionType.badResponse:
+        if (statusCode == 404) {
+          return 'Error ($statusCode): Resource not found. Please try again later.';
+        } else if (statusCode == 500) {
+          return 'Error ($statusCode): Server error. Please try again later.';
+        }
+        return 'Error ($statusCode): An error occurred. Please try again.';
+      case DioExceptionType.cancel:
+        return 'Request cancelled.';
+      case DioExceptionType.badCertificate:
+        return 'Security error. Please check your connection.';
+      case DioExceptionType.unknown:
+      default:
+        return 'An unexpected error occurred. Please try again.';
+    }
+  }
 
   Future<void> _requestCode() async {
     if (!form.valid) {
@@ -56,8 +95,14 @@ class _LoginPageState extends State<LoginPage> {
       }
     } catch (e, stackTrace) {
       if (!mounted) return;
+
+      String errorMessage = 'Failed to send code';
+      if (e is DioException) {
+        errorMessage = _extractErrorMessage(e);
+      }
+
       setState(() {
-        _errorMessage = 'Failed to send code: $e';
+        _errorMessage = errorMessage;
         _isLoading = false;
       });
       debugPrint('Login error: $e');
@@ -102,8 +147,14 @@ class _LoginPageState extends State<LoginPage> {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Welcome back, ${response.user.name}!')));
     } catch (e, stackTrace) {
       if (!mounted) return;
+
+      String errorMessage = 'Invalid or expired code';
+      if (e is DioException) {
+        errorMessage = _extractErrorMessage(e);
+      }
+
       setState(() {
-        _errorMessage = 'Invalid or expired code';
+        _errorMessage = errorMessage;
         _isLoading = false;
       });
       debugPrint('Code verification error: $e');
