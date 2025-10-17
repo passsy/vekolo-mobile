@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vekolo/services/ble_manager.dart';
 
@@ -111,28 +109,19 @@ void main() {
 
     group('Callback API', () {
       test('can set onTrainerDataUpdate callback', () {
-        int callCount = 0;
-        bleManager.onTrainerDataUpdate = (power, cadence, speed) {
-          callCount++;
-        };
+        bleManager.onTrainerDataUpdate = (power, cadence, speed) {};
 
         expect(bleManager.onTrainerDataUpdate, isNotNull);
       });
 
       test('can set onError callback', () {
-        String? lastError;
-        bleManager.onError = (error) {
-          lastError = error;
-        };
+        bleManager.onError = (error) {};
 
         expect(bleManager.onError, isNotNull);
       });
 
       test('can set onDisconnected callback', () {
-        bool called = false;
-        bleManager.onDisconnected = () {
-          called = true;
-        };
+        bleManager.onDisconnected = () {};
 
         expect(bleManager.onDisconnected, isNotNull);
       });

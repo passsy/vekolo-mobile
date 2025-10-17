@@ -1,4 +1,5 @@
 import 'package:context_plus/context_plus.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:reactive_forms/reactive_forms.dart';
@@ -13,7 +14,10 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   final form = FormGroup({
-    'email': FormControl<String>(validators: [Validators.required, Validators.email]),
+    'email': FormControl<String>(
+      validators: [Validators.required, Validators.email],
+      value: kDebugMode ? "pascal@phntm.xyz" : '',
+    ),
     'code': FormControl<String>(),
   });
 

@@ -45,7 +45,7 @@ class VekoloApiClient {
 
     // Add pretty logging interceptor for debugging
     if (enableLogging) {
-      _dio.interceptors.add(PrettyLogInterceptor());
+      _dio.interceptors.add(PrettyLogInterceptor(logMode: LogMode.unexpectedResponses));
     }
   }
 

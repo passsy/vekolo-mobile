@@ -388,7 +388,7 @@ class FtmsBleTransport {
     }
 
     try {
-      await _controlPointChar!.write(_sendingCommand!, withoutResponse: false);
+      await _controlPointChar!.write(_sendingCommand!);
     } catch (e, stackTrace) {
       print('[FtmsBleTransport] Error sending command: $e');
       print(stackTrace);

@@ -26,6 +26,7 @@ class _TrainerPageState extends State<TrainerPage> {
   bool _isConnecting = true;
   String? _errorMessage;
   int _targetPower = 150;
+  bool _isDisposing = false;
 
   @override
   void didChangeDependencies() {
@@ -43,6 +44,7 @@ class _TrainerPageState extends State<TrainerPage> {
 
   @override
   void dispose() {
+    _isDisposing = true;
     _connectionOperation?.cancel();
     _bleManager.disconnect();
     super.dispose();
@@ -73,7 +75,8 @@ class _TrainerPageState extends State<TrainerPage> {
 
     _bleManager.onDisconnected = () {
       developer.log('[TrainerPage] Disconnected');
-      if (mounted) {
+      // Only navigate if not already disposing (to avoid using context after disposal)
+      if (mounted && !_isDisposing) {
         context.go('/');
       }
     };
@@ -158,7 +161,7 @@ class _TrainerPageState extends State<TrainerPage> {
                 ],
               ),
             )
-          : Padding(
+          : SingleChildScrollView(
               padding: const EdgeInsets.all(16.0),
               child: Column(
                 children: [
@@ -230,7 +233,7 @@ class _TrainerPageState extends State<TrainerPage> {
                     unit: 'km/h',
                     color: Colors.blue,
                   ),
-                  const Spacer(),
+                  const SizedBox(height: 24),
                   ElevatedButton.icon(
                     onPressed: () {
                       _bleManager.disconnect();

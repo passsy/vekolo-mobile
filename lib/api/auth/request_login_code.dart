@@ -11,7 +11,7 @@ Future<CodeRequestResponse> postRequestLoginCode(ApiContext context, {required S
     final response = await context.dio.post(
       '/auth/code/request',
       data: {'type': 'login', 'email': email},
-      options: Options(contentType: Headers.jsonContentType),
+      options: Options(contentType: Headers.jsonContentType, validateStatus: (status) => status == 200),
     );
 
     return CodeRequestResponse.fromData(response.data as Map<String, Object?>);
