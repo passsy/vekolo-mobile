@@ -1,8 +1,10 @@
 import 'package:context_plus/context_plus.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:reactive_forms/reactive_forms.dart';
 import 'package:vekolo/config/api_config.dart';
+import 'package:vekolo/utils/dio_error_handler.dart';
 
 class SignupPage extends StatefulWidget {
   const SignupPage({super.key});
@@ -62,8 +64,20 @@ class _SignupPageState extends State<SignupPage> {
       }
     } catch (e, stackTrace) {
       if (!mounted) return;
+
+      final errorMessage = extractDioErrorMessage(
+        e as Exception,
+        fallbackMessage: 'Could not create account',
+        customMessage: (e) {
+          if (e.response?.statusCode == 409) {
+            return 'Error (409): An account with this email already exists';
+          }
+          return '';
+        },
+      );
+
       setState(() {
-        _errorMessage = 'Failed to send code: $e';
+        _errorMessage = errorMessage;
         _isLoading = false;
       });
       debugPrint('Signup error: $e');
@@ -108,8 +122,20 @@ class _SignupPageState extends State<SignupPage> {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Welcome, ${response.user.name}!')));
     } catch (e, stackTrace) {
       if (!mounted) return;
+
+      final errorMessage = extractDioErrorMessage(
+        e as Exception,
+        fallbackMessage: 'Invalid or expired code',
+        customMessage: (e) {
+          final statusCode = e.response?.statusCode;
+          if (statusCode == 401) return 'Error ($statusCode): Invalid or expired code';
+          if (statusCode == 400) return 'Error ($statusCode): Invalid verification code format';
+          return '';
+        },
+      );
+
       setState(() {
-        _errorMessage = 'Invalid or expired code';
+        _errorMessage = errorMessage;
         _isLoading = false;
       });
       debugPrint('Code verification error: $e');

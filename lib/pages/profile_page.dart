@@ -1,9 +1,11 @@
 import 'package:context_plus/context_plus.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:reactive_forms/reactive_forms.dart';
 import 'package:state_beacon/state_beacon.dart';
 import 'package:vekolo/config/api_config.dart';
+import 'package:vekolo/utils/dio_error_handler.dart';
 import 'package:vekolo/widgets/user_avatar.dart';
 
 class ProfilePage extends StatefulWidget {
@@ -98,8 +100,20 @@ class _ProfilePageState extends State<ProfilePage> {
       messenger.showSnackBar(const SnackBar(content: Text('Profile updated successfully')));
     } catch (e, stackTrace) {
       if (!mounted) return;
+
+      final errorMessage = extractDioErrorMessage(
+        e as Exception,
+        fallbackMessage: 'Failed to update profile',
+        customMessage: (e) {
+          final statusCode = e.response?.statusCode;
+          if (statusCode == 401) return 'Error ($statusCode): Session expired. Please log in again.';
+          if (statusCode == 403) return 'Error ($statusCode): You do not have permission to update this profile.';
+          return '';
+        },
+      );
+
       setState(() {
-        _errorMessage = 'Failed to update profile: $e';
+        _errorMessage = errorMessage;
         _isSaving = false;
       });
       debugPrint('Profile update error: $e');
