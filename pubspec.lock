@@ -269,6 +269,22 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
+  fresh:
+    dependency: transitive
+    description:
+      name: fresh
+      sha256: "9d345f48d4685781a5d8768b05634a0b2a46dfacec42c4b9d4b49ebe5127ef2e"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.4.3"
+  fresh_dio:
+    dependency: "direct main"
+    description:
+      name: fresh_dio
+      sha256: "3140345fd9aba5d82a8fc6809d79311ac089dd8c723523c3abcb9e8efcaba780"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.4.3"
   go_router:
     dependency: "direct main"
     description:

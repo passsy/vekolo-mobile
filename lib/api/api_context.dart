@@ -1,17 +1,16 @@
 import 'package:dio/dio.dart';
-import 'package:vekolo/api/vekolo_api_client.dart';
 
 /// Context object passed to all API request methods
 ///
-/// Contains the Dio instance for making HTTP requests and a callback
-/// for retrieving the current access token for authenticated endpoints.
+/// Contains two Dio instances: one for authenticated requests with auth interceptors,
+/// and one for public endpoints (login, signup, etc.) without auth interceptors.
 class ApiContext {
-  /// The Dio instance for making HTTP requests
-  final Dio dio;
+  /// The Dio instance for authenticated HTTP requests (includes auth interceptor)
+  final Dio authDio;
 
-  /// Callback for retrieving the current access token
-  /// Returns null if no user is authenticated
-  final Future<AccessToken?> Function() getAccessToken;
+  /// The Dio instance for public HTTP requests (no auth interceptor)
+  /// Use this for endpoints like login, signup, refresh token, etc.
+  final Dio publicDio;
 
-  const ApiContext({required this.dio, required this.getAccessToken});
+  const ApiContext({required this.authDio, required this.publicDio});
 }

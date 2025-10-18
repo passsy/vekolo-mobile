@@ -10,9 +10,9 @@ import 'package:vekolo/api/vekolo_api_client.dart';
 
 void main() async {
   // Initialize the client with your base URL
+  // Note: Auth is now handled via Fresh interceptor passed in interceptors list
   final client = VekoloApiClient(
     baseUrl: 'https://your-domain.com', // or http://localhost:3000 for dev
-    tokenProvider: () async => null, // No token initially
   );
 
   // Example 1: Sign up flow

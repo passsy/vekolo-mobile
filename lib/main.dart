@@ -7,6 +7,7 @@ import 'package:vekolo/domain/devices/device_manager.dart';
 import 'package:vekolo/router.dart';
 import 'package:vekolo/services/auth_service.dart';
 import 'package:vekolo/services/ble_manager.dart';
+import 'package:vekolo/services/fresh_auth.dart';
 import 'package:vekolo/services/workout_sync_service.dart';
 import 'package:vekolo/state/device_state.dart';
 import 'package:vekolo/state/device_state_manager.dart';
@@ -24,12 +25,17 @@ class VekoloApp extends StatefulWidget {
 }
 
 class _VekoloAppState extends State<VekoloApp> {
-  DeviceStateManager? _deviceStateManager;
+  bool _initialized = false;
 
-  @override
-  void dispose() {
-    _deviceStateManager?.dispose();
-    super.dispose();
+  Future<void> _initialize(BuildContext context) async {
+    // Run async initialization (load user from secure storage)
+    final authService = authServiceRef.of(context);
+    await authService.initialize();
+
+    // Mark initialization as complete
+    if (mounted) {
+      setState(() => _initialized = true);
+    }
   }
 
   @override
@@ -37,23 +43,21 @@ class _VekoloAppState extends State<VekoloApp> {
     return ContextRef.root(
       child: Builder(
         builder: (context) {
+          // Bind all services on every build (required by ContextRef)
           late final VekoloApiClient apiClient;
-          final authService = authServiceRef.bindValue(context, AuthService(apiClient: () => apiClient));
-          // TODO move in init method
-          authService.initialize();
 
-          // Bind services
-          apiClient = apiClientRef.bindValue(
+          // Create Fresh with lazy apiClient access
+          final fresh = createFreshAuth(apiClient: () => apiClient);
+          final authService = authServiceRef.bind(context, () => AuthService(fresh: fresh));
+
+          apiClient = apiClientRef.bind(
             context,
-            VekoloApiClient(
+            () => VekoloApiClient(
               baseUrl: ApiConfig.baseUrl,
               interceptors: [
                 PrettyLogInterceptor(logMode: LogMode.unexpectedResponses),
                 authService.apiInterceptor,
               ],
-              tokenProvider: () async {
-                return await authService.getAccessToken();
-              },
             ),
           );
 
@@ -65,12 +69,32 @@ class _VekoloAppState extends State<VekoloApp> {
           workoutSyncServiceRef.bindLazy(context, () => WorkoutSyncService(deviceManagerRef.of(context)));
 
           // Initialize DeviceStateManager to bridge DeviceManager with UI state
-          // This must happen after DeviceManager is set up but before the router
-          if (_deviceStateManager == null) {
-            final deviceManager = deviceManagerRef.of(context);
-            _deviceStateManager = DeviceStateManager(deviceManager);
+          deviceStateManagerRef.bindLazy(context, () => DeviceStateManager(deviceManagerRef.of(context)));
+
+          // Show splash screen during initialization
+          if (!_initialized) {
+            _initialize(context); // Fire and forget - setState will rebuild
+
+            return MaterialApp(
+              debugShowCheckedModeBanner: false,
+              home: Scaffold(
+                body: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      FlutterLogo(size: 100), // TODO: Replace with Vekolo logo
+                      SizedBox(height: 24),
+                      CircularProgressIndicator(),
+                      SizedBox(height: 16),
+                      Text('Loading...', style: TextStyle(fontSize: 16)),
+                    ],
+                  ),
+                ),
+              ),
+            );
           }
 
+          // After initialization, render main app
           return MaterialApp.router(
             title: 'Vekolo',
             theme: ThemeData(colorScheme: ColorScheme.fromSeed(seedColor: Colors.orange)),

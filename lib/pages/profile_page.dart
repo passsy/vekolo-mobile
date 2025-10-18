@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:reactive_forms/reactive_forms.dart';
 import 'package:state_beacon/state_beacon.dart';
+import 'package:vekolo/api/auth/redeem_code.dart';
 import 'package:vekolo/config/api_config.dart';
 import 'package:vekolo/utils/dio_error_handler.dart';
 import 'package:vekolo/widgets/user_avatar.dart';
@@ -64,17 +65,11 @@ class _ProfilePageState extends State<ProfilePage> {
 
     try {
       final authService = authServiceRef.of(context);
-      try {
-        final refreshToken = await authService.getRefreshToken();
-        final response = await authService.apiClient().refreshToken(refreshToken: refreshToken!.jwt);
-        print(response);
-      } catch (e) {
-        print('Token refresh error: $e');
-      }
-      return;
-
       final apiClient = apiClientRef.of(context);
       final messenger = ScaffoldMessenger.of(context);
+      final refreshToken = await authService.getRefreshToken();
+      final accessToken = await authService.getAccessToken();
+      await authService.saveTokens(accessToken: AccessToken(accessToken!.jwt + "bad"), refreshToken: refreshToken!);
       final user = authService.currentUser.value;
 
       if (user == null) {

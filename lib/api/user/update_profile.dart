@@ -13,12 +13,8 @@ Future<UpdateProfileResponse> postUpdateProfile(
   String? name,
   String? email,
 }) async {
-  final accessToken = await context.getAccessToken();
-  if (accessToken == null) {
-    throw Exception('Not authenticated');
-  }
-
-  final response = await context.dio.post(
+  // Note: Authorization header is automatically added by Fresh interceptor
+  final response = await context.authDio.post(
     '/api/user/update',
     data: {
       if (ftp != null) 'ftp': ftp,
@@ -26,7 +22,7 @@ Future<UpdateProfileResponse> postUpdateProfile(
       if (name != null) 'name': name,
       if (email != null) 'email': email,
     },
-    options: Options(contentType: Headers.jsonContentType, headers: {'Authorization': 'Bearer $accessToken'}),
+    options: Options(contentType: Headers.jsonContentType),
   );
 
   return UpdateProfileResponse.init.fromResponse(response);

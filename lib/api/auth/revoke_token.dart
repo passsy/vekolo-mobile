@@ -8,7 +8,7 @@ import 'package:vekolo/models/rekord.dart';
 ///
 /// Note: Even if this fails, local tokens should still be cleared.
 Future<RevokeTokenResponse> postRevokeToken(ApiContext context, {required String refreshToken}) async {
-  final response = await context.dio.post(
+  final response = await context.publicDio.post(
     '/auth/token/revoke',
     data: {'refreshToken': refreshToken},
     options: Options(contentType: Headers.jsonContentType),

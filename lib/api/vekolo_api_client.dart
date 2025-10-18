@@ -1,11 +1,11 @@
 import 'package:dio/dio.dart';
+import 'package:fresh_dio/fresh_dio.dart';
 import 'package:vekolo/api/api_context.dart';
 import 'package:vekolo/api/auth/redeem_code.dart';
 import 'package:vekolo/api/auth/refresh_token.dart';
 import 'package:vekolo/api/auth/request_login_code.dart';
 import 'package:vekolo/api/auth/request_signup_code.dart';
 import 'package:vekolo/api/auth/revoke_token.dart';
-import 'package:vekolo/api/pretty_log_interceptor.dart';
 import 'package:vekolo/api/user/update_profile.dart';
 
 export 'package:vekolo/api/auth/redeem_code.dart';
@@ -31,15 +31,28 @@ class VekoloApiClient {
 
   VekoloApiClient({
     required this.baseUrl,
-    required Future<AccessToken?> Function() tokenProvider,
     List<Interceptor> interceptors = const [],
   }) {
-    final Dio _dio = Dio();
-    context = ApiContext(dio: _dio, getAccessToken: tokenProvider);
+    // Create authenticated Dio instance (with all interceptors including auth)
+    final Dio authenticatedDio = Dio();
+    authenticatedDio.options.baseUrl = baseUrl;
+    authenticatedDio.options.validateStatus = (status) => status != null && status < 500;
+    authenticatedDio.interceptors.addAll(interceptors);
 
-    _dio.options.baseUrl = baseUrl;
-    _dio.options.validateStatus = (status) => status != null && status < 500;
-    _dio.interceptors.addAll(interceptors);
+    // Create public Dio instance (without auth interceptor)
+    // Only includes non-auth interceptors (logging, error handling, etc.)
+    final Dio publicDio = Dio();
+    publicDio.options.baseUrl = baseUrl;
+    publicDio.options.validateStatus = (status) => status != null && status < 500;
+    // Add all interceptors except auth-related ones
+    publicDio.interceptors.addAll(
+      interceptors.where((interceptor) => interceptor is! Fresh),
+    );
+
+    context = ApiContext(
+      authDio: authenticatedDio,
+      publicDio: publicDio,
+    );
   }
 
   late final ApiContext context;

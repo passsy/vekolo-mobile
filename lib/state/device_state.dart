@@ -4,6 +4,7 @@ import 'package:vekolo/domain/devices/device_manager.dart';
 import 'package:vekolo/domain/devices/fitness_device.dart';
 import 'package:vekolo/domain/models/fitness_data.dart';
 import 'package:vekolo/services/workout_sync_service.dart';
+import 'package:vekolo/state/device_state_manager.dart';
 
 // ============================================================================
 // Service References
@@ -20,6 +21,12 @@ final deviceManagerRef = context_plus.Ref<DeviceManager>();
 /// Manages workout synchronization with the backend and coordinates
 /// trainer control during workouts.
 final workoutSyncServiceRef = context_plus.Ref<WorkoutSyncService>();
+
+/// Ref for dependency injection of DeviceStateManager.
+///
+/// Bridges DeviceManager events to reactive UI state beacons.
+/// Automatically disposed when the context is removed.
+final deviceStateManagerRef = context_plus.Ref<DeviceStateManager>();
 
 // ============================================================================
 // UI State Beacons - Device List & Assignments

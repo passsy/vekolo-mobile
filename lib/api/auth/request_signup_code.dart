@@ -13,7 +13,7 @@ Future<CodeRequestResponse> postRequestSignupCode(
   int? weight,
   int? ftp,
 }) async {
-  final response = await context.dio.post(
+  final response = await context.publicDio.post(
     '/auth/code/request',
     data: {
       'type': 'signup',

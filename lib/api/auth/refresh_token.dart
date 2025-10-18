@@ -8,7 +8,7 @@ import 'package:vekolo/models/rekord.dart';
 ///
 /// Throws [DioException] if refresh token is invalid or expired (status 401)
 Future<RefreshTokenResponse> postRefreshToken(ApiContext context, {required String refreshToken}) async {
-  final response = await context.dio.post(
+  final response = await context.publicDio.post(
     '/auth/token/refresh',
     data: {'refreshToken': refreshToken},
     options: Options(

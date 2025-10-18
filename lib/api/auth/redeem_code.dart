@@ -3,7 +3,6 @@ import 'package:dio/dio.dart';
 import 'package:vekolo/api/api_context.dart';
 import 'package:vekolo/models/rekord.dart';
 import 'package:vekolo/models/user.dart';
-import 'package:clock/clock.dart';
 
 /// Redeem a magic code for JWT tokens
 ///
@@ -16,7 +15,7 @@ Future<TokenResponse> postRedeemCode(
   required String code,
   String? deviceInfo,
 }) async {
-  final response = await context.dio.post(
+  final response = await context.publicDio.post(
     '/auth/token/redeem',
     data: {'email': email, 'code': code, if (deviceInfo != null) 'deviceInfo': deviceInfo},
     options: Options(contentType: Headers.jsonContentType),
