@@ -22,6 +22,7 @@ dependencies:
   state_beacon: ^1.0.0
   clock: ^1.0.0
   fresh_dio:
+  url_launcher: ^6.3.2
 
 dev_dependencies:
   flutter_test:

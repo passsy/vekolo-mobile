@@ -2,16 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:reactive_forms/reactive_forms.dart';
 import 'package:vekolo/infrastructure/ble/ble_scanner.dart';
 import 'dart:developer' as developer;
+import 'dart:io' show Platform;
+import 'dart:async';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:context_plus/context_plus.dart';
+import 'package:vekolo/config/api_config.dart';
+import 'package:vekolo/models/user.dart';
+import 'package:flutter_blue_plus/flutter_blue_plus.dart' as fbp;
 
 /// Page state enum for managing UI flow
-enum UnknownDevicePageState {
-  scanning,
-  deviceList,
-  connecting,
-  review,
-  success,
-  error,
-}
+enum UnknownDevicePageState { scanning, deviceList, connecting, review, success, error }
 
 class UnknownDeviceReportPage extends StatefulWidget {
   const UnknownDeviceReportPage({super.key});
@@ -23,11 +23,18 @@ class UnknownDeviceReportPage extends StatefulWidget {
 class _UnknownDeviceReportPageState extends State<UnknownDeviceReportPage> {
   UnknownDevicePageState _pageState = UnknownDevicePageState.scanning;
 
-  // Fake devices for UI demonstration
+  // Real BLE devices
   final List<DiscoveredDevice> _devices = [];
   DiscoveredDevice? _selectedDevice;
   String _errorMessage = '';
   String _collectedData = '';
+
+  // Store BLE device and services for report regeneration
+  fbp.BluetoothDevice? _selectedBleDevice;
+  List<fbp.BluetoothService>? _selectedDeviceServices;
+
+  // BLE scan subscription
+  StreamSubscription<List<fbp.ScanResult>>? _scanSubscription;
 
   // Form for additional notes
   late FormGroup _form;
@@ -38,9 +45,7 @@ class _UnknownDeviceReportPageState extends State<UnknownDeviceReportPage> {
     developer.log('[UnknownDeviceReportPage] Initializing page');
 
     // Initialize form with notes field
-    _form = FormGroup({
-      'notes': FormControl<String>(value: ''),
-    });
+    _form = FormGroup({'notes': FormControl<String>(value: '')});
 
     // Auto-start scan (stubbed)
     _startScan();
@@ -49,134 +54,305 @@ class _UnknownDeviceReportPageState extends State<UnknownDeviceReportPage> {
   @override
   void dispose() {
     developer.log('[UnknownDeviceReportPage] Disposing page');
+    _scanSubscription?.cancel();
+    fbp.FlutterBluePlus.stopScan();
     super.dispose();
   }
 
-  /// STUB: Simulates BLE scanning with fake devices
-  void _startScan() {
-    developer.log('[UnknownDeviceReportPage] Starting scan (STUB)');
+  /// Starts real BLE scanning for all devices
+  Future<void> _startScan() async {
+    developer.log('[UnknownDeviceReportPage] Starting real BLE scan');
 
     setState(() {
       _pageState = UnknownDevicePageState.scanning;
       _devices.clear();
     });
 
-    // Simulate discovering devices after a delay
-    Future.delayed(const Duration(seconds: 2), () {
-      if (!mounted) return;
+    try {
+      // Cancel any existing subscription
+      await _scanSubscription?.cancel();
 
-      // Generate fake devices for demonstration
-      final fakeDevices = [
-        _createFakeDevice('Wahoo KICKR 1234', 'AA:BB:CC:DD:EE:01', -45),
-        _createFakeDevice('', 'AA:BB:CC:DD:EE:02', -67),
-        _createFakeDevice('Garmin Edge', 'AA:BB:CC:DD:EE:03', -52),
-        _createFakeDevice('Unknown BLE Device', 'AA:BB:CC:DD:EE:04', -78),
-        _createFakeDevice('', 'AA:BB:CC:DD:EE:05', -89),
-        _createFakeDevice('Polar H10', 'AA:BB:CC:DD:EE:06', -41),
-      ];
+      // Stop any ongoing scan
+      await fbp.FlutterBluePlus.stopScan();
 
-      setState(() {
-        _devices.addAll(fakeDevices);
-        _devices.sort((a, b) => b.rssi.compareTo(a.rssi)); // Sort by signal strength
-        _pageState = UnknownDevicePageState.deviceList;
-      });
-    });
+      // Start scanning for ALL BLE devices (no service filter for unknown device reporting)
+      await fbp.FlutterBluePlus.startScan(timeout: const Duration(seconds: 10));
+
+      // Map to track unique devices by ID
+      final Map<String, DiscoveredDevice> deviceMap = {};
+
+      // Listen to scan results
+      _scanSubscription = fbp.FlutterBluePlus.scanResults.listen(
+        (results) {
+          for (final result in results) {
+            final deviceId = result.device.remoteId.str;
+
+            // Convert to DiscoveredDevice
+            deviceMap[deviceId] = DiscoveredDevice(
+              id: deviceId,
+              name: result.device.platformName,
+              rssi: result.rssi,
+              serviceUuids: result.advertisementData.serviceUuids,
+            );
+          }
+
+          if (mounted) {
+            setState(() {
+              _devices.clear();
+              _devices.addAll(deviceMap.values);
+              _devices.sort((a, b) => b.rssi.compareTo(a.rssi)); // Sort by signal strength
+            });
+          }
+        },
+        onError: (Object e, StackTrace stackTrace) {
+          developer.log('[UnknownDeviceReportPage] Scan error: $e', stackTrace: stackTrace);
+          if (mounted) {
+            setState(() {
+              _errorMessage = 'Failed to scan for devices: $e';
+              _pageState = UnknownDevicePageState.error;
+            });
+          }
+        },
+      );
+
+      // Wait for scan to complete
+      await Future.delayed(const Duration(seconds: 10));
+
+      if (mounted) {
+        await _scanSubscription?.cancel();
+        await fbp.FlutterBluePlus.stopScan();
+
+        setState(() {
+          _pageState = UnknownDevicePageState.deviceList;
+        });
+
+        developer.log('[UnknownDeviceReportPage] Scan completed, found ${_devices.length} devices');
+      }
+    } catch (e, stackTrace) {
+      developer.log('[UnknownDeviceReportPage] Failed to start scan: $e', stackTrace: stackTrace);
+      if (mounted) {
+        setState(() {
+          _errorMessage =
+              'Failed to start Bluetooth scan.\nPlease ensure Bluetooth is enabled and permissions are granted.';
+          _pageState = UnknownDevicePageState.error;
+        });
+      }
+    }
   }
 
-  /// STUB: Creates a fake DiscoveredDevice for demonstration
-  DiscoveredDevice _createFakeDevice(String name, String id, int rssi) {
-    return DiscoveredDevice(
-      id: id,
-      name: name,
-      rssi: rssi,
-      serviceUuids: const [],
-    );
-  }
-
-  /// STUB: Simulates device connection and data collection
-  void _onDeviceSelected(DiscoveredDevice device) {
-    developer.log('[UnknownDeviceReportPage] Device selected (STUB): ${device.id}');
+  /// Connects to device and collects data
+  Future<void> _onDeviceSelected(DiscoveredDevice device) async {
+    developer.log('[UnknownDeviceReportPage] Device selected: ${device.id}');
 
     setState(() {
       _selectedDevice = device;
       _pageState = UnknownDevicePageState.connecting;
     });
 
-    // Simulate connection and data collection
-    Future.delayed(const Duration(seconds: 3), () {
-      if (!mounted) return;
+    try {
+      // Get current user from AuthService
+      final authService = authServiceRef.of(context);
+      final user = authService.currentUser.value;
 
-      // Randomly simulate success or failure (80% success rate)
-      final success = DateTime.now().second % 5 != 0;
+      // Find the BLE device
+      final bleDevice = fbp.BluetoothDevice.fromId(device.id);
 
-      if (success) {
-        // Generate fake collected data
-        _collectedData = _generateFakeDeviceData(device);
+      // Wrap the connection process with a timeout
+      await Future.any([
+        Future<void>(() async {
+          // Connect to the device
+          await bleDevice.connect();
 
+          developer.log('[UnknownDeviceReportPage] Connected to device: ${device.id}');
+
+          // Discover services
+          final services = await bleDevice.discoverServices();
+
+          developer.log('[UnknownDeviceReportPage] Discovered ${services.length} services');
+
+          // Store for later regeneration with user info
+          _selectedBleDevice = bleDevice;
+          _selectedDeviceServices = services;
+
+          // Collect device data with user info
+          _collectedData = await _generateDeviceData(device, bleDevice, services, userInfo: user);
+
+          // Disconnect from device
+          await bleDevice.disconnect();
+
+          if (mounted) {
+            setState(() {
+              _pageState = UnknownDevicePageState.review;
+            });
+          }
+        }),
+        Future.delayed(const Duration(seconds: 10), () {
+          throw TimeoutException('Connection timed out after 10 seconds');
+        }),
+      ]);
+    } on TimeoutException catch (e, stackTrace) {
+      developer.log('[UnknownDeviceReportPage] Connection timeout: $e', stackTrace: stackTrace);
+
+      if (mounted) {
         setState(() {
-          _pageState = UnknownDevicePageState.review;
-        });
-      } else {
-        // Simulate connection failure
-        setState(() {
-          _errorMessage = 'Failed to connect to device.\nPlease try again or select a different device.';
+          _errorMessage = 'Connection timed out after 10 seconds.\nPlease try again or select a different device.';
           _pageState = UnknownDevicePageState.error;
         });
       }
-    });
+    } catch (e, stackTrace) {
+      developer.log('[UnknownDeviceReportPage] Connection error: $e', stackTrace: stackTrace);
+
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'Failed to connect to device.\nError: $e\n\nPlease try again or select a different device.';
+          _pageState = UnknownDevicePageState.error;
+        });
+      }
+    }
   }
 
-  /// STUB: Generates fake device data in TXT format
-  String _generateFakeDeviceData(DiscoveredDevice device) {
+  /// Generates device data report from real BLE connection
+  Future<String> _generateDeviceData(
+    DiscoveredDevice device,
+    fbp.BluetoothDevice bleDevice,
+    List<fbp.BluetoothService> services, {
+    User? userInfo,
+  }) async {
     final now = DateTime.now();
-    return '''
-=== Vekolo Unknown Device Report ===
-Generated: ${now.toIso8601String()}
+    final buffer = StringBuffer();
 
-Device Information:
-- Device ID: ${device.id}
-- Device Name: ${device.name.isEmpty ? "Unknown Device" : device.name}
-- RSSI (Signal Strength): ${device.rssi} dBm
-- Timestamp: ${now.toLocal()}
+    buffer.writeln('=== Vekolo Unknown Device Report ===');
+    buffer.writeln('Generated: ${now.toIso8601String()}');
+    buffer.writeln();
 
-Discovered Services:
-- Service UUID: 00001800-0000-1000-8000-00805f9b34fb (Generic Access)
-- Service UUID: 00001801-0000-1000-8000-00805f9b34fb (Generic Attribute)
-- Service UUID: 0000180a-0000-1000-8000-00805f9b34fb (Device Information)
+    buffer.writeln('User Information:');
+    if (userInfo != null) {
+      buffer.writeln('- User ID: ${userInfo.id}');
+      buffer.writeln('- Name: ${userInfo.name}');
+      buffer.writeln('- Email: ${userInfo.email}');
+    } else {
+      buffer.writeln('- Not available (user not logged in)');
+    }
+    buffer.writeln();
 
-Manufacturer Data:
-- Data Length: 12 bytes
-- Raw Data: 4C 00 02 15 A1 B2 C3 D4 E5 F6 07 08
+    buffer.writeln('Device Information:');
+    buffer.writeln('- Device ID: ${device.id}');
+    buffer.writeln('- Device Name: ${device.name.isEmpty ? "Unknown Device" : device.name}');
+    buffer.writeln('- RSSI (Signal Strength): ${device.rssi} dBm');
+    buffer.writeln('- Timestamp: ${now.toLocal()}');
+    buffer.writeln();
 
-Service Data:
-- No service data available
+    buffer.writeln('Discovered Services (${services.length} total):');
+    for (final service in services) {
+      buffer.writeln('- Service UUID: ${service.uuid}');
 
-Connection Parameters:
-- Connection Interval: 7.5-15ms
-- MTU: 185 bytes
-- Latency: 0
-- Supervision Timeout: 4000ms
+      // List characteristics for each service
+      if (service.characteristics.isNotEmpty) {
+        for (final characteristic in service.characteristics) {
+          buffer.writeln('  └─ Characteristic: ${characteristic.uuid}');
+          buffer.writeln('     Properties: ${_formatCharacteristicProperties(characteristic)}');
+        }
+      }
+    }
+    buffer.writeln();
 
-Additional System Information:
-- Platform: iOS 17.0.0
-- App Version: 1.0.0
-- Flutter Reactive BLE Version: 5.x.x
+    // Try to get MTU if available
+    try {
+      final mtu = await bleDevice.mtu.first;
+      buffer.writeln('Connection Parameters:');
+      buffer.writeln('- MTU: $mtu bytes');
+    } catch (e) {
+      developer.log('[UnknownDeviceReportPage] Could not read MTU: $e');
+    }
+    buffer.writeln();
 
-End of Report
-''';
+    buffer.writeln('Additional System Information:');
+    buffer.writeln('- Platform: ${Platform.operatingSystem}');
+    buffer.writeln('- App Version: 1.0.0');
+    buffer.writeln('- Flutter Blue Plus Version: 1.36.8');
+    buffer.writeln();
+
+    buffer.writeln('End of Report');
+
+    return buffer.toString();
   }
 
-  /// STUB: Handles form submission
-  void _submitReport() {
-    developer.log('[UnknownDeviceReportPage] Submitting report (STUB)');
+  /// Formats characteristic properties for display
+  String _formatCharacteristicProperties(fbp.BluetoothCharacteristic characteristic) {
+    final props = <String>[];
+    if (characteristic.properties.read) props.add('Read');
+    if (characteristic.properties.write) props.add('Write');
+    if (characteristic.properties.writeWithoutResponse) props.add('WriteWithoutResponse');
+    if (characteristic.properties.notify) props.add('Notify');
+    if (characteristic.properties.indicate) props.add('Indicate');
+    return props.isEmpty ? 'None' : props.join(', ');
+  }
 
-    final notes = _form.control('notes').value as String?;
-    developer.log('[UnknownDeviceReportPage] Additional notes: ${notes ?? "(none)"}');
-    developer.log('[UnknownDeviceReportPage] Data length: ${_collectedData.length} characters');
+  /// Handles form submission - sends report via email
+  Future<void> _submitReport() async {
+    developer.log('[UnknownDeviceReportPage] Submitting report');
 
-    setState(() {
-      _pageState = UnknownDevicePageState.success;
-    });
+    try {
+      // Get current user
+      final authService = authServiceRef.of(context);
+      final user = authService.currentUser.value;
+
+      // Regenerate report with user information
+      if (_selectedDevice != null && _selectedBleDevice != null && _selectedDeviceServices != null) {
+        _collectedData = await _generateDeviceData(
+          _selectedDevice!,
+          _selectedBleDevice!,
+          _selectedDeviceServices!,
+          userInfo: user,
+        );
+      }
+
+      final notes = _form.control('notes').value as String?;
+      developer.log('[UnknownDeviceReportPage] Additional notes: ${notes ?? "(none)"}');
+
+      // Build email content
+      final emailBody = StringBuffer();
+      emailBody.writeln(_collectedData);
+
+      if (notes != null && notes.isNotEmpty) {
+        emailBody.writeln('\n');
+        emailBody.writeln('=== Additional Notes ===');
+        emailBody.writeln(notes);
+      }
+
+      // Create mailto URL
+      final emailAddress = 'support@vekolo.cc';
+      final subject = Uri.encodeComponent('Unknown Device Report - ${_selectedDevice?.name ?? "Unknown Device"}');
+      final body = Uri.encodeComponent(emailBody.toString());
+
+      final mailtoUrl = Uri.parse('mailto:$emailAddress?subject=$subject&body=$body');
+
+      developer.log('[UnknownDeviceReportPage] Opening email client with mailto URL');
+
+      // Launch email client
+      if (await canLaunchUrl(mailtoUrl)) {
+        await launchUrl(mailtoUrl);
+
+        // Show success state
+        if (mounted) {
+          setState(() {
+            _pageState = UnknownDevicePageState.success;
+          });
+        }
+      } else {
+        throw Exception('Could not launch email client');
+      }
+    } catch (e, stackTrace) {
+      developer.log('[UnknownDeviceReportPage] Error sending email: $e');
+      developer.log(stackTrace.toString());
+
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'Failed to open email client.\nPlease ensure you have a mail app configured.';
+          _pageState = UnknownDevicePageState.error;
+        });
+      }
+    }
   }
 
   /// Returns back to device list
@@ -267,10 +443,7 @@ End of Report
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Select a device to report',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-              ),
+              const Text('Select a device to report', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
               const SizedBox(height: 8),
               Text(
                 'Found ${_devices.length} device(s) nearby',
@@ -287,10 +460,7 @@ End of Report
                     children: [
                       Icon(Icons.bluetooth_searching, size: 64, color: Colors.grey[400]),
                       const SizedBox(height: 16),
-                      Text(
-                        'No devices found',
-                        style: TextStyle(fontSize: 16, color: Colors.grey[600]),
-                      ),
+                      Text('No devices found', style: TextStyle(fontSize: 16, color: Colors.grey[600])),
                       const SizedBox(height: 24),
                       ElevatedButton.icon(
                         onPressed: _startScan,
@@ -310,27 +480,18 @@ End of Report
                       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                       child: ListTile(
                         leading: const Icon(Icons.bluetooth, size: 32),
-                        title: Text(
-                          displayName,
-                          style: const TextStyle(fontWeight: FontWeight.w500),
-                        ),
+                        title: Text(displayName, style: const TextStyle(fontWeight: FontWeight.w500)),
                         subtitle: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const SizedBox(height: 4),
-                            Text(
-                              device.id,
-                              style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
-                            ),
+                            Text(device.id, style: const TextStyle(fontSize: 12, fontFamily: 'monospace')),
                             const SizedBox(height: 4),
                             Row(
                               children: [
                                 _buildRssiIndicator(device.rssi),
                                 const SizedBox(width: 8),
-                                Text(
-                                  '${device.rssi} dBm',
-                                  style: const TextStyle(fontSize: 12),
-                                ),
+                                Text('${device.rssi} dBm', style: const TextStyle(fontSize: 12)),
                               ],
                             ),
                           ],
@@ -398,20 +559,14 @@ End of Report
             children: [
               const Icon(Icons.check_circle, size: 64, color: Colors.green),
               const SizedBox(height: 16),
-              const Text(
-                'Device information collected',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
+              const Text('Device information collected', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
               Text(
                 'Successfully collected data from ${_selectedDevice?.name.isEmpty ?? true ? "Unknown Device" : _selectedDevice!.name}',
                 style: TextStyle(fontSize: 14, color: Colors.grey[600]),
               ),
               const SizedBox(height: 24),
-              const Text(
-                'Data Preview:',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-              ),
+              const Text('Data Preview:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
               const SizedBox(height: 8),
               Container(
                 width: double.infinity,
@@ -423,10 +578,7 @@ End of Report
                   border: Border.all(color: Colors.grey[300]!),
                 ),
                 child: SingleChildScrollView(
-                  child: Text(
-                    _collectedData,
-                    style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
-                  ),
+                  child: SelectableText(_collectedData, style: const TextStyle(fontSize: 12, fontFamily: 'monospace')),
                 ),
               ),
               const SizedBox(height: 24),
@@ -451,18 +603,13 @@ End of Report
                   onPressed: _submitReport,
                   icon: const Icon(Icons.send),
                   label: const Text('Submit Report'),
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                  ),
+                  style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16)),
                 ),
               ),
               const SizedBox(height: 8),
               SizedBox(
                 width: double.infinity,
-                child: OutlinedButton(
-                  onPressed: _backToDeviceList,
-                  child: const Text('Back to Device List'),
-                ),
+                child: OutlinedButton(onPressed: _backToDeviceList, child: const Text('Back to Device List')),
               ),
             ],
           ),
@@ -481,16 +628,9 @@ End of Report
           children: [
             const Icon(Icons.error_outline, size: 64, color: Colors.red),
             const SizedBox(height: 24),
-            const Text(
-              'Connection Failed',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
+            const Text('Connection Failed', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
             const SizedBox(height: 16),
-            Text(
-              _errorMessage,
-              style: const TextStyle(fontSize: 16),
-              textAlign: TextAlign.center,
-            ),
+            Text(_errorMessage, style: const TextStyle(fontSize: 16), textAlign: TextAlign.center),
             const SizedBox(height: 32),
             SizedBox(
               width: double.infinity,
@@ -498,18 +638,13 @@ End of Report
                 onPressed: _retryConnection,
                 icon: const Icon(Icons.refresh),
                 label: const Text('Try Again'),
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                ),
+                style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16)),
               ),
             ),
             const SizedBox(height: 8),
             SizedBox(
               width: double.infinity,
-              child: OutlinedButton(
-                onPressed: _backToDeviceList,
-                child: const Text('Back to Device List'),
-              ),
+              child: OutlinedButton(onPressed: _backToDeviceList, child: const Text('Back to Device List')),
             ),
           ],
         ),
@@ -527,10 +662,7 @@ End of Report
           children: [
             const Icon(Icons.check_circle_outline, size: 80, color: Colors.green),
             const SizedBox(height: 24),
-            const Text(
-              'Report Submitted',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
+            const Text('Report Submitted', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
             const SizedBox(height: 16),
             const Text(
               'Thank you for contributing to Vekolo!\n\nYour device report will help us improve support for more trainers.',
@@ -553,18 +685,13 @@ End of Report
                 },
                 icon: const Icon(Icons.add),
                 label: const Text('Report Another Device'),
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                ),
+                style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16)),
               ),
             ),
             const SizedBox(height: 8),
             SizedBox(
               width: double.infinity,
-              child: OutlinedButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Close'),
-              ),
+              child: OutlinedButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Close')),
             ),
           ],
         ),

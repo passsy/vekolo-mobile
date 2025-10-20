@@ -1,0 +1,60 @@
+=== Vekolo Unknown Device Report ===
+Generated: 2025-10-20T16:08:54.014541
+
+User Information:
+- User ID: 4Ft5fVWHWEnWb5WOColQK
+- Name: Pascal
+- Email: pascal@phntm.xyz
+
+Device Information:
+- Device ID: 79930339-97ED-4BEA-1AD5-140C410D764B
+- Device Name: Polar H9 D984782F
+- RSSI (Signal Strength): -52 dBm
+- Timestamp: 2025-10-20 16:08:54.014541
+
+Discovered Services (5 total):
+- Service UUID: 180d
+  └─ Characteristic: 2a37
+     Properties: Notify
+  └─ Characteristic: 2a38
+     Properties: Read
+- Service UUID: 180a
+  └─ Characteristic: 2a29
+     Properties: Read
+  └─ Characteristic: 2a24
+     Properties: Read
+  └─ Characteristic: 2a25
+     Properties: Read
+  └─ Characteristic: 2a27
+     Properties: Read
+  └─ Characteristic: 2a26
+     Properties: Read
+  └─ Characteristic: 2a28
+     Properties: Read
+  └─ Characteristic: 2a23
+     Properties: Read
+- Service UUID: 180f
+  └─ Characteristic: 2a19
+     Properties: Read, Notify
+- Service UUID: 6217ff4b-fb31-1140-ad5a-a45545d7ecf3
+  └─ Characteristic: 6217ff4c-c8ec-b1fb-1380-3ad986708e2d
+     Properties: Read
+  └─ Characteristic: 6217ff4d-91bb-91d0-7e2a-7cd3bda8a1f3
+     Properties: WriteWithoutResponse, Indicate
+- Service UUID: feee
+  └─ Characteristic: fb005c51-02e7-f387-1cad-8acd2d8df0c8
+     Properties: Write, WriteWithoutResponse, Notify
+  └─ Characteristic: fb005c52-02e7-f387-1cad-8acd2d8df0c8
+     Properties: Notify
+  └─ Characteristic: fb005c53-02e7-f387-1cad-8acd2d8df0c8
+     Properties: Write, WriteWithoutResponse
+
+Connection Parameters:
+- MTU: 232 bytes
+
+Additional System Information:
+- Platform: macos
+- App Version: 1.0.0
+- Flutter Blue Plus Version: 1.36.8
+
+End of Report
