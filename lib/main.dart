@@ -2,6 +2,7 @@ import 'dart:developer' as devloper;
 
 import 'package:context_plus/context_plus.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:vekolo/api/pretty_log_interceptor.dart';
 import 'package:vekolo/api/vekolo_api_client.dart';
 import 'package:vekolo/config/api_config.dart';
@@ -17,7 +18,10 @@ import 'package:vekolo/widgets/splash_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // Don't put any code here, move it to _VekoloAppState._initialize
+
+  // Important:
+  // Don't put any initialization/setup code here, move it to _VekoloAppState._initialize
+
   runApp(VekoloApp());
 }
 
@@ -33,6 +37,9 @@ class _VekoloAppState extends State<VekoloApp> {
 
   /// Perform async initialization of services before mounting the main app / drawing the first frame
   Future<void> _initialize(BuildContext context) async {
+    // Disable verbose flutter_blue_plus logging
+    FlutterBluePlus.setLogLevel(LogLevel.warning);
+
     // Initialize DeviceStateManager to start streaming device data to UI beacons
     // Must be done before any async operations to avoid BuildContext issues
     deviceStateManagerRef.of(context);
