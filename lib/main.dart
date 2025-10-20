@@ -1,3 +1,5 @@
+import 'dart:developer' as devloper;
+
 import 'package:context_plus/context_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:vekolo/api/pretty_log_interceptor.dart';
@@ -11,9 +13,11 @@ import 'package:vekolo/services/fresh_auth.dart';
 import 'package:vekolo/services/workout_sync_service.dart';
 import 'package:vekolo/state/device_state.dart';
 import 'package:vekolo/state/device_state_manager.dart';
+import 'package:vekolo/widgets/splash_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Don't put any code here, move it to _VekoloAppState._initialize
   runApp(VekoloApp());
 }
 
@@ -27,10 +31,16 @@ class VekoloApp extends StatefulWidget {
 class _VekoloAppState extends State<VekoloApp> {
   bool _initialized = false;
 
+  /// Perform async initialization of services before mounting the main app / drawing the first frame
   Future<void> _initialize(BuildContext context) async {
     // Run async initialization (load user from secure storage)
     final authService = authServiceRef.of(context);
     await authService.initialize();
+    try {
+      await authService.refreshAccessToken();
+    } catch (e, stack) {
+      devloper.log('[VekoloApp] No valid refresh token found during initialization', error: e, stackTrace: stack);
+    }
 
     // Mark initialization as complete
     if (mounted) {
@@ -48,7 +58,7 @@ class _VekoloAppState extends State<VekoloApp> {
 
           // Create Fresh with lazy apiClient access
           final fresh = createFreshAuth(apiClient: () => apiClient);
-          final authService = authServiceRef.bind(context, () => AuthService(fresh: fresh));
+          final authService = authServiceRef.bind(context, () => AuthService(fresh: fresh, apiClient: () => apiClient));
 
           apiClient = apiClientRef.bind(
             context,
@@ -75,29 +85,14 @@ class _VekoloAppState extends State<VekoloApp> {
           if (!_initialized) {
             _initialize(context); // Fire and forget - setState will rebuild
 
-            return MaterialApp(
-              debugShowCheckedModeBanner: false,
-              home: Scaffold(
-                body: Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      FlutterLogo(size: 100), // TODO: Replace with Vekolo logo
-                      SizedBox(height: 24),
-                      CircularProgressIndicator(),
-                      SizedBox(height: 16),
-                      Text('Loading...', style: TextStyle(fontSize: 16)),
-                    ],
-                  ),
-                ),
-              ),
-            );
+            return MaterialApp(debugShowCheckedModeBanner: false, title: 'Vekolo', home: SplashScreen());
           }
 
           // After initialization, render main app
           return MaterialApp.router(
             title: 'Vekolo',
             theme: ThemeData(colorScheme: ColorScheme.fromSeed(seedColor: Colors.orange)),
+            debugShowCheckedModeBanner: false,
             routerConfig: router,
           );
         },

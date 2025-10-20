@@ -2,13 +2,14 @@ import 'dart:convert';
 
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:fresh_dio/fresh_dio.dart';
+import 'package:fresh_dio/fresh_dio.dart' hide RefreshToken;
 import 'package:state_beacon/state_beacon.dart';
-import 'package:vekolo/api/vekolo_api_client.dart' as vekolo;
+import 'package:vekolo/api/vekolo_api_client.dart';
 import 'package:vekolo/models/user.dart';
+import 'package:vekolo/services/fresh_auth.dart';
 
 /// Token storage implementation using FlutterSecureStorage
-class SecureTokenStorage extends TokenStorage<OAuth2Token> {
+class SecureTokenStorage extends TokenStorage<VekoloToken> {
   static const _tokenKey = 'oauth2_token';
   final _storage = const FlutterSecureStorage();
 
@@ -18,12 +19,15 @@ class SecureTokenStorage extends TokenStorage<OAuth2Token> {
   }
 
   @override
-  Future<OAuth2Token?> read() async {
+  Future<VekoloToken?> read() async {
     final json = await _storage.read(key: _tokenKey);
     if (json == null) return null;
     try {
       final data = jsonDecode(json) as Map<String, dynamic>;
-      return OAuth2Token(accessToken: data['accessToken'] as String, refreshToken: data['refreshToken'] as String?);
+      return VekoloToken(
+        accessToken: AccessToken(data['accessToken'] as String),
+        refreshToken: RefreshToken(data['refreshToken'] as String),
+      );
     } catch (e, stackTrace) {
       print('[SecureTokenStorage] Failed to parse token: $e');
       print(stackTrace);
@@ -32,7 +36,7 @@ class SecureTokenStorage extends TokenStorage<OAuth2Token> {
   }
 
   @override
-  Future<void> write(OAuth2Token token) async {
+  Future<void> write(VekoloToken token) async {
     final json = jsonEncode({'accessToken': token.accessToken, 'refreshToken': token.refreshToken});
     await _storage.write(key: _tokenKey, value: json);
   }
@@ -40,9 +44,11 @@ class SecureTokenStorage extends TokenStorage<OAuth2Token> {
 
 /// Service for managing authentication state and secure token storage
 class AuthService {
-  AuthService({required this.fresh});
+  AuthService({required this.fresh, required VekoloApiClient Function() this.apiClient});
 
-  final Fresh<OAuth2Token> fresh;
+  final Fresh<VekoloToken> fresh;
+
+  final VekoloApiClient Function() apiClient;
 
   /// Get the Fresh interceptor for Dio (for authenticated requests only)
   Interceptor get apiInterceptor => fresh;
@@ -60,27 +66,39 @@ class AuthService {
     currentUser.value = user;
   }
 
+  /// Refresh the access token using the stored refresh token
+  ///
+  /// This also refreshes the current user data, which are part of the access token (JWT)
+  Future<void> refreshAccessToken() async {
+    final refreshToken = await getRefreshToken();
+    if (refreshToken == null) {
+      throw Exception('No refresh token available');
+    }
+    final response = await apiClient().refreshToken(refreshToken: refreshToken);
+    await saveTokens(accessToken: response.accessToken, refreshToken: refreshToken);
+  }
+
   /// Save authentication tokens and user data
-  Future<void> saveTokens({required vekolo.AccessToken accessToken, required vekolo.RefreshToken refreshToken}) async {
+  Future<void> saveTokens({required AccessToken accessToken, required RefreshToken refreshToken}) async {
     final user = User.init.fromAccessToken(accessToken);
     currentUser.value = user;
 
     // Save to fresh's token storage
-    await fresh.setToken(OAuth2Token(accessToken: accessToken.jwt, refreshToken: refreshToken.jwt));
+    await fresh.setToken(VekoloToken(accessToken: accessToken, refreshToken: refreshToken));
   }
 
   /// Get the stored access token
-  Future<vekolo.AccessToken?> getAccessToken() async {
+  Future<AccessToken?> getAccessToken() async {
     final token = await fresh.token;
     if (token == null) return null;
-    return vekolo.AccessToken(token.accessToken);
+    return AccessToken(token.accessToken);
   }
 
   /// Get the stored refresh token
-  Future<vekolo.RefreshToken?> getRefreshToken() async {
+  Future<RefreshToken?> getRefreshToken() async {
     final token = await fresh.token;
     if (token == null) return null;
-    return vekolo.RefreshToken(token.refreshToken ?? '');
+    return RefreshToken(token.refreshToken ?? '');
   }
 
   /// Get the stored user data

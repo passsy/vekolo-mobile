@@ -21,12 +21,24 @@ dependencies:
   reactive_forms: ^18.1.1
   state_beacon: ^1.0.0
   clock: ^1.0.0
-  fresh_dio: ^0.4.3
+  fresh_dio:
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   lint: ^2.8.0
+
+dependency_overrides:
+  fresh_dio:
+    git:
+      url: https://github.com/passsy/fresh/
+      path: packages/fresh_dio
+      ref: pull-validate-token-from-StarProxima
+  fresh:
+    git:
+      url: https://github.com/passsy/fresh/
+      path: packages/fresh
+      ref: pull-validate-token-from-StarProxima
 
 flutter:
   uses-material-design: true

@@ -1,5 +1,5 @@
 import 'package:dio/dio.dart';
-import 'package:fresh_dio/fresh_dio.dart';
+import 'package:fresh_dio/fresh_dio.dart' show Fresh;
 import 'package:vekolo/api/api_context.dart';
 import 'package:vekolo/api/auth/redeem_code.dart';
 import 'package:vekolo/api/auth/refresh_token.dart';
@@ -29,10 +29,7 @@ export 'package:vekolo/api/user/update_profile.dart';
 class VekoloApiClient {
   final String baseUrl;
 
-  VekoloApiClient({
-    required this.baseUrl,
-    List<Interceptor> interceptors = const [],
-  }) {
+  VekoloApiClient({required this.baseUrl, List<Interceptor> interceptors = const []}) {
     // Create authenticated Dio instance (with all interceptors including auth)
     final Dio authenticatedDio = Dio();
     authenticatedDio.options.baseUrl = baseUrl;
@@ -45,14 +42,9 @@ class VekoloApiClient {
     publicDio.options.baseUrl = baseUrl;
     publicDio.options.validateStatus = (status) => status != null && status < 500;
     // Add all interceptors except auth-related ones
-    publicDio.interceptors.addAll(
-      interceptors.where((interceptor) => interceptor is! Fresh),
-    );
+    publicDio.interceptors.addAll(interceptors.where((interceptor) => interceptor is! Fresh));
 
-    context = ApiContext(
-      authDio: authenticatedDio,
-      publicDio: publicDio,
-    );
+    context = ApiContext(authDio: authenticatedDio, publicDio: publicDio);
   }
 
   late final ApiContext context;
@@ -89,14 +81,14 @@ class VekoloApiClient {
   /// Refresh an access token
   ///
   /// `POST /auth/token/refresh`
-  Future<RefreshTokenResponse> refreshToken({required String refreshToken}) {
+  Future<RefreshTokenResponse> refreshToken({required RefreshToken refreshToken}) {
     return postRefreshToken(context, refreshToken: refreshToken);
   }
 
   /// Revoke a refresh token (logout)
   ///
   /// `POST /auth/token/revoke`
-  Future<RevokeTokenResponse> revokeToken({required String refreshToken}) {
+  Future<RevokeTokenResponse> revokeToken({required RefreshToken refreshToken}) {
     return postRevokeToken(context, refreshToken: refreshToken);
   }
 

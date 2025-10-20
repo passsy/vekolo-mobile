@@ -1,4 +1,4 @@
-import 'package:vekolo/api/auth/redeem_code.dart';
+import 'package:vekolo/api/vekolo_api_client.dart';
 import 'package:vekolo/models/rekord.dart';
 
 class User with RekordMixin {

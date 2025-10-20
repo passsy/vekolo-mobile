@@ -128,7 +128,7 @@ Future<void> loginFlow(VekoloApiClient client) async {
 Future<void> refreshTokenExample(VekoloApiClient client) async {
   try {
     // Load refresh token from secure storage
-    const storedRefreshToken = 'your-stored-refresh-token';
+    const storedRefreshToken = RefreshToken('your-stored-refresh-token');
 
     // Get a new access token
     final response = await client.refreshToken(refreshToken: storedRefreshToken);
@@ -150,7 +150,7 @@ Future<void> refreshTokenExample(VekoloApiClient client) async {
 Future<void> logoutExample(VekoloApiClient client) async {
   try {
     // Load refresh token from secure storage
-    const storedRefreshToken = 'your-stored-refresh-token';
+    const storedRefreshToken = RefreshToken('your-stored-refresh-token');
 
     // Revoke the token on the server
     final response = await client.revokeToken(refreshToken: storedRefreshToken);
