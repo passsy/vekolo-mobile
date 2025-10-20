@@ -1,5 +1,5 @@
 === Vekolo Unknown Device Report ===
-Generated: 2025-10-20T16:10:21.103252
+Generated: 2025-10-20T16:14:22.034523
 
 User Information:
 - User ID: 4Ft5fVWHWEnWb5WOColQK
@@ -9,25 +9,32 @@ User Information:
 Device Information:
 - Device ID: 4BF23FA4-33B9-8AEB-DCCD-E5799FD84EB6
 - Device Name: Polar Sense CD0BB326
-- RSSI (Signal Strength): -45 dBm
-- Timestamp: 2025-10-20 16:10:21.103252
+- RSSI (Signal Strength): -61 dBm
+- Timestamp: 2025-10-20 16:14:22.034523
 
 Discovered Services (7 total):
 - Service UUID: 180a
   └─ Characteristic: 2a29
      Properties: Read
+     Value: 50 6F 6C 61 72 20 45 6C 65 63 74 72 6F 20 4F 79 00 (17 bytes)
   └─ Characteristic: 2a24
      Properties: Read
+     Value: 49 4E 57 34 4A (5 bytes)
   └─ Characteristic: 2a25
      Properties: Read
+     Value: 43 44 30 42 42 33 32 36 00 (9 bytes)
   └─ Characteristic: 2a27
      Properties: Read
+     Value: 30 30 37 38 34 32 39 32 2E 30 32 (11 bytes)
   └─ Characteristic: 2a26
      Properties: Read
+     Value: 30 2E 31 2E 35 (5 bytes)
   └─ Characteristic: 2a28
      Properties: Read
+     Value: 32 2E 32 2E 36 (5 bytes)
   └─ Characteristic: 2a23
      Properties: Read
+     Value: B3 0B CD FE FF 1A 9E A0 (8 bytes)
 - Service UUID: feee
   └─ Characteristic: fb005c51-02e7-f387-1cad-8acd2d8df0c8
      Properties: Write, WriteWithoutResponse, Notify
@@ -41,9 +48,11 @@ Discovered Services (7 total):
 - Service UUID: 180f
   └─ Characteristic: 2a19
      Properties: Read, Notify
+     Value: 5F (1 bytes)
 - Service UUID: fb005c20-02e7-f387-1cad-8acd2d8df0c8
   └─ Characteristic: fb005c21-02e7-f387-1cad-8acd2d8df0c8
      Properties: Read
+     Value: 08 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 (16 bytes)
   └─ Characteristic: fb005c22-02e7-f387-1cad-8acd2d8df0c8
      Properties: Write, Indicate
   └─ Characteristic: fb005c26-02e7-f387-1cad-8acd2d8df0c8
@@ -51,11 +60,13 @@ Discovered Services (7 total):
 - Service UUID: 6217ff4b-fb31-1140-ad5a-a45545d7ecf3
   └─ Characteristic: 6217ff4c-c8ec-b1fb-1380-3ad986708e2d
      Properties: Read
+     Value: 81 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 (16 bytes)
   └─ Characteristic: 6217ff4d-91bb-91d0-7e2a-7cd3bda8a1f3
      Properties: Write, Indicate
 - Service UUID: fb005c80-02e7-f387-1cad-8acd2d8df0c8
   └─ Characteristic: fb005c81-02e7-f387-1cad-8acd2d8df0c8
      Properties: Read, Write, Indicate
+     Value: 0F 6E 62 00 00 00 00 00 00 00 00 00 00 00 00 00 00 (17 bytes)
   └─ Characteristic: fb005c82-02e7-f387-1cad-8acd2d8df0c8
      Properties: Notify
 

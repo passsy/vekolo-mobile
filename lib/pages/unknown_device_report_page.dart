@@ -33,6 +33,10 @@ class _UnknownDeviceReportPageState extends State<UnknownDeviceReportPage> {
   fbp.BluetoothDevice? _selectedBleDevice;
   List<fbp.BluetoothService>? _selectedDeviceServices;
 
+  // Progress tracking for service reading
+  int _currentServiceIndex = 0;
+  int _totalServices = 0;
+
   // BLE scan subscription
   StreamSubscription<List<fbp.ScanResult>>? _scanSubscription;
 
@@ -147,6 +151,9 @@ class _UnknownDeviceReportPageState extends State<UnknownDeviceReportPage> {
     setState(() {
       _selectedDevice = device;
       _pageState = UnknownDevicePageState.connecting;
+      // Reset progress
+      _currentServiceIndex = 0;
+      _totalServices = 0;
     });
 
     try {
@@ -174,8 +181,28 @@ class _UnknownDeviceReportPageState extends State<UnknownDeviceReportPage> {
           _selectedBleDevice = bleDevice;
           _selectedDeviceServices = services;
 
+          // Initialize progress tracking
+          if (mounted) {
+            setState(() {
+              _totalServices = services.length;
+              _currentServiceIndex = 0;
+            });
+          }
+
           // Collect device data with user info
-          _collectedData = await _generateDeviceData(device, bleDevice, services, userInfo: user);
+          _collectedData = await _generateDeviceData(
+            device,
+            bleDevice,
+            services,
+            userInfo: user,
+            onProgress: (current) {
+              if (mounted) {
+                setState(() {
+                  _currentServiceIndex = current;
+                });
+              }
+            },
+          );
 
           // Disconnect from device
           await bleDevice.disconnect();
@@ -217,6 +244,7 @@ class _UnknownDeviceReportPageState extends State<UnknownDeviceReportPage> {
     fbp.BluetoothDevice bleDevice,
     List<fbp.BluetoothService> services, {
     User? userInfo,
+    void Function(int currentService)? onProgress,
   }) async {
     final now = DateTime.now();
     final buffer = StringBuffer();
@@ -243,7 +271,12 @@ class _UnknownDeviceReportPageState extends State<UnknownDeviceReportPage> {
     buffer.writeln();
 
     buffer.writeln('Discovered Services (${services.length} total):');
-    for (final service in services) {
+    for (var i = 0; i < services.length; i++) {
+      final service = services[i];
+
+      // Update progress
+      onProgress?.call(i + 1);
+
       buffer.writeln('- Service UUID: ${service.uuid}');
 
       // List characteristics for each service
@@ -251,6 +284,22 @@ class _UnknownDeviceReportPageState extends State<UnknownDeviceReportPage> {
         for (final characteristic in service.characteristics) {
           buffer.writeln('  └─ Characteristic: ${characteristic.uuid}');
           buffer.writeln('     Properties: ${_formatCharacteristicProperties(characteristic)}');
+
+          // Try to read characteristic value if readable
+          if (characteristic.properties.read) {
+            try {
+              final value = await characteristic.read().timeout(const Duration(seconds: 2));
+              if (value.isNotEmpty) {
+                final hexValue = value.map((byte) => byte.toRadixString(16).padLeft(2, '0').toUpperCase()).join(' ');
+                buffer.writeln('     Value: $hexValue (${value.length} bytes)');
+              } else {
+                buffer.writeln('     Value: (empty)');
+              }
+            } catch (e) {
+              buffer.writeln('     Value: (read failed: $e)');
+              developer.log('[UnknownDeviceReportPage] Failed to read characteristic ${characteristic.uuid}: $e');
+            }
+          }
         }
       }
     }
@@ -361,6 +410,9 @@ class _UnknownDeviceReportPageState extends State<UnknownDeviceReportPage> {
       _selectedDevice = null;
       _errorMessage = '';
       _pageState = UnknownDevicePageState.deviceList;
+      // Reset progress
+      _currentServiceIndex = 0;
+      _totalServices = 0;
     });
   }
 
@@ -521,28 +573,44 @@ class _UnknownDeviceReportPageState extends State<UnknownDeviceReportPage> {
   /// Builds the connecting state UI
   Widget _buildConnectingState() {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const CircularProgressIndicator(),
-          const SizedBox(height: 24),
-          const Text(
-            'Connecting and collecting\ndevice information...',
-            style: TextStyle(fontSize: 16),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 16),
-          if (_selectedDevice != null) ...[
-            Text(
-              _selectedDevice!.name.isEmpty ? 'Unknown Device' : _selectedDevice!.name,
-              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 32.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(height: 24),
+            const Text(
+              'Connecting and collecting\ndevice information...',
+              style: TextStyle(fontSize: 16),
+              textAlign: TextAlign.center,
             ),
-            Text(
-              _selectedDevice!.id,
-              style: TextStyle(fontSize: 12, color: Colors.grey[600], fontFamily: 'monospace'),
-            ),
+            const SizedBox(height: 16),
+            if (_selectedDevice != null) ...[
+              Text(
+                _selectedDevice!.name.isEmpty ? 'Unknown Device' : _selectedDevice!.name,
+                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+              ),
+              Text(
+                _selectedDevice!.id,
+                style: TextStyle(fontSize: 12, color: Colors.grey[600], fontFamily: 'monospace'),
+              ),
+            ],
+            if (_totalServices > 0) ...[
+              const SizedBox(height: 24),
+              LinearProgressIndicator(
+                value: _currentServiceIndex / _totalServices,
+                backgroundColor: Colors.grey[300],
+                valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.primary),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Reading service $_currentServiceIndex of $_totalServices',
+                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+              ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }

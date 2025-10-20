@@ -1,5 +1,5 @@
 === Vekolo Unknown Device Report ===
-Generated: 2025-10-20T16:08:54.014541
+Generated: 2025-10-20T16:14:46.541569
 
 User Information:
 - User ID: 4Ft5fVWHWEnWb5WOColQK
@@ -9,8 +9,8 @@ User Information:
 Device Information:
 - Device ID: 79930339-97ED-4BEA-1AD5-140C410D764B
 - Device Name: Polar H9 D984782F
-- RSSI (Signal Strength): -52 dBm
-- Timestamp: 2025-10-20 16:08:54.014541
+- RSSI (Signal Strength): -53 dBm
+- Timestamp: 2025-10-20 16:14:46.541569
 
 Discovered Services (5 total):
 - Service UUID: 180d
@@ -18,27 +18,37 @@ Discovered Services (5 total):
      Properties: Notify
   └─ Characteristic: 2a38
      Properties: Read
+     Value: 01 (1 bytes)
 - Service UUID: 180a
   └─ Characteristic: 2a29
      Properties: Read
+     Value: 50 6F 6C 61 72 20 45 6C 65 63 74 72 6F 20 4F 79 00 (17 bytes)
   └─ Characteristic: 2a24
      Properties: Read
+     Value: 48 39 00 (3 bytes)
   └─ Characteristic: 2a25
      Properties: Read
+     Value: 44 39 38 34 37 38 32 46 00 (9 bytes)
   └─ Characteristic: 2a27
      Properties: Read
+     Value: 30 30 37 38 30 36 35 35 2E 30 30 00 (12 bytes)
   └─ Characteristic: 2a26
      Properties: Read
+     Value: 35 2E 30 2E 30 00 (6 bytes)
   └─ Characteristic: 2a28
      Properties: Read
+     Value: 31 2E 31 2E 30 00 (6 bytes)
   └─ Characteristic: 2a23
      Properties: Read
+     Value: 78 84 D9 FE FF 1A 9E A0 (8 bytes)
 - Service UUID: 180f
   └─ Characteristic: 2a19
      Properties: Read, Notify
+     Value: 0A (1 bytes)
 - Service UUID: 6217ff4b-fb31-1140-ad5a-a45545d7ecf3
   └─ Characteristic: 6217ff4c-c8ec-b1fb-1380-3ad986708e2d
      Properties: Read
+     Value: 1F 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 (16 bytes)
   └─ Characteristic: 6217ff4d-91bb-91d0-7e2a-7cd3bda8a1f3
      Properties: WriteWithoutResponse, Indicate
 - Service UUID: feee
