@@ -39,6 +39,7 @@ class _UnknownDeviceReportPageState extends State<UnknownDeviceReportPage> {
 
   // BLE scan subscription
   StreamSubscription<List<fbp.ScanResult>>? _scanSubscription;
+  bool _isScanning = false;
 
   // Form for additional notes
   late FormGroup _form;
@@ -58,8 +59,7 @@ class _UnknownDeviceReportPageState extends State<UnknownDeviceReportPage> {
   @override
   void dispose() {
     developer.log('[UnknownDeviceReportPage] Disposing page');
-    _scanSubscription?.cancel();
-    fbp.FlutterBluePlus.stopScan();
+    _stopScan();
     super.dispose();
   }
 
@@ -70,6 +70,7 @@ class _UnknownDeviceReportPageState extends State<UnknownDeviceReportPage> {
     setState(() {
       _pageState = UnknownDevicePageState.scanning;
       _devices.clear();
+      _isScanning = true;
     });
 
     try {
@@ -88,23 +89,35 @@ class _UnknownDeviceReportPageState extends State<UnknownDeviceReportPage> {
       // Listen to scan results
       _scanSubscription = fbp.FlutterBluePlus.scanResults.listen(
         (results) {
+          bool hasNewDevices = false;
+
           for (final result in results) {
             final deviceId = result.device.remoteId.str;
 
-            // Convert to DiscoveredDevice
-            deviceMap[deviceId] = DiscoveredDevice(
-              id: deviceId,
-              name: result.device.platformName,
-              rssi: result.rssi,
-              serviceUuids: result.advertisementData.serviceUuids,
-            );
+            // Check if this is a new device
+            if (!deviceMap.containsKey(deviceId)) {
+              hasNewDevices = true;
+
+              // Convert to DiscoveredDevice
+              deviceMap[deviceId] = DiscoveredDevice(
+                id: deviceId,
+                name: result.device.platformName,
+                rssi: result.rssi,
+                serviceUuids: result.advertisementData.serviceUuids,
+              );
+            }
           }
 
-          if (mounted) {
+          if (hasNewDevices && mounted) {
             setState(() {
               _devices.clear();
               _devices.addAll(deviceMap.values);
-              _devices.sort((a, b) => b.rssi.compareTo(a.rssi)); // Sort by signal strength
+              // Don't sort - show devices in the order they appear
+
+              // Switch to device list state once we have at least one device
+              if (_pageState == UnknownDevicePageState.scanning && _devices.isNotEmpty) {
+                _pageState = UnknownDevicePageState.deviceList;
+              }
             });
           }
         },
@@ -119,19 +132,7 @@ class _UnknownDeviceReportPageState extends State<UnknownDeviceReportPage> {
         },
       );
 
-      // Wait for scan to complete
-      await Future.delayed(const Duration(seconds: 10));
-
-      if (mounted) {
-        await _scanSubscription?.cancel();
-        await fbp.FlutterBluePlus.stopScan();
-
-        setState(() {
-          _pageState = UnknownDevicePageState.deviceList;
-        });
-
-        developer.log('[UnknownDeviceReportPage] Scan completed, found ${_devices.length} devices');
-      }
+      developer.log('[UnknownDeviceReportPage] Scan started, waiting for devices...');
     } catch (e, stackTrace) {
       developer.log('[UnknownDeviceReportPage] Failed to start scan: $e', stackTrace: stackTrace);
       if (mounted) {
@@ -144,9 +145,32 @@ class _UnknownDeviceReportPageState extends State<UnknownDeviceReportPage> {
     }
   }
 
+  /// Stops the current BLE scan
+  Future<void> _stopScan() async {
+    if (!_isScanning) return;
+
+    developer.log('[UnknownDeviceReportPage] Stopping scan');
+    await _scanSubscription?.cancel();
+    _scanSubscription = null;
+    await fbp.FlutterBluePlus.stopScan();
+
+    if (mounted) {
+      setState(() {
+        _isScanning = false;
+      });
+    }
+  }
+
   /// Connects to device and collects data
   Future<void> _onDeviceSelected(DiscoveredDevice device) async {
     developer.log('[UnknownDeviceReportPage] Device selected: ${device.id}');
+
+    // Get current user from AuthService before async operations
+    final authService = authServiceRef.of(context);
+    final user = authService.currentUser.value;
+
+    // Stop scanning when device is selected
+    await _stopScan();
 
     setState(() {
       _selectedDevice = device;
@@ -157,10 +181,6 @@ class _UnknownDeviceReportPageState extends State<UnknownDeviceReportPage> {
     });
 
     try {
-      // Get current user from AuthService
-      final authService = authServiceRef.of(context);
-      final user = authService.currentUser.value;
-
       // Find the BLE device
       final bleDevice = fbp.BluetoothDevice.fromId(device.id);
 
@@ -423,42 +443,45 @@ class _UnknownDeviceReportPageState extends State<UnknownDeviceReportPage> {
     }
   }
 
-  /// Builds RSSI indicator widget
+  /// Builds RSSI indicator widget with icon and color
   Widget _buildRssiIndicator(int rssi) {
-    // Convert RSSI to signal strength (0-4 bars)
-    int bars;
+    // Convert RSSI to signal strength level and color
+    IconData icon;
     Color color;
+    String strength;
 
     if (rssi >= -50) {
-      bars = 4;
+      icon = Icons.signal_cellular_4_bar;
       color = Colors.green;
+      strength = 'Excellent';
     } else if (rssi >= -60) {
-      bars = 3;
+      icon = Icons.signal_cellular_alt;
       color = Colors.lightGreen;
+      strength = 'Good';
     } else if (rssi >= -70) {
-      bars = 2;
+      icon = Icons.signal_cellular_alt_2_bar;
       color = Colors.orange;
+      strength = 'Fair';
     } else if (rssi >= -80) {
-      bars = 1;
+      icon = Icons.signal_cellular_alt_1_bar;
       color = Colors.deepOrange;
+      strength = 'Weak';
     } else {
-      bars = 1;
+      icon = Icons.signal_cellular_0_bar;
       color = Colors.red;
+      strength = 'Poor';
     }
 
     return Row(
       mainAxisSize: MainAxisSize.min,
-      children: List.generate(4, (index) {
-        return Container(
-          width: 4,
-          height: 8 + (index * 3),
-          margin: const EdgeInsets.symmetric(horizontal: 1),
-          decoration: BoxDecoration(
-            color: index < bars ? color : Colors.grey[300],
-            borderRadius: BorderRadius.circular(1),
-          ),
-        );
-      }),
+      children: [
+        Icon(icon, size: 16, color: color),
+        const SizedBox(width: 4),
+        Text(
+          strength,
+          style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.w500),
+        ),
+      ],
     );
   }
 
@@ -559,11 +582,17 @@ class _UnknownDeviceReportPageState extends State<UnknownDeviceReportPage> {
           padding: const EdgeInsets.all(16.0),
           child: SizedBox(
             width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: _startScan,
-              icon: const Icon(Icons.refresh),
-              label: const Text('Scan Again'),
-            ),
+            child: _isScanning
+                ? OutlinedButton.icon(
+                    onPressed: _stopScan,
+                    icon: const Icon(Icons.stop),
+                    label: const Text('Stop Scan'),
+                  )
+                : OutlinedButton.icon(
+                    onPressed: _startScan,
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Scan Again'),
+                  ),
           ),
         ),
       ],
