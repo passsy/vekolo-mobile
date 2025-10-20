@@ -62,6 +62,9 @@ class DeviceManager {
   /// Dedicated cadence sensor, overrides trainer's cadence if assigned.
   FitnessDevice? _cadenceSource;
 
+  /// Dedicated speed sensor, overrides trainer's speed if assigned.
+  FitnessDevice? _speedSource;
+
   /// Dedicated heart rate monitor.
   FitnessDevice? _heartRateSource;
 
@@ -71,6 +74,7 @@ class DeviceManager {
 
   final StreamController<PowerData> _powerController = StreamController<PowerData>.broadcast();
   final StreamController<CadenceData> _cadenceController = StreamController<CadenceData>.broadcast();
+  final StreamController<SpeedData> _speedController = StreamController<SpeedData>.broadcast();
   final StreamController<HeartRateData> _heartRateController = StreamController<HeartRateData>.broadcast();
 
   // ============================================================================
@@ -82,6 +86,9 @@ class DeviceManager {
 
   /// Active subscription to cadence data from assigned device.
   StreamSubscription<CadenceData>? _cadenceSubscription;
+
+  /// Active subscription to speed data from assigned device.
+  StreamSubscription<SpeedData>? _speedSubscription;
 
   /// Active subscription to heart rate data from assigned device.
   StreamSubscription<HeartRateData>? _heartRateSubscription;
@@ -109,6 +116,16 @@ class DeviceManager {
   ///
   /// Stream automatically switches when device assignments change.
   Stream<CadenceData> get cadenceStream => _cadenceController.stream;
+
+  /// Aggregated speed data stream from assigned speed source.
+  ///
+  /// Emits speed data from:
+  /// 1. Dedicated [speedSource] if assigned and supports speed
+  /// 2. Otherwise from [primaryTrainer] if it supports speed
+  /// 3. No data if neither source is assigned or supports speed
+  ///
+  /// Stream automatically switches when device assignments change.
+  Stream<SpeedData> get speedStream => _speedController.stream;
 
   /// Aggregated heart rate data stream from assigned HR source.
   ///
@@ -154,6 +171,7 @@ class DeviceManager {
       _primaryTrainer = null;
       _updatePowerStream();
       _updateCadenceStream();
+      _updateSpeedStream();
     }
     if (_powerSource?.id == deviceId) {
       _powerSource = null;
@@ -162,6 +180,10 @@ class DeviceManager {
     if (_cadenceSource?.id == deviceId) {
       _cadenceSource = null;
       _updateCadenceStream();
+    }
+    if (_speedSource?.id == deviceId) {
+      _speedSource = null;
+      _updateSpeedStream();
     }
     if (_heartRateSource?.id == deviceId) {
       _heartRateSource = null;
@@ -183,7 +205,16 @@ class DeviceManager {
   /// - Serve as fallback cadence source if no dedicated cadence sensor is assigned
   ///
   /// Throws [ArgumentError] if device not found or doesn't support ERG mode.
-  void assignPrimaryTrainer(String deviceId) {
+  /// Pass null to unassign the primary trainer.
+  void assignPrimaryTrainer(String? deviceId) {
+    if (deviceId == null) {
+      _primaryTrainer = null;
+      _updatePowerStream();
+      _updateCadenceStream();
+      _updateSpeedStream();
+      return;
+    }
+
     final device = _findDevice(deviceId);
 
     if (!device.supportsErgMode) {
@@ -192,12 +223,15 @@ class DeviceManager {
 
     _primaryTrainer = device;
 
-    // Primary trainer affects power and cadence streams if no dedicated sources
+    // Primary trainer affects power, cadence, and speed streams if no dedicated sources
     if (_powerSource == null) {
       _updatePowerStream();
     }
     if (_cadenceSource == null) {
       _updateCadenceStream();
+    }
+    if (_speedSource == null) {
+      _updateSpeedStream();
     }
   }
 
@@ -208,7 +242,14 @@ class DeviceManager {
   /// more accurate than the trainer's built-in power measurement.
   ///
   /// Throws [ArgumentError] if device not found or doesn't provide power data.
-  void assignPowerSource(String deviceId) {
+  /// Pass null to unassign the power source.
+  void assignPowerSource(String? deviceId) {
+    if (deviceId == null) {
+      _powerSource = null;
+      _updatePowerStream();
+      return;
+    }
+
     final device = _findDevice(deviceId);
 
     if (!device.capabilities.contains(DeviceDataType.power)) {
@@ -225,7 +266,13 @@ class DeviceManager {
   /// the primary trainer. Useful when using a dedicated cadence sensor.
   ///
   /// Throws [ArgumentError] if device not found or doesn't provide cadence data.
-  void assignCadenceSource(String deviceId) {
+  void assignCadenceSource(String? deviceId) {
+    if (deviceId == null) {
+      _cadenceSource = null;
+      _updateCadenceStream();
+      return;
+    }
+
     final device = _findDevice(deviceId);
 
     if (!device.capabilities.contains(DeviceDataType.cadence)) {
@@ -236,13 +283,43 @@ class DeviceManager {
     _updateCadenceStream();
   }
 
+  /// Assigns a device as the dedicated speed source.
+  ///
+  /// Speed data will come from this device, overriding any speed data from
+  /// the primary trainer. Useful when using a dedicated speed sensor.
+  ///
+  /// Throws [ArgumentError] if device not found or doesn't provide speed data.
+  void assignSpeedSource(String? deviceId) {
+    if (deviceId == null) {
+      _speedSource = null;
+      _updateSpeedStream();
+      return;
+    }
+
+    final device = _findDevice(deviceId);
+
+    if (!device.capabilities.contains(DeviceDataType.speed)) {
+      throw ArgumentError('Device $deviceId does not provide speed data');
+    }
+
+    _speedSource = device;
+    _updateSpeedStream();
+  }
+
   /// Assigns a device as the heart rate source.
   ///
   /// Heart rate data will come from this device. There's no fallback to the
   /// trainer since trainers don't typically provide HR data.
   ///
   /// Throws [ArgumentError] if device not found or doesn't provide HR data.
-  void assignHeartRateSource(String deviceId) {
+  /// Pass null to unassign the heart rate source.
+  void assignHeartRateSource(String? deviceId) {
+    if (deviceId == null) {
+      _heartRateSource = null;
+      _updateHeartRateStream();
+      return;
+    }
+
     final device = _findDevice(deviceId);
 
     if (!device.capabilities.contains(DeviceDataType.heartRate)) {
@@ -270,6 +347,9 @@ class DeviceManager {
 
   /// Returns the currently assigned cadence source, or null if none assigned.
   FitnessDevice? get cadenceSource => _cadenceSource;
+
+  /// Returns the currently assigned speed source, or null if none assigned.
+  FitnessDevice? get speedSource => _speedSource;
 
   /// Returns the currently assigned heart rate source, or null if none assigned.
   FitnessDevice? get heartRateSource => _heartRateSource;
@@ -332,6 +412,33 @@ class DeviceManager {
     }
   }
 
+  /// Updates the speed stream to listen to the correct device.
+  ///
+  /// Priority:
+  /// 1. Dedicated speed source if assigned
+  /// 2. Primary trainer if it provides speed
+  /// 3. No stream (cancel subscription) if neither available
+  void _updateSpeedStream() {
+    // Cancel existing subscription
+    _speedSubscription?.cancel();
+    _speedSubscription = null;
+
+    // Determine which device to use for speed
+    final FitnessDevice? speedDevice = _speedSource ?? _primaryTrainer;
+
+    // Subscribe to device's speed stream if available
+    final Stream<SpeedData>? stream = speedDevice?.speedStream;
+    if (stream != null) {
+      _speedSubscription = stream.listen(
+        _speedController.add,
+        onError: (Object e, StackTrace stackTrace) {
+          // Forward errors to the aggregated stream
+          _speedController.addError(e, stackTrace);
+        },
+      );
+    }
+  }
+
   /// Updates the heart rate stream to listen to the correct device.
   ///
   /// Uses the assigned heart rate source. No fallback since trainers
@@ -380,10 +487,12 @@ class DeviceManager {
   void dispose() {
     _powerSubscription?.cancel();
     _cadenceSubscription?.cancel();
+    _speedSubscription?.cancel();
     _heartRateSubscription?.cancel();
 
     _powerController.close();
     _cadenceController.close();
+    _speedController.close();
     _heartRateController.close();
   }
 }

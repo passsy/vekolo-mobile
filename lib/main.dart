@@ -33,6 +33,11 @@ class _VekoloAppState extends State<VekoloApp> {
 
   /// Perform async initialization of services before mounting the main app / drawing the first frame
   Future<void> _initialize(BuildContext context) async {
+    // Initialize DeviceStateManager to start streaming device data to UI beacons
+    // Must be done before any async operations to avoid BuildContext issues
+    deviceStateManagerRef.of(context);
+    devloper.log('[VekoloApp] DeviceStateManager initialized');
+
     // Run async initialization (load user from secure storage)
     final authService = authServiceRef.of(context);
     await authService.initialize();

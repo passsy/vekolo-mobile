@@ -67,7 +67,7 @@ class FtmsDevice extends FitnessDevice {
   DeviceType get type => DeviceType.trainer;
 
   @override
-  Set<DeviceDataType> get capabilities => {DeviceDataType.power, DeviceDataType.cadence};
+  Set<DeviceDataType> get capabilities => {DeviceDataType.power, DeviceDataType.cadence, DeviceDataType.speed};
 
   // ============================================================================
   // Connection Management
@@ -150,6 +150,9 @@ class FtmsDevice extends FitnessDevice {
   Stream<CadenceData> get cadenceStream => _transport.cadenceStream;
 
   @override
+  Stream<SpeedData> get speedStream => _transport.speedStream;
+
+  @override
   Stream<HeartRateData>? get heartRateStream => null;
 
   // ============================================================================
@@ -164,7 +167,7 @@ class FtmsDevice extends FitnessDevice {
     if (!supportsErgMode) {
       throw UnsupportedError('This device does not support ERG mode');
     }
-    await _transport.sendTargetPower(watts);
+    _transport.syncState(transport.FtmsDeviceState(targetPower: watts));
   }
 
   // ============================================================================

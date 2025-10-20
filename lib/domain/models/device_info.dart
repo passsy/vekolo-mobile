@@ -70,6 +70,9 @@ enum DeviceDataType {
   /// Cadence measurement in RPM.
   cadence,
 
+  /// Speed measurement in km/h.
+  speed,
+
   /// Heart rate measurement in BPM.
   heartRate,
 }

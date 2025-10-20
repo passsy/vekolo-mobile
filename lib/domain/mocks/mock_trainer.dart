@@ -69,6 +69,7 @@ class MockTrainer extends FitnessDevice {
   // Controllers for data streams
   final _powerController = StreamController<PowerData>.broadcast();
   final _cadenceController = StreamController<CadenceData>.broadcast();
+  final _speedController = StreamController<SpeedData>.broadcast();
   final _connectionController = StreamController<ConnectionState>.broadcast();
 
   // Current state
@@ -96,7 +97,7 @@ class MockTrainer extends FitnessDevice {
   DeviceType get type => DeviceType.trainer;
 
   @override
-  Set<DeviceDataType> get capabilities => {DeviceDataType.power, DeviceDataType.cadence};
+  Set<DeviceDataType> get capabilities => {DeviceDataType.power, DeviceDataType.cadence, DeviceDataType.speed};
 
   @override
   Stream<ConnectionState> get connectionState => _connectionController.stream;
@@ -157,6 +158,9 @@ class MockTrainer extends FitnessDevice {
 
   @override
   Stream<CadenceData>? get cadenceStream => _cadenceController.stream;
+
+  @override
+  Stream<SpeedData>? get speedStream => _speedController.stream;
 
   @override
   Stream<HeartRateData>? get heartRateStream => null;
@@ -304,6 +308,7 @@ class MockTrainer extends FitnessDevice {
     _stopAllSimulations();
     _powerController.close();
     _cadenceController.close();
+    _speedController.close();
     _connectionController.close();
   }
 }

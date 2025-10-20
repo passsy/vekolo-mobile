@@ -64,6 +64,36 @@ class CadenceData {
   String toString() => 'CadenceData(rpm: $rpm, timestamp: $timestamp)';
 }
 
+/// Speed measurement in km/h from a trainer or speed sensor.
+class SpeedData {
+  /// Creates a speed data point.
+  const SpeedData({required this.kmh, required this.timestamp});
+
+  /// Speed in kilometers per hour.
+  final double kmh;
+
+  /// Time when this measurement was taken.
+  final DateTime timestamp;
+
+  /// Creates a copy with optional field replacements.
+  SpeedData copyWith({double? kmh, DateTime? timestamp}) {
+    return SpeedData(kmh: kmh ?? this.kmh, timestamp: timestamp ?? this.timestamp);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+
+    return other is SpeedData && other.kmh == kmh && other.timestamp == timestamp;
+  }
+
+  @override
+  int get hashCode => Object.hash(kmh, timestamp);
+
+  @override
+  String toString() => 'SpeedData(kmh: $kmh, timestamp: $timestamp)';
+}
+
 /// Heart rate measurement in BPM from a heart rate monitor.
 class HeartRateData {
   /// Creates a heart rate data point.

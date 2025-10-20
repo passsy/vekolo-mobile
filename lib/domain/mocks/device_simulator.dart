@@ -266,6 +266,9 @@ class _MockPowerMeter extends FitnessDevice {
   Stream<CadenceData>? get cadenceStream => null;
 
   @override
+  Stream<SpeedData>? get speedStream => null;
+
+  @override
   Stream<HeartRateData>? get heartRateStream => null;
 
   @override
@@ -369,6 +372,9 @@ class _MockCadenceSensor extends FitnessDevice {
 
   @override
   Stream<CadenceData>? get cadenceStream => _cadenceController.stream;
+
+  @override
+  Stream<SpeedData>? get speedStream => null;
 
   @override
   Stream<HeartRateData>? get heartRateStream => null;
@@ -483,6 +489,9 @@ class _MockHeartRateMonitor extends FitnessDevice {
 
   @override
   Stream<CadenceData>? get cadenceStream => null;
+
+  @override
+  Stream<SpeedData>? get speedStream => null;
 
   @override
   Stream<HeartRateData>? get heartRateStream => _hrController.stream;

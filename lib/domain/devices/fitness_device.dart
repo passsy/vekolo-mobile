@@ -125,6 +125,16 @@ abstract class FitnessDevice {
   /// emit errors if the connection is lost.
   Stream<CadenceData>? get cadenceStream;
 
+  /// Stream of speed measurements if this device provides speed data.
+  ///
+  /// Returns `null` if [capabilities] does not include [DeviceDataType.speed].
+  /// When non-null, emits [SpeedData] updates at device-specific intervals
+  /// (typically 1-4 Hz).
+  ///
+  /// The stream should emit data only while connected. It may complete or
+  /// emit errors if the connection is lost.
+  Stream<SpeedData>? get speedStream;
+
   /// Stream of heart rate measurements if this device provides HR data.
   ///
   /// Returns `null` if [capabilities] does not include [DeviceDataType.heartRate].

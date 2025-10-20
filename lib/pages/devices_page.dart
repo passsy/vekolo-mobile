@@ -67,14 +67,6 @@ class _DevicesPageState extends State<DevicesPage> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          _buildErgControlTestSection(context),
-          const SizedBox(height: 24),
-          _buildWorkoutPlayerTestSection(context),
-          const SizedBox(height: 24),
-          const Divider(),
-          const SizedBox(height: 24),
-          _buildPrimaryTrainerSection(context, deviceManager),
-          const SizedBox(height: 24),
           _buildDataSourceSection(
             context,
             deviceManager,
@@ -101,6 +93,25 @@ class _DevicesPageState extends State<DevicesPage> {
             assignedDevice: deviceManager.heartRateSource,
             dataType: device_info.DeviceDataType.heartRate,
           ),
+          const SizedBox(height: 16),
+          _buildDataSourceSection(
+            context,
+            deviceManager,
+            title: 'SPEED',
+            icon: Icons.speed,
+            assignedDevice: deviceManager.speedSource,
+            dataType: device_info.DeviceDataType.speed,
+          ),
+          const SizedBox(height: 24),
+          const Divider(),
+          const SizedBox(height: 24),
+          _buildErgControlTestSection(context),
+          const SizedBox(height: 24),
+          _buildWorkoutPlayerTestSection(context),
+          const SizedBox(height: 24),
+          const Divider(),
+          const SizedBox(height: 24),
+          _buildPrimaryTrainerSection(context, deviceManager),
           const SizedBox(height: 24),
           const Divider(),
           const SizedBox(height: 24),
@@ -403,7 +414,7 @@ class _DevicesPageState extends State<DevicesPage> {
         ),
         const SizedBox(height: 12),
         if (hasTrainer)
-          _buildDeviceCard(context, device: trainer, onDisconnect: () => _handleDisconnect(trainer))
+          _buildDeviceCard(context, device: trainer, onUnassign: _handleUnassignPrimaryTrainer)
         else
           _buildEmptyState(context, 'No trainer assigned'),
       ],
@@ -430,7 +441,11 @@ class _DevicesPageState extends State<DevicesPage> {
         ),
         const SizedBox(height: 12),
         if (assignedDevice != null)
-          _buildDeviceCard(context, device: assignedDevice, onDisconnect: () => _handleDisconnect(assignedDevice))
+          _buildDeviceCard(
+            context,
+            device: assignedDevice,
+            onUnassign: () => _handleUnassignDataSource(dataType),
+          )
         else
           OutlinedButton.icon(
             onPressed: () => _showDeviceAssignmentDialog(context, deviceManager, dataType),
@@ -448,6 +463,7 @@ class _DevicesPageState extends State<DevicesPage> {
       deviceManager.primaryTrainer?.id,
       deviceManager.powerSource?.id,
       deviceManager.cadenceSource?.id,
+      deviceManager.speedSource?.id,
       deviceManager.heartRateSource?.id,
     }.whereType<String>().toSet();
 
@@ -480,6 +496,7 @@ class _DevicesPageState extends State<DevicesPage> {
     BuildContext context, {
     required FitnessDevice device,
     VoidCallback? onDisconnect,
+    VoidCallback? onUnassign,
     VoidCallback? onConnect,
     bool showAssignButtons = false,
   }) {
@@ -541,12 +558,27 @@ class _DevicesPageState extends State<DevicesPage> {
                           onPressed: () => _handleAssignCadence(device),
                           child: const Text('Assign to Cadence'),
                         ),
+                      if (device.capabilities.contains(device_info.DeviceDataType.speed))
+                        OutlinedButton(
+                          onPressed: () => _handleAssignSpeed(device),
+                          child: const Text('Assign to Speed'),
+                        ),
                       if (onConnect != null && !isConnected)
                         ElevatedButton(
                           onPressed: isConnecting ? null : onConnect,
                           child: Text(isConnecting ? 'Connecting...' : 'Connect'),
                         ),
                     ],
+                  )
+                else if (onUnassign != null)
+                  OutlinedButton.icon(
+                    onPressed: onUnassign,
+                    icon: const Icon(Icons.link_off),
+                    label: const Text('Unassign'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.orange[900],
+                      side: BorderSide(color: Colors.orange[300]!),
+                    ),
                   )
                 else if (onDisconnect != null)
                   ElevatedButton(
@@ -587,6 +619,7 @@ class _DevicesPageState extends State<DevicesPage> {
     final parts = <String>[];
     if (capabilities.contains(device_info.DeviceDataType.power)) parts.add('Power');
     if (capabilities.contains(device_info.DeviceDataType.cadence)) parts.add('Cadence');
+    if (capabilities.contains(device_info.DeviceDataType.speed)) parts.add('Speed');
     if (capabilities.contains(device_info.DeviceDataType.heartRate)) parts.add('Heart Rate');
 
     return parts.join(' • ');
@@ -619,21 +652,6 @@ class _DevicesPageState extends State<DevicesPage> {
           _connectingDeviceId = null;
         });
       }
-    }
-  }
-
-  Future<void> _handleDisconnect(FitnessDevice device) async {
-    try {
-      await device.disconnect();
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${device.name} disconnected')));
-      setState(() {}); // Refresh UI
-    } catch (e, stackTrace) {
-      developer.log('Error disconnecting from ${device.name}', name: 'DevicesPage', error: e, stackTrace: stackTrace);
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Failed to disconnect: $e'), backgroundColor: Colors.red));
     }
   }
 
@@ -695,6 +713,60 @@ class _DevicesPageState extends State<DevicesPage> {
     }
   }
 
+  void _handleAssignSpeed(FitnessDevice device) {
+    final deviceManager = deviceManagerRef.of(context);
+    try {
+      deviceManager.assignSpeedSource(device.id);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${device.name} assigned as speed source')));
+      setState(() {}); // Refresh UI
+    } catch (e, stackTrace) {
+      developer.log('Error assigning speed source', name: 'DevicesPage', error: e, stackTrace: stackTrace);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to assign: $e'), backgroundColor: Colors.red));
+    }
+  }
+
+  void _handleUnassignPrimaryTrainer() {
+    final deviceManager = deviceManagerRef.of(context);
+    try {
+      deviceManager.assignPrimaryTrainer(null);
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Primary trainer unassigned')));
+      setState(() {}); // Refresh UI
+    } catch (e, stackTrace) {
+      developer.log('Error unassigning primary trainer', name: 'DevicesPage', error: e, stackTrace: stackTrace);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to unassign: $e'), backgroundColor: Colors.red));
+    }
+  }
+
+  void _handleUnassignDataSource(device_info.DeviceDataType dataType) {
+    final deviceManager = deviceManagerRef.of(context);
+    try {
+      switch (dataType) {
+        case device_info.DeviceDataType.power:
+          deviceManager.assignPowerSource(null);
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Power source unassigned')));
+        case device_info.DeviceDataType.cadence:
+          deviceManager.assignCadenceSource(null);
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Cadence source unassigned')));
+        case device_info.DeviceDataType.heartRate:
+          deviceManager.assignHeartRateSource(null);
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Heart rate source unassigned')));
+        case device_info.DeviceDataType.speed:
+          deviceManager.assignSpeedSource(null);
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Speed source unassigned')));
+      }
+      setState(() {}); // Refresh UI
+    } catch (e, stackTrace) {
+      developer.log('Error unassigning data source', name: 'DevicesPage', error: e, stackTrace: stackTrace);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to unassign: $e'), backgroundColor: Colors.red));
+    }
+  }
+
   // ============================================================================
   // Device Assignment Dialog
   // ============================================================================
@@ -705,22 +777,20 @@ class _DevicesPageState extends State<DevicesPage> {
     device_info.DeviceDataType dataType,
   ) {
     final allDevices = deviceManager.devices;
-    final assignedDeviceIds = {
-      deviceManager.primaryTrainer?.id,
-      deviceManager.powerSource?.id,
-      deviceManager.cadenceSource?.id,
-      deviceManager.heartRateSource?.id,
-    }.whereType<String>().toSet();
+    // Only exclude primary trainer from data source assignments
+    // Allow same device to be assigned to multiple data sources (power, cadence, HR)
+    final primaryTrainerId = deviceManager.primaryTrainer?.id;
 
     final eligibleDevices = allDevices.where((device) {
-      return !assignedDeviceIds.contains(device.id) && device.capabilities.contains(dataType);
+      return device.id != primaryTrainerId && device.capabilities.contains(dataType);
     }).toList();
 
-    final dataTypeName = dataType == device_info.DeviceDataType.power
-        ? 'Power'
-        : dataType == device_info.DeviceDataType.cadence
-        ? 'Cadence'
-        : 'Heart Rate';
+    final dataTypeName = switch (dataType) {
+      device_info.DeviceDataType.power => 'Power',
+      device_info.DeviceDataType.cadence => 'Cadence',
+      device_info.DeviceDataType.speed => 'Speed',
+      device_info.DeviceDataType.heartRate => 'Heart Rate',
+    };
 
     showDialog<void>(
       context: context,
@@ -774,6 +844,8 @@ class _DevicesPageState extends State<DevicesPage> {
           _handleAssignPower(device);
         case device_info.DeviceDataType.cadence:
           _handleAssignCadence(device);
+        case device_info.DeviceDataType.speed:
+          _handleAssignSpeed(device);
         case device_info.DeviceDataType.heartRate:
           _handleAssignHeartRate(device);
       }
@@ -817,15 +889,55 @@ class _DevicesPageState extends State<DevicesPage> {
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${ftmsDevice.name} added to devices')));
+      // Auto-assign device to available data sources based on its capabilities
+      final autoAssignments = <String>[];
+
+      // Check if device supports ERG mode and no trainer is assigned
+      if (ftmsDevice.supportsErgMode && deviceManager.primaryTrainer == null) {
+        deviceManager.assignPrimaryTrainer(ftmsDevice.id);
+        autoAssignments.add('primary trainer');
+      }
+
+      // Auto-assign to data sources
+      if (ftmsDevice.capabilities.contains(device_info.DeviceDataType.power) && deviceManager.powerSource == null) {
+        deviceManager.assignPowerSource(ftmsDevice.id);
+        autoAssignments.add('power source');
+      }
+
+      if (ftmsDevice.capabilities.contains(device_info.DeviceDataType.cadence) && deviceManager.cadenceSource == null) {
+        deviceManager.assignCadenceSource(ftmsDevice.id);
+        autoAssignments.add('cadence source');
+      }
+
+      if (ftmsDevice.capabilities.contains(device_info.DeviceDataType.speed) && deviceManager.speedSource == null) {
+        deviceManager.assignSpeedSource(ftmsDevice.id);
+        autoAssignments.add('speed source');
+      }
+
+      if (ftmsDevice.capabilities.contains(device_info.DeviceDataType.heartRate) && deviceManager.heartRateSource == null) {
+        deviceManager.assignHeartRateSource(ftmsDevice.id);
+        autoAssignments.add('heart rate source');
+      }
+
+      // Connect the device automatically
+      developer.log('[DevicesPage] Auto-connecting device: ${ftmsDevice.name}');
+      await ftmsDevice.connect().value;
+
+      if (!mounted) return;
+
+      final message = autoAssignments.isEmpty
+          ? '${ftmsDevice.name} added and connected'
+          : '${ftmsDevice.name} connected and assigned as ${autoAssignments.join(', ')}';
+
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
 
       setState(() {}); // Refresh UI
     } catch (e, stackTrace) {
-      developer.log('Error adding device', name: 'DevicesPage', error: e, stackTrace: stackTrace);
+      developer.log('Error adding/connecting device', name: 'DevicesPage', error: e, stackTrace: stackTrace);
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Failed to add device: $e'), backgroundColor: Colors.red));
+      ).showSnackBar(SnackBar(content: Text('Failed to add/connect device: $e'), backgroundColor: Colors.red));
     }
   }
 }

@@ -6,6 +6,180 @@ import 'package:async/async.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart' as fbp;
 import 'package:vekolo/domain/models/fitness_data.dart';
 
+/// Shadow state representing the desired configuration of an FTMS device.
+///
+/// Similar to virtual DOM in React, this represents what we want the device
+/// to be, not what it currently is. The transport layer diffs this against
+/// the actual device state and syncs necessary changes.
+///
+/// Based on FTMS v1.0 specification section 4.16.1 - Fitness Machine Control Point.
+///
+/// Only one control mode can be active at a time. Setting a new mode
+/// automatically clears the previous one.
+class FtmsDeviceState {
+  /// Creates a device state with a specific control mode.
+  ///
+  /// Only one of the target parameters should be set at a time:
+  /// - [targetPower] - ERG mode (Op Code 0x05)
+  /// - [targetResistanceLevel] - Resistance mode (Op Code 0x04)
+  /// - [targetSpeed] - Speed mode (Op Code 0x02)
+  /// - [targetInclination] - Inclination/grade mode (Op Code 0x03)
+  /// - [targetHeartRate] - HR-based mode (Op Code 0x06)
+  /// - [targetCadence] - Cadence-based mode (Op Code 0x14)
+  /// - [simulationParams] - Simulation mode with wind/grade (Op Code 0x11)
+  const FtmsDeviceState({
+    this.targetPower,
+    this.targetResistanceLevel,
+    this.targetSpeed,
+    this.targetInclination,
+    this.targetHeartRate,
+    this.targetCadence,
+    this.simulationParams,
+  });
+
+  /// Target power in watts for ERG mode (Op Code 0x05).
+  /// Range: typically 0-4000W depending on trainer.
+  final int? targetPower;
+
+  /// Target resistance level (Op Code 0x04).
+  /// Range: device-specific, typically 0-100.
+  final int? targetResistanceLevel;
+
+  /// Target speed in km/h (Op Code 0x02).
+  /// Resolution: 0.01 km/h.
+  final double? targetSpeed;
+
+  /// Target inclination percentage (Op Code 0x03).
+  /// Range: typically -100% to +100% (negative = downhill).
+  /// Resolution: 0.1%.
+  final double? targetInclination;
+
+  /// Target heart rate in BPM (Op Code 0x06).
+  /// Range: typically 0-220 BPM.
+  final int? targetHeartRate;
+
+  /// Target cadence in RPM (Op Code 0x14).
+  /// Resolution: 0.5 RPM.
+  final double? targetCadence;
+
+  /// Indoor bike simulation parameters (Op Code 0x11).
+  /// Combines wind speed, grade, rolling resistance, and wind resistance.
+  final SimulationParameters? simulationParams;
+
+  /// Creates an idle state (device not under control).
+  const FtmsDeviceState.idle()
+      : targetPower = null,
+        targetResistanceLevel = null,
+        targetSpeed = null,
+        targetInclination = null,
+        targetHeartRate = null,
+        targetCadence = null,
+        simulationParams = null;
+
+  /// Returns true if any control mode is active.
+  bool get hasActiveControl =>
+      targetPower != null ||
+      targetResistanceLevel != null ||
+      targetSpeed != null ||
+      targetInclination != null ||
+      targetHeartRate != null ||
+      targetCadence != null ||
+      simulationParams != null;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is FtmsDeviceState &&
+          runtimeType == other.runtimeType &&
+          targetPower == other.targetPower &&
+          targetResistanceLevel == other.targetResistanceLevel &&
+          targetSpeed == other.targetSpeed &&
+          targetInclination == other.targetInclination &&
+          targetHeartRate == other.targetHeartRate &&
+          targetCadence == other.targetCadence &&
+          simulationParams == other.simulationParams;
+
+  @override
+  int get hashCode =>
+      targetPower.hashCode ^
+      targetResistanceLevel.hashCode ^
+      targetSpeed.hashCode ^
+      targetInclination.hashCode ^
+      targetHeartRate.hashCode ^
+      targetCadence.hashCode ^
+      simulationParams.hashCode;
+
+  @override
+  String toString() => 'FtmsDeviceState('
+      'power: $targetPower, '
+      'resistance: $targetResistanceLevel, '
+      'speed: $targetSpeed, '
+      'incline: $targetInclination, '
+      'hr: $targetHeartRate, '
+      'cadence: $targetCadence, '
+      'simulation: $simulationParams'
+      ')';
+}
+
+/// Indoor bike simulation parameters (FTMS Op Code 0x11).
+///
+/// Used for realistic outdoor ride simulation, combining environmental
+/// factors like wind, grade, and rolling resistance.
+class SimulationParameters {
+  /// Creates simulation parameters.
+  ///
+  /// [windSpeed] - Wind speed in m/s (positive = headwind, negative = tailwind)
+  /// [grade] - Grade percentage (positive = uphill, negative = downhill)
+  /// [crr] - Coefficient of rolling resistance (default: 0.004 for asphalt)
+  /// [cw] - Wind resistance coefficient (default: 0.51 for upright position)
+  const SimulationParameters({
+    required this.windSpeed,
+    required this.grade,
+    this.crr = 0.004,
+    this.cw = 0.51,
+  });
+
+  /// Wind speed in meters/second.
+  /// Range: -127.99 to +127.99 m/s
+  /// Resolution: 0.001 m/s
+  /// Positive = headwind, Negative = tailwind
+  final double windSpeed;
+
+  /// Grade (slope) in percentage.
+  /// Range: -200.00% to +200.00%
+  /// Resolution: 0.01%
+  /// Positive = uphill, Negative = downhill
+  final double grade;
+
+  /// Coefficient of Rolling Resistance (Crr).
+  /// Range: 0 to 1
+  /// Resolution: 0.0001
+  /// Examples: 0.004 (asphalt), 0.008 (rough road), 0.012 (gravel)
+  final double crr;
+
+  /// Wind Resistance Coefficient (Cw).
+  /// Range: 0 to 1
+  /// Resolution: 0.01
+  /// Examples: 0.51 (upright), 0.38 (hoods), 0.32 (drops), 0.25 (aero)
+  final double cw;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is SimulationParameters &&
+          runtimeType == other.runtimeType &&
+          windSpeed == other.windSpeed &&
+          grade == other.grade &&
+          crr == other.crr &&
+          cw == other.cw;
+
+  @override
+  int get hashCode => windSpeed.hashCode ^ grade.hashCode ^ crr.hashCode ^ cw.hashCode;
+
+  @override
+  String toString() => 'SimulationParameters(wind: ${windSpeed}m/s, grade: $grade%, crr: $crr, cw: $cw)';
+}
+
 /// Bluetooth transport layer for FTMS (Fitness Machine Service) protocol.
 ///
 /// Handles low-level BLE communication with FTMS-compliant trainers and bikes.
@@ -29,7 +203,6 @@ class FtmsBleTransport {
   // BLE device reference
   fbp.BluetoothDevice? _device;
 
-  static const _bluetoothTimeout = Duration(milliseconds: 5000);
   static const _bluetoothDebounce = Duration(milliseconds: 250);
 
   // Connection state
@@ -40,15 +213,18 @@ class FtmsBleTransport {
   fbp.BluetoothCharacteristic? _indoorBikeDataChar;
   fbp.BluetoothCharacteristic? _controlPointChar;
 
-  // Command queue
-  final List<Uint8List> _commandQueue = [];
-  Uint8List? _sendingCommand;
-  DateTime _lastSentCommandTime = DateTime.now();
-  Timer? _retryTimer;
+  // Device state synchronization
+  FtmsDeviceState _desiredState = const FtmsDeviceState.idle(); // What we want the device to be
+  FtmsDeviceState _actualState = const FtmsDeviceState.idle(); // What the device actually is (last confirmed)
+  bool _hasControl = false; // Whether we have control of the device
+  bool _isSyncing = false; // Whether a sync operation is in progress
+  Timer? _syncDebounceTimer; // Debounce timer for sync requests
+  DateTime _lastSyncTime = DateTime.now();
 
   // Data stream controllers
   final _powerController = StreamController<PowerData>.broadcast();
   final _cadenceController = StreamController<CadenceData>.broadcast();
+  final _speedController = StreamController<SpeedData>.broadcast();
   final _connectionStateController = StreamController<ConnectionState>.broadcast();
 
   /// Stream of power data from the trainer.
@@ -56,6 +232,9 @@ class FtmsBleTransport {
 
   /// Stream of cadence data from the trainer.
   Stream<CadenceData> get cadenceStream => _cadenceController.stream;
+
+  /// Stream of speed data from the trainer.
+  Stream<SpeedData> get speedStream => _speedController.stream;
 
   /// Stream of connection state changes.
   Stream<ConnectionState> get connectionStateStream => _connectionStateController.stream;
@@ -259,10 +438,12 @@ class FtmsBleTransport {
       final timestamp = DateTime.now();
       int? power;
       int? cadence;
+      double? speed;
 
-      // Parse speed if present (currently not used, but required for offset calculation)
+      // Parse speed if present
       if (speedPresent && offset + 2 <= data.length) {
-        // Skip speed value - resolution would be 0.01 km/h
+        final rawSpeed = buffer.getUint16(offset, Endian.little);
+        speed = rawSpeed * 0.01; // Resolution: 0.01 km/h
         offset += 2;
       }
 
@@ -311,6 +492,9 @@ class FtmsBleTransport {
       if (cadence != null) {
         _cadenceController.add(CadenceData(rpm: cadence, timestamp: timestamp));
       }
+      if (speed != null) {
+        _speedController.add(SpeedData(kmh: speed, timestamp: timestamp));
+      }
     } catch (e, stackTrace) {
       print('[FtmsBleTransport] Error parsing indoor bike data: $e');
       print(stackTrace);
@@ -338,102 +522,176 @@ class FtmsBleTransport {
 
       if (resultCode == 0x01) {
         developer.log('[FtmsBleTransport] Command 0x${requestOpCode.toRadixString(16)} succeeded');
-        // Check if the command in the queue matches the response
-        if (_sendingCommand != null && _sendingCommand![0] == requestOpCode) {
-          _sendingCommand = null;
+
+        // Track actual device state based on successful commands
+        if (requestOpCode == 0x00) {
+          _hasControl = true;
+        } else if (requestOpCode == 0x05) {
+          // Set Target Power success - update actual state
+          _actualState = FtmsDeviceState(targetPower: _desiredState.targetPower);
+          developer.log('[FtmsBleTransport] Power target ${_actualState.targetPower}W applied successfully');
+        } else if (requestOpCode == 0x04) {
+          // Set Target Resistance Level success
+          _actualState = FtmsDeviceState(targetResistanceLevel: _desiredState.targetResistanceLevel);
+          developer.log('[FtmsBleTransport] Resistance level ${_actualState.targetResistanceLevel} applied');
+        } else if (requestOpCode == 0x11) {
+          // Indoor Bike Simulation success
+          _actualState = FtmsDeviceState(simulationParams: _desiredState.simulationParams);
+          developer.log('[FtmsBleTransport] Simulation parameters applied: ${_actualState.simulationParams}');
         }
+        // Add more op codes as needed
       } else {
         print(
           '[FtmsBleTransport] FTMS operation 0x${requestOpCode.toRadixString(16)} failed with result: 0x${resultCode.toRadixString(16)}',
         );
-        _sendingCommand = null;
-      }
 
-      // Send next command in queue
-      _sendNextCommand();
+        // Lost control or failed to apply state
+        if (requestOpCode == 0x00) {
+          _hasControl = false;
+        }
+      }
     }
   }
 
-  Future<void> _sendNextCommand() async {
-    if (_commandQueue.isEmpty) return;
-    if (_sendingCommand != null && DateTime.now().difference(_lastSentCommandTime) < _bluetoothTimeout) {
+  /// Internal method to synchronize actual device state with desired state.
+  ///
+  /// Compares current device state with [_desiredState] and sends only the
+  /// necessary BLE commands to reconcile the difference.
+  ///
+  /// Implements FTMS Control Point operations (section 4.16.1 of spec).
+  Future<void> _syncState() async {
+    if (!isConnected || _isSyncing) return;
+
+    // Rate limit sync operations
+    final timeSinceLastSync = DateTime.now().difference(_lastSyncTime);
+    if (timeSinceLastSync < _bluetoothDebounce) {
       return;
     }
 
-    // Rate limiting with scheduled retry
-    final timeSinceLastCommand = DateTime.now().difference(_lastSentCommandTime);
-    if (timeSinceLastCommand < _bluetoothDebounce) {
-      // Schedule retry after debounce period if not already scheduled
-      if (_retryTimer == null || !_retryTimer!.isActive) {
-        final remainingDebounce = _bluetoothDebounce - timeSinceLastCommand;
-        _retryTimer = Timer(remainingDebounce, _sendNextCommand);
-      }
-      return;
-    }
-
-    if (!isConnected) return;
-
-    _sendingCommand = _commandQueue.removeAt(0);
-    _lastSentCommandTime = DateTime.now();
-
-    // Log the command being sent
-    final opCode = _sendingCommand![0];
-    if (opCode == 0x00) {
-      developer.log('[FtmsBleTransport] 📤 Sending: Request Control (0x00)');
-    } else if (opCode == 0x05 && _sendingCommand!.length >= 3) {
-      final power = _sendingCommand![1] | (_sendingCommand![2] << 8);
-      developer.log('[FtmsBleTransport] 📤 Sending: Set Target Power ${power}W (0x05)');
-    } else {
-      developer.log('[FtmsBleTransport] 📤 Sending: Command 0x${opCode.toRadixString(16)}');
-    }
+    _isSyncing = true;
+    _lastSyncTime = DateTime.now();
 
     try {
-      await _controlPointChar!.write(_sendingCommand!);
+      // Step 1: Request control if we don't have it and need it
+      final needsControl = _desiredState.hasActiveControl;
+      if (needsControl && !_hasControl) {
+        developer.log('[FtmsBleTransport] 📤 Sending: Request Control (0x00)');
+        await _controlPointChar!.write(Uint8List.fromList([0x00]));
+        await Future.delayed(const Duration(milliseconds: 100)); // Wait for response
+      }
+
+      if (!_hasControl) {
+        return; // Can't set any targets without control
+      }
+
+      // Step 2: Determine if state changed and send appropriate command
+      // Only one mode can be active at a time, so we check each in priority order
+
+      if (_desiredState != _actualState) {
+        // Target Power mode (Op Code 0x05) - ERG mode
+        if (_desiredState.targetPower != null) {
+          final power = _desiredState.targetPower!;
+          developer.log('[FtmsBleTransport] 📤 Sending: Set Target Power ${power}W (0x05)');
+          await _controlPointChar!.write(Uint8List.fromList([
+            0x05,
+            power & 0xFF, // Low byte
+            (power >> 8) & 0xFF, // High byte
+          ]));
+        }
+        // Target Resistance Level (Op Code 0x04)
+        else if (_desiredState.targetResistanceLevel != null) {
+          final level = _desiredState.targetResistanceLevel!;
+          developer.log('[FtmsBleTransport] 📤 Sending: Set Target Resistance Level $level (0x04)');
+          await _controlPointChar!.write(Uint8List.fromList([
+            0x04,
+            level & 0xFF, // Low byte
+            (level >> 8) & 0xFF, // High byte (signed int16, but resistance is positive)
+          ]));
+        }
+        // Indoor Bike Simulation (Op Code 0x11)
+        else if (_desiredState.simulationParams != null) {
+          final sim = _desiredState.simulationParams!;
+          developer.log(
+            '[FtmsBleTransport] 📤 Sending: Set Indoor Bike Simulation (0x11) - Grade: ${sim.grade}%, Wind: ${sim.windSpeed}m/s',
+          );
+
+          // FTMS spec: wind speed (sint16, 0.001 m/s), grade (sint16, 0.01%), crr (uint8, 0.0001), cw (uint8, 0.01)
+          final windSpeedRaw = (sim.windSpeed * 1000).round().clamp(-32768, 32767);
+          final gradeRaw = (sim.grade * 100).round().clamp(-32768, 32767);
+          final crrRaw = (sim.crr * 10000).round().clamp(0, 255);
+          final cwRaw = (sim.cw * 100).round().clamp(0, 255);
+
+          await _controlPointChar!.write(Uint8List.fromList([
+            0x11, // Op Code
+            windSpeedRaw & 0xFF, // Wind speed low byte
+            (windSpeedRaw >> 8) & 0xFF, // Wind speed high byte
+            gradeRaw & 0xFF, // Grade low byte
+            (gradeRaw >> 8) & 0xFF, // Grade high byte
+            crrRaw, // Coefficient of rolling resistance
+            cwRaw, // Wind resistance coefficient
+          ]));
+        }
+        // Add more modes here as needed (speed, inclination, HR, cadence, etc.)
+        else {
+          // Idle state - no command needed (or could send Reset if desired)
+          developer.log('[FtmsBleTransport] Desired state is idle, no sync needed');
+        }
+      }
     } catch (e, stackTrace) {
-      print('[FtmsBleTransport] Error sending command: $e');
+      print('[FtmsBleTransport] Error during state sync: $e');
       print(stackTrace);
-      _sendingCommand = null;
+      _hasControl = false; // Assume we lost control on error
+    } finally {
+      // Always reset syncing flag so subsequent syncs can proceed
+      _isSyncing = false;
     }
   }
 
-  /// Sends target power command to the trainer in ERG mode.
+  /// Synchronizes the device to match the desired state.
   ///
-  /// [watts] is clamped to 25-1500W range for safety.
-  /// Commands are queued and sent with rate limiting to avoid overwhelming the device.
-  Future<void> sendTargetPower(int watts) async {
-    developer.log('[FtmsBleTransport] sendTargetPower called with ${watts}W');
+  /// This is the only public method for controlling device state. Pass a
+  /// [FtmsDeviceState] representing what you want the device to be, and the
+  /// transport will figure out what commands to send.
+  ///
+  /// The sync is debounced to avoid overwhelming the device when called rapidly.
+  /// Power values are automatically clamped to 25-1500W for safety.
+  ///
+  /// Example:
+  /// ```dart
+  /// // Set to 200W ERG mode
+  /// transport.syncState(FtmsDeviceState(targetPower: 200));
+  ///
+  /// // Set to 250W
+  /// transport.syncState(FtmsDeviceState(targetPower: 250));
+  ///
+  /// // Release control
+  /// transport.syncState(FtmsDeviceState.idle());
+  /// ```
+  void syncState(FtmsDeviceState state) {
+    // Clamp power to safe range
+    final clampedState = state.targetPower != null
+        ? FtmsDeviceState(targetPower: state.targetPower!.clamp(25, 1500))
+        : state;
 
-    // Check if there's already a target power command in the queue
-    final targetPowerInQueue = _commandQueue.any((cmd) => cmd[0] == 0x05);
-    if (targetPowerInQueue) {
-      developer.log('[FtmsBleTransport] Target power already in queue, skipping');
-      _sendNextCommand();
-      return;
+    if (clampedState.targetPower != state.targetPower) {
+      developer.log(
+        '[FtmsBleTransport] Power clamped from ${state.targetPower}W to ${clampedState.targetPower}W',
+      );
     }
 
-    // Limit power to 25-1500W
-    final clampedPower = watts.clamp(25, 1500);
-    if (clampedPower != watts) {
-      developer.log('[FtmsBleTransport] Power clamped from ${watts}W to ${clampedPower}W');
+    // Update desired state
+    final stateChanged = _desiredState != clampedState;
+    _desiredState = clampedState;
+
+    if (stateChanged) {
+      developer.log('[FtmsBleTransport] Desired state updated: $clampedState');
     }
 
-    developer.log(
-      '[FtmsBleTransport] Queueing commands: Request Control (0x00) + Set Target Power ${clampedPower}W (0x05)',
-    );
-
-    // Request control (0x00)
-    _commandQueue.add(Uint8List.fromList([0x00]));
-
-    // Set target power (0x05) with little endian bytes
-    _commandQueue.add(
-      Uint8List.fromList([
-        0x05,
-        clampedPower & 0xFF, // Low byte
-        (clampedPower >> 8) & 0xFF, // High byte
-      ]),
-    );
-
-    _sendNextCommand();
+    // Cancel any pending sync and schedule a new one (debouncing)
+    _syncDebounceTimer?.cancel();
+    _syncDebounceTimer = Timer(const Duration(milliseconds: 100), () {
+      _syncState();
+    });
   }
 
   void _handleDisconnection() {
@@ -441,13 +699,15 @@ class FtmsBleTransport {
     _connectionSubscription?.cancel();
     _indoorBikeDataSubscription?.cancel();
     _controlPointSubscription?.cancel();
-    _retryTimer?.cancel();
+    _syncDebounceTimer?.cancel();
     _connectionSubscription = null;
     _indoorBikeDataSubscription = null;
     _controlPointSubscription = null;
-    _retryTimer = null;
-    _commandQueue.clear();
-    _sendingCommand = null;
+    _syncDebounceTimer = null;
+    _desiredState = const FtmsDeviceState.idle();
+    _actualState = const FtmsDeviceState.idle();
+    _hasControl = false;
+    _isSyncing = false;
     _connectionCompleter = null;
 
     // Only add event if stream controller is not closed
@@ -458,7 +718,7 @@ class FtmsBleTransport {
 
   /// Disconnects from the FTMS device.
   ///
-  /// Cancels all subscriptions and clears command queue.
+  /// Cancels all subscriptions and resets device state.
   Future<void> disconnect() async {
     try {
       if (_device != null) {
@@ -476,9 +736,10 @@ class FtmsBleTransport {
     _connectionSubscription?.cancel();
     _indoorBikeDataSubscription?.cancel();
     _controlPointSubscription?.cancel();
-    _retryTimer?.cancel();
+    _syncDebounceTimer?.cancel();
     _powerController.close();
     _cadenceController.close();
+    _speedController.close();
     _connectionStateController.close();
   }
 }
