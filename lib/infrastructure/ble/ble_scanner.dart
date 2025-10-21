@@ -171,10 +171,7 @@ class BleScanner {
 
     try {
       // Start scanning with flutter_blue_plus
-      await fbp.FlutterBluePlus.startScan(
-        withServices: [ftmsServiceUuid],
-        timeout: const Duration(seconds: 60),
-      );
+      await fbp.FlutterBluePlus.startScan(withServices: [ftmsServiceUuid], timeout: const Duration(seconds: 60));
 
       // Listen to scan results
       _scanSubscription = fbp.FlutterBluePlus.scanResults.listen(
@@ -330,12 +327,7 @@ class ScanResult {
 /// This class wraps device information from flutter_blue_plus to provide
 /// a consistent API across the codebase.
 class DiscoveredDevice {
-  const DiscoveredDevice({
-    required this.id,
-    required this.name,
-    required this.rssi,
-    required this.serviceUuids,
-  });
+  const DiscoveredDevice({required this.id, required this.name, required this.rssi, required this.serviceUuids});
 
   final String id;
   final String name;
