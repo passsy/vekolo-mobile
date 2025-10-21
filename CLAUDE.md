@@ -5,6 +5,13 @@
 @./.taskmaster/CLAUDE.md
 
 
+## Platform Support
+
+- **Mobile**: Android & iOS (current focus)
+- **Desktop**: macOS (used heavily for development)
+- **Web**: Planned for the future (code should be web-compatible where possible)
+
+
 ## General Instructions
 
 - Ask before adding any new package!

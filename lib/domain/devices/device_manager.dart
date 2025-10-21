@@ -153,6 +153,26 @@ class DeviceManager {
     _devices.add(device);
   }
 
+  /// Adds a device or returns the existing device if one with the same ID exists.
+  ///
+  /// This is useful for reconnection scenarios where a device may have disconnected
+  /// but is still in the manager. If a device with the same ID already exists,
+  /// that device instance is returned. Otherwise, the new device is added and returned.
+  ///
+  /// The device is not automatically assigned to any role. Use assign methods
+  /// to designate the device as a power source, cadence source, etc.
+  ///
+  /// Returns the device instance (either existing or newly added).
+  Future<FitnessDevice> addOrGetExistingDevice(FitnessDevice device) async {
+    final existing = _devices.where((d) => d.id == device.id).firstOrNull;
+    if (existing != null) {
+      return existing;
+    }
+
+    _devices.add(device);
+    return device;
+  }
+
   /// Removes a device from the manager and clears any role assignments.
   ///
   /// If the device was assigned to any role (trainer, power, cadence, HR),

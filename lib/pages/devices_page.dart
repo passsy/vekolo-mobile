@@ -441,11 +441,7 @@ class _DevicesPageState extends State<DevicesPage> {
         ),
         const SizedBox(height: 12),
         if (assignedDevice != null)
-          _buildDeviceCard(
-            context,
-            device: assignedDevice,
-            onUnassign: () => _handleUnassignDataSource(dataType),
-          )
+          _buildDeviceCard(context, device: assignedDevice, onUnassign: () => _handleUnassignDataSource(dataType))
         else
           OutlinedButton.icon(
             onPressed: () => _showDeviceAssignmentDialog(context, deviceManager, dataType),
@@ -880,52 +876,64 @@ class _DevicesPageState extends State<DevicesPage> {
     developer.log('[DevicesPage] Device selected: ${device.name} (${device.id})');
 
     try {
-      // Create FTMS device from scanned device
-      final ftmsDevice = FtmsDevice(deviceId: device.id, name: device.name.isEmpty ? 'Unknown Device' : device.name);
-
-      // Add to device manager
       final deviceManager = deviceManagerRef.of(context);
-      await deviceManager.addDevice(ftmsDevice);
+
+      // Create FTMS device from scanned device
+      final newDevice = FtmsDevice(deviceId: device.id, name: device.name.isEmpty ? 'Unknown Device' : device.name);
+
+      // Add to device manager (or get existing if already exists)
+      final ftmsDevice = await deviceManager.addOrGetExistingDevice(newDevice) as FtmsDevice;
+      final isReconnect = ftmsDevice != newDevice;
+
+      if (isReconnect) {
+        developer.log('[DevicesPage] Device already exists in manager, reconnecting');
+      }
 
       if (!mounted) return;
 
-      // Auto-assign device to available data sources based on its capabilities
+      // Auto-assign device to available data sources based on its capabilities (only for new devices)
       final autoAssignments = <String>[];
 
-      // Check if device supports ERG mode and no trainer is assigned
-      if (ftmsDevice.supportsErgMode && deviceManager.primaryTrainer == null) {
-        deviceManager.assignPrimaryTrainer(ftmsDevice.id);
-        autoAssignments.add('primary trainer');
-      }
+      if (!isReconnect) {
+        // Check if device supports ERG mode and no trainer is assigned
+        if (ftmsDevice.supportsErgMode && deviceManager.primaryTrainer == null) {
+          deviceManager.assignPrimaryTrainer(ftmsDevice.id);
+          autoAssignments.add('primary trainer');
+        }
 
-      // Auto-assign to data sources
-      if (ftmsDevice.capabilities.contains(device_info.DeviceDataType.power) && deviceManager.powerSource == null) {
-        deviceManager.assignPowerSource(ftmsDevice.id);
-        autoAssignments.add('power source');
-      }
+        // Auto-assign to data sources
+        if (ftmsDevice.capabilities.contains(device_info.DeviceDataType.power) && deviceManager.powerSource == null) {
+          deviceManager.assignPowerSource(ftmsDevice.id);
+          autoAssignments.add('power source');
+        }
 
-      if (ftmsDevice.capabilities.contains(device_info.DeviceDataType.cadence) && deviceManager.cadenceSource == null) {
-        deviceManager.assignCadenceSource(ftmsDevice.id);
-        autoAssignments.add('cadence source');
-      }
+        if (ftmsDevice.capabilities.contains(device_info.DeviceDataType.cadence) &&
+            deviceManager.cadenceSource == null) {
+          deviceManager.assignCadenceSource(ftmsDevice.id);
+          autoAssignments.add('cadence source');
+        }
 
-      if (ftmsDevice.capabilities.contains(device_info.DeviceDataType.speed) && deviceManager.speedSource == null) {
-        deviceManager.assignSpeedSource(ftmsDevice.id);
-        autoAssignments.add('speed source');
-      }
+        if (ftmsDevice.capabilities.contains(device_info.DeviceDataType.speed) && deviceManager.speedSource == null) {
+          deviceManager.assignSpeedSource(ftmsDevice.id);
+          autoAssignments.add('speed source');
+        }
 
-      if (ftmsDevice.capabilities.contains(device_info.DeviceDataType.heartRate) && deviceManager.heartRateSource == null) {
-        deviceManager.assignHeartRateSource(ftmsDevice.id);
-        autoAssignments.add('heart rate source');
+        if (ftmsDevice.capabilities.contains(device_info.DeviceDataType.heartRate) &&
+            deviceManager.heartRateSource == null) {
+          deviceManager.assignHeartRateSource(ftmsDevice.id);
+          autoAssignments.add('heart rate source');
+        }
       }
 
       // Connect the device automatically
-      developer.log('[DevicesPage] Auto-connecting device: ${ftmsDevice.name}');
+      developer.log('[DevicesPage] ${isReconnect ? 'Reconnecting' : 'Auto-connecting'} device: ${ftmsDevice.name}');
       await ftmsDevice.connect().value;
 
       if (!mounted) return;
 
-      final message = autoAssignments.isEmpty
+      final message = isReconnect
+          ? '${ftmsDevice.name} reconnected'
+          : autoAssignments.isEmpty
           ? '${ftmsDevice.name} added and connected'
           : '${ftmsDevice.name} connected and assigned as ${autoAssignments.join(', ')}';
 

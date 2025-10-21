@@ -7,6 +7,7 @@
 // missing or corrupted fields gracefully.
 
 import 'package:vekolo/api/vekolo_api_client.dart';
+import 'package:vekolo/utils/device_info.dart';
 
 void main() async {
   // Initialize the client with your base URL
@@ -60,10 +61,11 @@ Future<void> signupFlow(VekoloApiClient client) async {
     const userEnteredCode = '123456'; // From email
 
     // Step 3: Redeem the code for tokens
+    final deviceName = await DeviceInfoUtil.getDeviceName();
     final tokenResponse = await client.redeemCode(
       email: 'user@example.com',
       code: userEnteredCode,
-      deviceInfo: 'Flutter App v1.0.0',
+      deviceInfo: deviceName,
     );
 
     // Step 4: Access nested User object through Rekord
@@ -108,10 +110,11 @@ Future<void> loginFlow(VekoloApiClient client) async {
     const userEnteredCode = '123456'; // From email
 
     // Step 3: Redeem the code for tokens
+    final deviceName = await DeviceInfoUtil.getDeviceName();
     final tokenResponse = await client.redeemCode(
       email: 'user@example.com',
       code: userEnteredCode,
-      deviceInfo: 'Flutter App v1.0.0',
+      deviceInfo: deviceName,
     );
 
     // Rekord pattern makes nested access clean

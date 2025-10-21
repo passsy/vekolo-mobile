@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:reactive_forms/reactive_forms.dart';
 import 'package:vekolo/config/api_config.dart';
+import 'package:vekolo/utils/device_info.dart';
 import 'package:vekolo/utils/dio_error_handler.dart';
 
 class LoginPage extends StatefulWidget {
@@ -83,10 +84,11 @@ class _LoginPageState extends State<LoginPage> {
 
     try {
       final client = apiClientRef.of(context);
+      final deviceName = await DeviceInfoUtil.getDeviceName();
       final response = await client.redeemCode(
         email: form.control('email').value as String,
         code: codeValue,
-        deviceInfo: 'Flutter App',
+        deviceInfo: deviceName,
       );
 
       if (!mounted) return;

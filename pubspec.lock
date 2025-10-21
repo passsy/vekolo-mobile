@@ -121,6 +121,22 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.1.0"
+  device_info_plus:
+    dependency: "direct main"
+    description:
+      name: device_info_plus
+      sha256: dd0e8e02186b2196c7848c9d394a5fd6e5b57a43a546082c5820b1ec72317e33
+      url: "https://pub.dev"
+    source: hosted
+    version: "12.2.0"
+  device_info_plus_platform_interface:
+    dependency: transitive
+    description:
+      name: device_info_plus_platform_interface
+      sha256: e1ea89119e34903dca74b883d0dd78eb762814f97fb6c76f35e9ff74d261a18f
+      url: "https://pub.dev"
+    source: hosted
+    version: "7.0.3"
   dio:
     dependency: "direct main"
     description:
@@ -153,6 +169,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.1.4"
+  file:
+    dependency: transitive
+    description:
+      name: file
+      sha256: a3b4f84adafef897088c160faf7dfffb7696046cb13ae90b508c2cbc95d3b8d4
+      url: "https://pub.dev"
+    source: hosted
+    version: "7.0.1"
   flutter:
     dependency: "direct main"
     description: flutter
@@ -274,7 +298,7 @@ packages:
     description:
       path: "packages/fresh"
       ref: pull-validate-token-from-StarProxima
-      resolved-ref: aa91213274c9391a4711c26a4e2b9a369b655990
+      resolved-ref: "33e5d6bd004349b4c2cdd13911a572da41fbe9d1"
       url: "https://github.com/passsy/fresh/"
     source: git
     version: "0.7.0"
@@ -283,7 +307,7 @@ packages:
     description:
       path: "packages/fresh_dio"
       ref: pull-validate-token-from-StarProxima
-      resolved-ref: aa91213274c9391a4711c26a4e2b9a369b655990
+      resolved-ref: "33e5d6bd004349b4c2cdd13911a572da41fbe9d1"
       url: "https://github.com/passsy/fresh/"
     source: git
     version: "0.5.0"
@@ -732,6 +756,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "5.15.0"
+  win32_registry:
+    dependency: transitive
+    description:
+      name: win32_registry
+      sha256: "6f1b564492d0147b330dd794fee8f512cec4977957f310f9951b5f9d83618dae"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.1.0"
   xdg_directories:
     dependency: transitive
     description:

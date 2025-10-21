@@ -23,6 +23,7 @@ dependencies:
   clock: ^1.0.0
   fresh_dio:
   url_launcher: ^6.3.2
+  device_info_plus: ^12.2.0
 
 dev_dependencies:
   flutter_test:
