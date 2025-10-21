@@ -180,6 +180,7 @@ Request Control (0x00)
 ### Why Commands Are Sent Repeatedly
 
 Both **Set Indoor Bike Simulation (0x11)** and **Set Target Power (0x05)** commands are sent **periodically every ~2 seconds** with identical parameters, even when nothing has changed.
+After each change: 2-4 times.
 
 #### Timing Analysis from Logs
 
