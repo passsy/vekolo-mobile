@@ -1,0 +1,1248 @@
+Last login: Tue Oct 21 03:07:10 on ttys019
+❯ cd zwack
+❯ npm run simulator -- --variable=ftms --variable=rsc --variable=csp --variable=power --variable=cadence --variable=speed
+
+> zwack@0.1.6 simulator
+> node ./example/simulator.js --variable=ftms --variable=rsc --variable=csp --variable=power --variable=cadence --variable=speed
+
+2025-10-21 03:49:18.168 node[92046:67805453] BlenoMac::Init
+2025-10-21 03:49:18.169 node[92046:67805453] -[BLEPeripheralManager init]
+[ZWack] Faking test data for sensor: Zwack
+[ZWack]  Advertising these services: ftms,rsc,csp,power,cadence,speed
+
+List of Available Keys
+c/C - Decrease/Increase cycling cadence
+p/P - Decrease/Increase cycling power
+s/S - Decrease/Increase running speed
+d/D - Decrease/Increase running cadence
+
+r/R - Decrease/Increase parameter variability
+i/I - Decrease/Increase parameter increment
+x/q - Exit
+
+
+BLE Sensor parameters:
+
+Cycling:
+    Cadence: 90 RPM
+      Power: 100 W
+      Speed: 18 km/h
+
+Running:
+    Speed: 10 m/h, Pace: 06:00 min/mi
+    Cadence: 180 steps/min
+
+Randomness: 5
+Increment: 10
+
+
+(node:92046) [DEP0005] DeprecationWarning: Buffer() is deprecated due to security and usability issues. Please use the Buffer.alloc(), Buffer.allocUnsafe(), or Buffer.from() methods instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+2025-10-21 03:49:20.586 node[92046:67805460] CoreBluetooth BLE hardware is powered on and ready.
+2025-10-21 03:49:20.586 node[92046:67805453] BlenoMac::StartAdvertising
+2025-10-21 03:49:20.586 node[92046:67805453] startAdvertising:Zwack serviceUUIDs:(
+    "Device Information",
+    1826,
+    "Cycling Power",
+    "Running Speed and Cadence"
+)
+2025-10-21 03:49:20.586 node[92046:67805460] peripheralManagerDidStartAdvertising: <CBPeripheralManager: 0x600002889110>
+2025-10-21 03:49:20.587 node[92046:67805453] BlenoMac::SetServices
+2025-10-21 03:49:20.587 node[92046:67805453] napiArrayToCBMutableServices
+2025-10-21 03:49:20.587 node[92046:67805453] napiToCBMutableService
+2025-10-21 03:49:20.587 node[92046:67805453] napiArrayToCBMutableService: uuid:180A
+2025-10-21 03:49:20.587 node[92046:67805453] napiArrayToCBMutableCharacteristics
+2025-10-21 03:49:20.587 node[92046:67805453] napiToCBMutableCharacteristic
+2025-10-21 03:49:20.587 node[92046:67805453] napiToCBMutableCharacteristic: cUUID:2A23
+2025-10-21 03:49:20.587 node[92046:67805453] napiToCBMutableCharacteristic: value:{length = 1, bytes = 0x30}
+2025-10-21 03:49:20.587 node[92046:67805453] napiToCBCharacteristicProperties
+2025-10-21 03:49:20.587 node[92046:67805453] napiToCBAttributePermissions
+2025-10-21 03:49:20.587 node[92046:67805453] napiArrayToCBDescriptors
+2025-10-21 03:49:20.587 node[92046:67805453] napiToCBDescriptor uuid:2901 value:System Id
+2025-10-21 03:49:20.587 node[92046:67805453] napiToCBMutableCharacteristic
+2025-10-21 03:49:20.587 node[92046:67805453] napiToCBMutableCharacteristic: cUUID:2A24
+2025-10-21 03:49:20.587 node[92046:67805453] napiToCBMutableCharacteristic: value:{length = 6, bytes = 0x5a572d313031}
+2025-10-21 03:49:20.587 node[92046:67805453] napiToCBCharacteristicProperties
+2025-10-21 03:49:20.587 node[92046:67805453] napiToCBAttributePermissions
+2025-10-21 03:49:20.587 node[92046:67805453] napiArrayToCBDescriptors
+2025-10-21 03:49:20.587 node[92046:67805453] napiToCBDescriptor uuid:2901 value:Model Number
+2025-10-21 03:49:20.587 node[92046:67805453] napiToCBMutableCharacteristic
+2025-10-21 03:49:20.587 node[92046:67805453] napiToCBMutableCharacteristic: cUUID:2A25
+2025-10-21 03:49:20.587 node[92046:67805453] napiToCBMutableCharacteristic: value:{length = 1, bytes = 0x31}
+2025-10-21 03:49:20.587 node[92046:67805453] napiToCBCharacteristicProperties
+2025-10-21 03:49:20.587 node[92046:67805453] napiToCBAttributePermissions
+2025-10-21 03:49:20.587 node[92046:67805453] napiArrayToCBDescriptors
+2025-10-21 03:49:20.587 node[92046:67805453] napiToCBDescriptor uuid:2901 value:Serial Number
+2025-10-21 03:49:20.587 node[92046:67805453] napiToCBMutableCharacteristic
+2025-10-21 03:49:20.587 node[92046:67805453] napiToCBMutableCharacteristic: cUUID:2A26
+2025-10-21 03:49:20.587 node[92046:67805453] napiToCBMutableCharacteristic: value:{length = 3, bytes = 0x302e31}
+2025-10-21 03:49:20.587 node[92046:67805453] napiToCBCharacteristicProperties
+2025-10-21 03:49:20.587 node[92046:67805453] napiToCBAttributePermissions
+2025-10-21 03:49:20.587 node[92046:67805453] napiArrayToCBDescriptors
+2025-10-21 03:49:20.587 node[92046:67805453] napiToCBDescriptor uuid:2901 value:Firmware Revision
+2025-10-21 03:49:20.587 node[92046:67805453] napiToCBMutableCharacteristic
+2025-10-21 03:49:20.587 node[92046:67805453] napiToCBMutableCharacteristic: cUUID:2A27
+2025-10-21 03:49:20.587 node[92046:67805453] napiToCBMutableCharacteristic: value:{length = 3, bytes = 0x302e31}
+2025-10-21 03:49:20.587 node[92046:67805453] napiToCBCharacteristicProperties
+2025-10-21 03:49:20.587 node[92046:67805453] napiToCBAttributePermissions
+2025-10-21 03:49:20.587 node[92046:67805453] napiArrayToCBDescriptors
+2025-10-21 03:49:20.587 node[92046:67805453] napiToCBDescriptor uuid:2901 value:Hardware Revision
+2025-10-21 03:49:20.587 node[92046:67805453] napiToCBMutableCharacteristic
+2025-10-21 03:49:20.587 node[92046:67805453] napiToCBMutableCharacteristic: cUUID:2A28
+2025-10-21 03:49:20.587 node[92046:67805453] napiToCBMutableCharacteristic: value:{length = 3, bytes = 0x302e31}
+2025-10-21 03:49:20.587 node[92046:67805453] napiToCBCharacteristicProperties
+2025-10-21 03:49:20.587 node[92046:67805453] napiToCBAttributePermissions
+2025-10-21 03:49:20.587 node[92046:67805453] napiArrayToCBDescriptors
+2025-10-21 03:49:20.587 node[92046:67805453] napiToCBDescriptor uuid:2901 value:Software Revision
+2025-10-21 03:49:20.587 node[92046:67805453] napiToCBMutableCharacteristic
+2025-10-21 03:49:20.587 node[92046:67805453] napiToCBMutableCharacteristic: cUUID:2A29
+2025-10-21 03:49:20.587 node[92046:67805453] napiToCBMutableCharacteristic: value:{length = 14, bytes = 0x41636d65205a7761636b20496e63}
+2025-10-21 03:49:20.587 node[92046:67805453] napiToCBCharacteristicProperties
+2025-10-21 03:49:20.587 node[92046:67805453] napiToCBAttributePermissions
+2025-10-21 03:49:20.587 node[92046:67805453] napiArrayToCBDescriptors
+2025-10-21 03:49:20.587 node[92046:67805453] napiToCBDescriptor uuid:2901 value:Manufacturer Name
+2025-10-21 03:49:20.587 node[92046:67805453] napiToCBMutableService
+2025-10-21 03:49:20.587 node[92046:67805453] napiArrayToCBMutableService: uuid:1818
+2025-10-21 03:49:20.587 node[92046:67805453] napiArrayToCBMutableCharacteristics
+2025-10-21 03:49:20.587 node[92046:67805453] napiToCBMutableCharacteristic
+2025-10-21 03:49:20.587 node[92046:67805453] napiToCBMutableCharacteristic: cUUID:2A63
+2025-10-21 03:49:20.587 node[92046:67805453] napiToCBMutableCharacteristic: value:(null)
+2025-10-21 03:49:20.587 node[92046:67805453] napiToCBCharacteristicProperties
+2025-10-21 03:49:20.587 node[92046:67805453] napiToCBAttributePermissions
+2025-10-21 03:49:20.588 node[92046:67805453] napiArrayToCBDescriptors
+2025-10-21 03:49:20.588 node[92046:67805453] napiToCBDescriptor uuid:2901 value:Cycling Power Measurement
+2025-10-21 03:49:20.588 node[92046:67805453] napiToCBDescriptor uuid:2902 value:
+2025-10-21 03:49:20.588 node[92046:67805453] napiToCBDescriptor uuid:2903 value:
+2025-10-21 03:49:20.588 node[92046:67805453] napiToCBMutableCharacteristic
+2025-10-21 03:49:20.588 node[92046:67805453] napiToCBMutableCharacteristic: cUUID:A026E005-0A7D-4AB3-97FA-F1500F9FEB8B
+2025-10-21 03:49:20.588 node[92046:67805453] napiToCBMutableCharacteristic: value:(null)
+2025-10-21 03:49:20.588 node[92046:67805453] napiToCBCharacteristicProperties
+2025-10-21 03:49:20.588 node[92046:67805453] napiToCBAttributePermissions
+2025-10-21 03:49:20.588 node[92046:67805453] napiArrayToCBDescriptors
+2025-10-21 03:49:20.588 node[92046:67805453] napiToCBDescriptor uuid:2901 value:Cycling Power Wahoo Extension
+2025-10-21 03:49:20.588 node[92046:67805453] napiToCBMutableCharacteristic
+2025-10-21 03:49:20.588 node[92046:67805453] napiToCBMutableCharacteristic: cUUID:2A65
+2025-10-21 03:49:20.588 node[92046:67805453] napiToCBMutableCharacteristic: value:{length = 4, bytes = 0x08000000}
+2025-10-21 03:49:20.588 node[92046:67805453] napiToCBCharacteristicProperties
+2025-10-21 03:49:20.588 node[92046:67805453] napiToCBAttributePermissions
+2025-10-21 03:49:20.588 node[92046:67805453] napiArrayToCBDescriptors
+2025-10-21 03:49:20.588 node[92046:67805453] napiToCBDescriptor uuid:2901 value:Cycling Power Feature
+2025-10-21 03:49:20.588 node[92046:67805453] napiToCBMutableCharacteristic
+2025-10-21 03:49:20.588 node[92046:67805453] napiToCBMutableCharacteristic: cUUID:2A5D
+2025-10-21 03:49:20.588 node[92046:67805453] napiToCBMutableCharacteristic: value:{length = 1, bytes = 0x0d}
+2025-10-21 03:49:20.588 node[92046:67805453] napiToCBCharacteristicProperties
+2025-10-21 03:49:20.588 node[92046:67805453] napiToCBAttributePermissions
+2025-10-21 03:49:20.588 node[92046:67805453] napiArrayToCBDescriptors
+2025-10-21 03:49:20.588 node[92046:67805453] napiToCBDescriptor uuid:2901 value:Sensor Location
+2025-10-21 03:49:20.588 node[92046:67805453] napiToCBMutableService
+2025-10-21 03:49:20.588 node[92046:67805453] napiArrayToCBMutableService: uuid:1814
+2025-10-21 03:49:20.588 node[92046:67805453] napiArrayToCBMutableCharacteristics
+2025-10-21 03:49:20.588 node[92046:67805453] napiToCBMutableCharacteristic
+2025-10-21 03:49:20.588 node[92046:67805453] napiToCBMutableCharacteristic: cUUID:2A53
+2025-10-21 03:49:20.588 node[92046:67805453] napiToCBMutableCharacteristic: value:(null)
+2025-10-21 03:49:20.588 node[92046:67805453] napiToCBCharacteristicProperties
+2025-10-21 03:49:20.588 node[92046:67805453] napiToCBAttributePermissions
+2025-10-21 03:49:20.588 node[92046:67805453] napiArrayToCBDescriptors
+2025-10-21 03:49:20.588 node[92046:67805453] napiToCBDescriptor uuid:2901 value:Running Speed And Cadence
+2025-10-21 03:49:20.588 node[92046:67805453] napiToCBDescriptor uuid:2902 value:
+2025-10-21 03:49:20.588 node[92046:67805453] napiToCBMutableCharacteristic
+2025-10-21 03:49:20.588 node[92046:67805453] napiToCBMutableCharacteristic: cUUID:2A54
+2025-10-21 03:49:20.588 node[92046:67805453] napiToCBMutableCharacteristic: value:{length = 4, bytes = 0x00000000}
+2025-10-21 03:49:20.588 node[92046:67805453] napiToCBCharacteristicProperties
+2025-10-21 03:49:20.588 node[92046:67805453] napiToCBAttributePermissions
+2025-10-21 03:49:20.588 node[92046:67805453] napiArrayToCBDescriptors
+2025-10-21 03:49:20.588 node[92046:67805453] napiToCBDescriptor uuid:2901 value:RSC Feature
+2025-10-21 03:49:20.588 node[92046:67805453] napiToCBMutableCharacteristic
+2025-10-21 03:49:20.588 node[92046:67805453] napiToCBMutableCharacteristic: cUUID:2A5D
+2025-10-21 03:49:20.588 node[92046:67805453] napiToCBMutableCharacteristic: value:{length = 1, bytes = 0x00}
+2025-10-21 03:49:20.588 node[92046:67805453] napiToCBCharacteristicProperties
+2025-10-21 03:49:20.588 node[92046:67805453] napiToCBAttributePermissions
+2025-10-21 03:49:20.588 node[92046:67805453] napiArrayToCBDescriptors
+2025-10-21 03:49:20.588 node[92046:67805453] napiToCBDescriptor uuid:2901 value:Sensor Location
+2025-10-21 03:49:20.588 node[92046:67805453] napiToCBMutableService
+2025-10-21 03:49:20.588 node[92046:67805453] napiArrayToCBMutableService: uuid:1826
+2025-10-21 03:49:20.588 node[92046:67805453] napiArrayToCBMutableCharacteristics
+2025-10-21 03:49:20.588 node[92046:67805453] napiToCBMutableCharacteristic
+2025-10-21 03:49:20.588 node[92046:67805453] napiToCBMutableCharacteristic: cUUID:2ACC
+2025-10-21 03:49:20.588 node[92046:67805453] napiToCBMutableCharacteristic: value:(null)
+2025-10-21 03:49:20.588 node[92046:67805453] napiToCBCharacteristicProperties
+2025-10-21 03:49:20.588 node[92046:67805453] napiToCBAttributePermissions
+2025-10-21 03:49:20.588 node[92046:67805453] napiArrayToCBDescriptors
+2025-10-21 03:49:20.588 node[92046:67805453] napiToCBDescriptor uuid:2901 value:Fitness Machine Feature
+2025-10-21 03:49:20.588 node[92046:67805453] napiToCBMutableCharacteristic
+2025-10-21 03:49:20.588 node[92046:67805453] napiToCBMutableCharacteristic: cUUID:2AD2
+2025-10-21 03:49:20.588 node[92046:67805453] napiToCBMutableCharacteristic: value:(null)
+2025-10-21 03:49:20.588 node[92046:67805453] napiToCBCharacteristicProperties
+2025-10-21 03:49:20.588 node[92046:67805453] napiToCBAttributePermissions
+2025-10-21 03:49:20.588 node[92046:67805453] napiArrayToCBDescriptors
+2025-10-21 03:49:20.588 node[92046:67805453] napiToCBDescriptor uuid:2901 value:Indoor Bike Data
+2025-10-21 03:49:20.588 node[92046:67805453] napiToCBMutableCharacteristic
+2025-10-21 03:49:20.588 node[92046:67805453] napiToCBMutableCharacteristic: cUUID:2ADA
+2025-10-21 03:49:20.588 node[92046:67805453] napiToCBMutableCharacteristic: value:(null)
+2025-10-21 03:49:20.588 node[92046:67805453] napiToCBCharacteristicProperties
+2025-10-21 03:49:20.588 node[92046:67805453] napiToCBAttributePermissions
+2025-10-21 03:49:20.588 node[92046:67805453] napiArrayToCBDescriptors
+2025-10-21 03:49:20.588 node[92046:67805453] napiToCBDescriptor uuid:2901 value:Fitness Machine Status
+2025-10-21 03:49:20.588 node[92046:67805453] napiToCBMutableCharacteristic
+2025-10-21 03:49:20.588 node[92046:67805453] napiToCBMutableCharacteristic: cUUID:2AD9
+2025-10-21 03:49:20.588 node[92046:67805453] napiToCBMutableCharacteristic: value:(null)
+2025-10-21 03:49:20.588 node[92046:67805453] napiToCBCharacteristicProperties
+2025-10-21 03:49:20.588 node[92046:67805453] napiToCBAttributePermissions
+2025-10-21 03:49:20.588 node[92046:67805453] napiArrayToCBDescriptors
+2025-10-21 03:49:20.588 node[92046:67805453] napiToCBDescriptor uuid:2901 value:Fitness Machine Control Point
+2025-10-21 03:49:20.588 node[92046:67805453] napiToCBMutableCharacteristic
+2025-10-21 03:49:20.588 node[92046:67805453] napiToCBMutableCharacteristic: cUUID:2AD8
+2025-10-21 03:49:20.588 node[92046:67805453] napiToCBMutableCharacteristic: value:(null)
+2025-10-21 03:49:20.588 node[92046:67805453] napiToCBCharacteristicProperties
+2025-10-21 03:49:20.588 node[92046:67805453] napiToCBAttributePermissions
+2025-10-21 03:49:20.588 node[92046:67805453] napiArrayToCBDescriptors
+2025-10-21 03:49:20.588 node[92046:67805453] napiToCBDescriptor uuid:2901 value:Supported Power Range
+2025-10-21 03:49:20.589 node[92046:67805453] napiArrayToUUIDEmitters
+2025-10-21 03:49:20.590 node[92046:67805460] peripheralManagerDidAddService: <CBMutableService: 0x6000030a8000 Primary = YES, UUID = Device Information, Included Services = (null), Characteristics = (
+    "<CBMutableCharacteristic: 0x6000038a0380 UUID = System ID, Value = {length = 1, bytes = 0x30}, Properties = 0x2, Permissions = 0x1, Descriptors = (\n    \"<CBMutableDescriptor: 0x600000690840 UUID = Characteristic User Description, Value = System Id>\"\n), SubscribedCentrals = (\n)>",
+    "<CBMutableCharacteristic: 0x6000038a0850 UUID = Model Number String, Value = {length = 6, bytes = 0x5a572d313031}, Properties = 0x2, Permissions = 0x1, Descriptors = (\n    \"<CBMutableDescriptor: 0x600000690a00 UUID = Characteristic User Description, Value = Model Number>\"\n), SubscribedCentrals = (\n)>",
+    "<CBMutableCharacteristic: 0x6000038a0a80 UUID = Serial Number String, Value = {length = 1, bytes = 0x31}, Properties = 0x2, Permissions = 0x1, Descriptors = (\n    \"<CBMutableDescriptor: 0x600000690b40 UUID = Characteristic User Description, Value = Serial Number>\"\n), SubscribedCentrals = (\n)>",
+    "<CBMutableCharacteristic: 0x6000038a0cb0 UUID = Firmware Revision String, Value = {length = 3, bytes = 0x302e31}, Properties = 0x2, Permissions = 0x1, Descriptors = (\n    \"<CBMutableDescriptor: 0x600000690c80 UUID = Characteristic User Description, Value = Firmware Revision>\"\n), SubscribedCentrals = (\n)>",
+    "<CBMutableCharacteristic: 0x6000038a0ee0 UUID = Hardware Revision String, Value = {length = 3, bytes = 0x302e31}, Properties = 0x2, Permissions = 0x1, Descriptors = (\n    \"<CBMutableDescriptor: 0x600000690900 UUID = Characteristic User Description, Value = Hardware Revision>\"\n), SubscribedCentrals = (\n)>",
+    "<CBMutableCharacteristic: 0x6000038a11f0 UUID = Software Revision String, Value = {length = 3, bytes = 0x302e31}, Properties = 0x2, Permissions = 0x1, Descriptors = (\n    \"<CBMutableDescriptor: 0x600000690e80 UUID = Characteristic User Description, Value = Software Revision>\"\n), SubscribedCentrals = (\n)>",
+    "<CBMutableCharacteristic: 0x6000038a1420 UUID = Manufacturer Name String, Value = {length = 14, bytes = 0x41636d65205a7761636b20496e63}, Properties = 0x2, Permissions = 0x1, Descriptors = (\n    \"<CBMutableDescriptor: 0x600000690f40 UUID = Characteristic User Description, Value = Manufacturer Name>\"\n), SubscribedCentrals = (\n)>"
+)> Error Domain=CBErrorDomain Code=8 "The specified UUID is not allowed for this operation." UserInfo={NSLocalizedDescription=The specified UUID is not allowed for this operation.}
+2025-10-21 03:49:20.590 node[92046:67805460] Error publishing service: The specified UUID is not allowed for this operation.
+2025-10-21 03:49:20.590 node[92046:67805460] peripheralManagerDidAddService: <CBMutableService: 0x6000030a82d0 Primary = YES, UUID = Cycling Power, Included Services = (null), Characteristics = (
+    "<CBMutableCharacteristic: 0x6000038a16c0 UUID = 2A63, Value = (null), Properties = 0x10, Permissions = 0x0, Descriptors = (\n    \"<CBMutableDescriptor: 0x600000691180 UUID = Characteristic User Description, Value = Cycling Power Measurement>\",\n    \"<CBMutableDescriptor: 0x600000691240 UUID = Client Characteristic Configuration, Value = >\",\n    \"<CBMutableDescriptor: 0x600000691380 UUID = Server Characteristic Configuration, Value = >\"\n), SubscribedCentrals = (\n)>",
+    "<CBMutableCharacteristic: 0x6000038a1e30 UUID = A026E005-0A7D-4AB3-97FA-F1500F9FEB8B, Value = (null), Properties = 0x8, Permissions = 0x2, Descriptors = (\n    \"<CBMutableDescriptor: 0x6000006914c0 UUID = Characteristic User Description, Value = Cycling Power Wahoo Extension>\"\n), SubscribedCentrals = (\n)>",
+    "<CBMutableCharacteristic: 0x6000038a1f80 UUID = 2A65, Value = {length = 4, bytes = 0x08000000}, Properties = 0x2, Permissions = 0x1, Descriptors = (\n    \"<CBMutableDescriptor: 0x600000691740 UUID = Characteristic User Description, Value = Cycling Power Feature>\"\n), SubscribedCentrals = (\n)>",
+    "<CBMutableCharacteristic: 0x6000038a21b0 UUID = 2A5D, Value = {length = 1, bytes = 0x0d}, Properties = 0x2, Permissions = 0x1, Descriptors = (\n    \"<CBMutableDescriptor: 0x600000691900 UUID = Characteristic User Description, Value = Sensor Location>\"\n), SubscribedCentrals = (\n)>"
+)> Error Domain=CBErrorDomain Code=1 "One or more parameters were invalid." UserInfo={NSLocalizedDescription=One or more parameters were invalid.}
+2025-10-21 03:49:20.590 node[92046:67805460] Error publishing service: One or more parameters were invalid.
+2025-10-21 03:49:20.590 node[92046:67805460] peripheralManagerDidAddService: <CBMutableService: 0x6000030a8320 Primary = YES, UUID = Running Speed and Cadence, Included Services = (null), Characteristics = (
+    "<CBMutableCharacteristic: 0x6000038a2450 UUID = 2A53, Value = (null), Properties = 0x10, Permissions = 0x0, Descriptors = (\n    \"<CBMutableDescriptor: 0x600000691ac0 UUID = Characteristic User Description, Value = Running Speed And Cadence>\",\n    \"<CBMutableDescriptor: 0x600000691b80 UUID = Client Characteristic Configuration, Value = >\"\n), SubscribedCentrals = (\n)>",
+    "<CBMutableCharacteristic: 0x6000038a2920 UUID = 2A54, Value = {length = 4, bytes = 0x00000000}, Properties = 0x2, Permissions = 0x1, Descriptors = (\n    \"<CBMutableDescriptor: 0x600000691cc0 UUID = Characteristic User Description, Value = RSC Feature>\"\n), SubscribedCentrals = (\n)>",
+    "<CBMutableCharacteristic: 0x6000038a2b50 UUID = 2A5D, Value = {length = 1, bytes = 0x00}, Properties = 0x2, Permissions = 0x1, Descriptors = (\n    \"<CBMutableDescriptor: 0x600000691f00 UUID = Characteristic User Description, Value = Sensor Location>\"\n), SubscribedCentrals = (\n)>"
+)> Error Domain=CBErrorDomain Code=1 "One or more parameters were invalid." UserInfo={NSLocalizedDescription=One or more parameters were invalid.}
+2025-10-21 03:49:20.590 node[92046:67805460] Error publishing service: One or more parameters were invalid.
+2025-10-21 03:49:20.590 node[92046:67805460] peripheralManagerDidAddService: <CBMutableService: 0x6000030a8370 Primary = YES, UUID = 1826, Included Services = (null), Characteristics = (
+    "<CBMutableCharacteristic: 0x6000038a2df0 UUID = 2ACC, Value = (null), Properties = 0x2, Permissions = 0x1, Descriptors = (\n    \"<CBMutableDescriptor: 0x600000692080 UUID = Characteristic User Description, Value = Fitness Machine Feature>\"\n), SubscribedCentrals = (\n)>",
+    "<CBMutableCharacteristic: 0x6000038a3020 UUID = 2AD2, Value = (null), Properties = 0x10, Permissions = 0x0, Descriptors = (\n    \"<CBMutableDescriptor: 0x6000006921c0 UUID = Characteristic User Description, Value = Indoor Bike Data>\"\n), SubscribedCentrals = (\n)>",
+    "<CBMutableCharacteristic: 0x6000038a3250 UUID = 2ADA, Value = (null), Properties = 0x10, Permissions = 0x0, Descriptors = (\n    \"<CBMutableDescriptor: 0x600000692300 UUID = Characteristic User Description, Value = Fitness Machine Status>\"\n), SubscribedCentrals = (\n)>",
+    "<CBMutableCharacteristic: 0x6000038a3480 UUID = 2AD9, Value = (null), Properties = 0x28, Permissions = 0x2, Descriptors = (\n    \"<CBMutableDescriptor: 0x600000692480 UUID = Characteristic User Description, Value = Fitness Machine Control Point>\"\n), SubscribedCentrals = (\n)>",
+    "<CBMutableCharacteristic: 0x6000038a36b0 UUID = 2AD8, Value = (null), Properties = 0x2, Permissions = 0x1, Descriptors = (\n    \"<CBMutableDescriptor: 0x6000006925c0 UUID = Characteristic User Description, Value = Supported Power Range>\"\n), SubscribedCentrals = (\n)>"
+)> (null)
+2025-10-21 03:49:30.798 node[92046:67805460] didReceiveReadRequest: <CBCentral: 0x6000030ac050 identifier = 9F50C53A-CBAA-34B0-2988-89D2EA569356, MTU = 512> 2ACC
+2025-10-21 03:49:30.948 node[92046:67805460] didSubscribeToCharacteristic
+2025-10-21 03:49:31.098 node[92046:67805460] didSubscribeToCharacteristic
+2025-10-21 03:49:31.190 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006400} CBMutableCharacteristic
+2025-10-21 03:49:31.219 node[92046:67805460] didSubscribeToCharacteristic
+2025-10-21 03:49:32.193 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006800} CBMutableCharacteristic
+2025-10-21 03:49:33.194 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006400} CBMutableCharacteristic
+2025-10-21 03:49:34.203 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006700} CBMutableCharacteristic
+2025-10-21 03:49:35.206 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006800} CBMutableCharacteristic
+2025-10-21 03:49:36.207 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006500} CBMutableCharacteristic
+2025-10-21 03:49:37.212 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006500} CBMutableCharacteristic
+2025-10-21 03:49:38.215 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006600} CBMutableCharacteristic
+2025-10-21 03:49:39.217 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006700} CBMutableCharacteristic
+2025-10-21 03:49:40.221 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006500} CBMutableCharacteristic
+2025-10-21 03:49:41.222 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006700} CBMutableCharacteristic
+2025-10-21 03:49:42.224 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006700} CBMutableCharacteristic
+2025-10-21 03:49:43.226 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006700} CBMutableCharacteristic
+2025-10-21 03:49:44.227 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006400} CBMutableCharacteristic
+2025-10-21 03:49:45.229 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006600} CBMutableCharacteristic
+2025-10-21 03:49:46.230 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006400} CBMutableCharacteristic
+2025-10-21 03:49:46.789 node[92046:67805460] didReceiveWriteRequest: <CBCentral: 0x6000030ac050 identifier = 9F50C53A-CBAA-34B0-2988-89D2EA569356, MTU = 512> 2AD9
+2025-10-21 03:49:46.795 node[92046:67805453] subscription note: {length = 3, bytes = 0x800001} CBMutableCharacteristic
+2025-10-21 03:49:46.908 node[92046:67805460] didReceiveWriteRequest: <CBCentral: 0x6000030ac050 identifier = 9F50C53A-CBAA-34B0-2988-89D2EA569356, MTU = 512> 2AD9
+2025-10-21 03:49:46.910 node[92046:67805453] subscription note: {length = 1, bytes = 0x01} CBMutableCharacteristic
+2025-10-21 03:49:46.912 node[92046:67805453] subscription note: {length = 3, bytes = 0x800101} CBMutableCharacteristic
+2025-10-21 03:49:46.912 node[92046:67805460] peripheralManagerIsReadyToUpdateSubscribers
+2025-10-21 03:49:47.231 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006800} CBMutableCharacteristic
+2025-10-21 03:49:48.232 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006600} CBMutableCharacteristic
+2025-10-21 03:49:49.237 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006700} CBMutableCharacteristic
+2025-10-21 03:49:50.239 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006700} CBMutableCharacteristic
+2025-10-21 03:49:51.240 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006400} CBMutableCharacteristic
+2025-10-21 03:49:51.978 node[92046:67805460] didReceiveWriteRequest: <CBCentral: 0x6000030ac050 identifier = 9F50C53A-CBAA-34B0-2988-89D2EA569356, MTU = 512> 2AD9
+2025-10-21 03:49:51.980 node[92046:67805453] subscription note: {length = 3, bytes = 0x800105} CBMutableCharacteristic
+2025-10-21 03:49:52.128 node[92046:67805460] didReceiveWriteRequest: <CBCentral: 0x6000030ac050 identifier = 9F50C53A-CBAA-34B0-2988-89D2EA569356, MTU = 512> 2AD9
+2025-10-21 03:49:52.129 node[92046:67805453] subscription note: {length = 3, bytes = 0x800001} CBMutableCharacteristic
+2025-10-21 03:49:52.243 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006600} CBMutableCharacteristic
+2025-10-21 03:49:52.249 node[92046:67805460] didReceiveWriteRequest: <CBCentral: 0x6000030ac050 identifier = 9F50C53A-CBAA-34B0-2988-89D2EA569356, MTU = 512> 2AD9
+2025-10-21 03:49:52.250 node[92046:67805453] subscription note: {length = 1, bytes = 0x04} CBMutableCharacteristic
+2025-10-21 03:49:52.251 node[92046:67805453] subscription note: {length = 3, bytes = 0x800701} CBMutableCharacteristic
+2025-10-21 03:49:52.252 node[92046:67805460] peripheralManagerIsReadyToUpdateSubscribers
+2025-10-21 03:49:53.244 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006500} CBMutableCharacteristic
+2025-10-21 03:49:54.249 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006800} CBMutableCharacteristic
+2025-10-21 03:49:55.251 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006400} CBMutableCharacteristic
+2025-10-21 03:49:56.264 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006800} CBMutableCharacteristic
+2025-10-21 03:49:57.266 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006600} CBMutableCharacteristic
+2025-10-21 03:49:58.268 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006700} CBMutableCharacteristic
+2025-10-21 03:49:59.275 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006700} CBMutableCharacteristic
+2025-10-21 03:50:00.278 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006800} CBMutableCharacteristic
+2025-10-21 03:50:00.769 node[92046:67805460] didReceiveWriteRequest: <CBCentral: 0x6000030ac050 identifier = 9F50C53A-CBAA-34B0-2988-89D2EA569356, MTU = 512> 2AD9
+2025-10-21 03:50:00.770 node[92046:67805453] subscription note: {length = 3, bytes = 0x800704} CBMutableCharacteristic
+2025-10-21 03:50:01.279 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006600} CBMutableCharacteristic
+2025-10-21 03:50:01.819 node[92046:67805460] didReceiveWriteRequest: <CBCentral: 0x6000030ac050 identifier = 9F50C53A-CBAA-34B0-2988-89D2EA569356, MTU = 512> 2AD9
+2025-10-21 03:50:01.820 node[92046:67805453] subscription note: {length = 3, bytes = 0x085000} CBMutableCharacteristic
+2025-10-21 03:50:01.820 node[92046:67805453] subscription note: {length = 3, bytes = 0x800501} CBMutableCharacteristic
+2025-10-21 03:50:01.823 node[92046:67805460] peripheralManagerIsReadyToUpdateSubscribers
+2025-10-21 03:50:02.282 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006600} CBMutableCharacteristic
+2025-10-21 03:50:03.284 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006400} CBMutableCharacteristic
+2025-10-21 03:50:03.860 node[92046:67805460] didReceiveWriteRequest: <CBCentral: 0x6000030ac050 identifier = 9F50C53A-CBAA-34B0-2988-89D2EA569356, MTU = 512> 2AD9
+2025-10-21 03:50:03.860 node[92046:67805453] subscription note: {length = 3, bytes = 0x085000} CBMutableCharacteristic
+2025-10-21 03:50:03.860 node[92046:67805453] subscription note: {length = 3, bytes = 0x800501} CBMutableCharacteristic
+2025-10-21 03:50:03.862 node[92046:67805460] peripheralManagerIsReadyToUpdateSubscribers
+2025-10-21 03:50:04.287 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006600} CBMutableCharacteristic
+2025-10-21 03:50:05.291 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006800} CBMutableCharacteristic
+2025-10-21 03:50:05.899 node[92046:67805460] didReceiveWriteRequest: <CBCentral: 0x6000030ac050 identifier = 9F50C53A-CBAA-34B0-2988-89D2EA569356, MTU = 512> 2AD9
+2025-10-21 03:50:05.900 node[92046:67805453] subscription note: {length = 3, bytes = 0x085000} CBMutableCharacteristic
+2025-10-21 03:50:05.902 node[92046:67805453] subscription note: {length = 3, bytes = 0x800501} CBMutableCharacteristic
+2025-10-21 03:50:05.902 node[92046:67805460] peripheralManagerIsReadyToUpdateSubscribers
+2025-10-21 03:50:06.294 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006400} CBMutableCharacteristic
+2025-10-21 03:50:07.298 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006800} CBMutableCharacteristic
+2025-10-21 03:50:07.908 node[92046:67805460] didReceiveWriteRequest: <CBCentral: 0x6000030ac050 identifier = 9F50C53A-CBAA-34B0-2988-89D2EA569356, MTU = 512> 2AD9
+2025-10-21 03:50:07.909 node[92046:67805453] subscription note: {length = 3, bytes = 0x085000} CBMutableCharacteristic
+2025-10-21 03:50:07.912 node[92046:67805453] subscription note: {length = 3, bytes = 0x800501} CBMutableCharacteristic
+2025-10-21 03:50:07.912 node[92046:67805460] peripheralManagerIsReadyToUpdateSubscribers
+2025-10-21 03:50:08.299 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006600} CBMutableCharacteristic
+2025-10-21 03:50:09.302 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006700} CBMutableCharacteristic
+2025-10-21 03:50:09.949 node[92046:67805460] didReceiveWriteRequest: <CBCentral: 0x6000030ac050 identifier = 9F50C53A-CBAA-34B0-2988-89D2EA569356, MTU = 512> 2AD9
+2025-10-21 03:50:09.951 node[92046:67805453] subscription note: {length = 3, bytes = 0x800001} CBMutableCharacteristic
+2025-10-21 03:50:10.068 node[92046:67805460] didReceiveWriteRequest: <CBCentral: 0x6000030ac050 identifier = 9F50C53A-CBAA-34B0-2988-89D2EA569356, MTU = 512> 2AD9
+2025-10-21 03:50:10.069 node[92046:67805453] subscription note: {length = 1, bytes = 0x01} CBMutableCharacteristic
+2025-10-21 03:50:10.071 node[92046:67805453] subscription note: {length = 3, bytes = 0x800101} CBMutableCharacteristic
+2025-10-21 03:50:10.071 node[92046:67806170] peripheralManagerIsReadyToUpdateSubscribers
+2025-10-21 03:50:10.306 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006600} CBMutableCharacteristic
+2025-10-21 03:50:11.309 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006500} CBMutableCharacteristic
+2025-10-21 03:50:12.312 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006400} CBMutableCharacteristic
+2025-10-21 03:50:13.314 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006600} CBMutableCharacteristic
+2025-10-21 03:50:14.315 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006700} CBMutableCharacteristic
+2025-10-21 03:50:15.109 node[92046:67806170] didReceiveWriteRequest: <CBCentral: 0x6000030ac050 identifier = 9F50C53A-CBAA-34B0-2988-89D2EA569356, MTU = 512> 2AD9
+2025-10-21 03:50:15.110 node[92046:67805453] subscription note: {length = 3, bytes = 0x800105} CBMutableCharacteristic
+2025-10-21 03:50:15.199 node[92046:67805460] didReceiveWriteRequest: <CBCentral: 0x6000030ac050 identifier = 9F50C53A-CBAA-34B0-2988-89D2EA569356, MTU = 512> 2AD9
+2025-10-21 03:50:15.205 node[92046:67805453] subscription note: {length = 3, bytes = 0x800001} CBMutableCharacteristic
+2025-10-21 03:50:15.288 node[92046:67806170] didReceiveWriteRequest: <CBCentral: 0x6000030ac050 identifier = 9F50C53A-CBAA-34B0-2988-89D2EA569356, MTU = 512> 2AD9
+2025-10-21 03:50:15.288 node[92046:67805453] subscription note: {length = 3, bytes = 0x800704} CBMutableCharacteristic
+2025-10-21 03:50:15.318 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006500} CBMutableCharacteristic
+2025-10-21 03:50:15.379 node[92046:67806170] peripheralManagerIsReadyToUpdateSubscribers
+2025-10-21 03:50:16.320 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006800} CBMutableCharacteristic
+2025-10-21 03:50:17.321 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006700} CBMutableCharacteristic
+2025-10-21 03:50:18.322 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006500} CBMutableCharacteristic
+2025-10-21 03:50:19.327 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006800} CBMutableCharacteristic
+2025-10-21 03:50:20.328 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006800} CBMutableCharacteristic
+2025-10-21 03:50:21.330 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006800} CBMutableCharacteristic
+2025-10-21 03:50:22.332 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006800} CBMutableCharacteristic
+2025-10-21 03:50:23.335 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006400} CBMutableCharacteristic
+2025-10-21 03:50:24.338 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006500} CBMutableCharacteristic
+2025-10-21 03:50:25.339 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006500} CBMutableCharacteristic
+2025-10-21 03:50:25.939 node[92046:67805460] didReceiveWriteRequest: <CBCentral: 0x6000030ac050 identifier = 9F50C53A-CBAA-34B0-2988-89D2EA569356, MTU = 512> 2AD9
+2025-10-21 03:50:25.940 node[92046:67805453] subscription note: {length = 7, bytes = 0x12000001000000} CBMutableCharacteristic
+2025-10-21 03:50:25.940 node[92046:67805453] subscription note: {length = 3, bytes = 0x801101} CBMutableCharacteristic
+2025-10-21 03:50:25.943 node[92046:67806170] peripheralManagerIsReadyToUpdateSubscribers
+2025-10-21 03:50:26.341 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006800} CBMutableCharacteristic
+2025-10-21 03:50:27.344 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006600} CBMutableCharacteristic
+2025-10-21 03:50:27.949 node[92046:67806170] didReceiveWriteRequest: <CBCentral: 0x6000030ac050 identifier = 9F50C53A-CBAA-34B0-2988-89D2EA569356, MTU = 512> 2AD9
+2025-10-21 03:50:27.950 node[92046:67805453] subscription note: {length = 7, bytes = 0x12000001000000} CBMutableCharacteristic
+2025-10-21 03:50:27.952 node[92046:67805453] subscription note: {length = 3, bytes = 0x801101} CBMutableCharacteristic
+2025-10-21 03:50:27.955 node[92046:67805460] peripheralManagerIsReadyToUpdateSubscribers
+2025-10-21 03:50:28.348 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006400} CBMutableCharacteristic
+2025-10-21 03:50:29.357 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006500} CBMutableCharacteristic
+2025-10-21 03:50:29.989 node[92046:67805460] didReceiveWriteRequest: <CBCentral: 0x6000030ac050 identifier = 9F50C53A-CBAA-34B0-2988-89D2EA569356, MTU = 512> 2AD9
+2025-10-21 03:50:29.991 node[92046:67805453] subscription note: {length = 7, bytes = 0x12000001000000} CBMutableCharacteristic
+2025-10-21 03:50:29.993 node[92046:67805453] subscription note: {length = 3, bytes = 0x801101} CBMutableCharacteristic
+2025-10-21 03:50:29.993 node[92046:67806170] peripheralManagerIsReadyToUpdateSubscribers
+2025-10-21 03:50:30.360 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006700} CBMutableCharacteristic
+2025-10-21 03:50:31.366 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006600} CBMutableCharacteristic
+2025-10-21 03:50:32.000 node[92046:67806170] didReceiveWriteRequest: <CBCentral: 0x6000030ac050 identifier = 9F50C53A-CBAA-34B0-2988-89D2EA569356, MTU = 512> 2AD9
+2025-10-21 03:50:32.001 node[92046:67805453] subscription note: {length = 7, bytes = 0x12000001000000} CBMutableCharacteristic
+2025-10-21 03:50:32.003 node[92046:67805453] subscription note: {length = 3, bytes = 0x801101} CBMutableCharacteristic
+2025-10-21 03:50:32.003 node[92046:67805460] peripheralManagerIsReadyToUpdateSubscribers
+2025-10-21 03:50:32.371 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006800} CBMutableCharacteristic
+2025-10-21 03:50:33.379 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006800} CBMutableCharacteristic
+2025-10-21 03:50:34.068 node[92046:67805460] didReceiveWriteRequest: <CBCentral: 0x6000030ac050 identifier = 9F50C53A-CBAA-34B0-2988-89D2EA569356, MTU = 512> 2AD9
+2025-10-21 03:50:34.069 node[92046:67805453] subscription note: {length = 3, bytes = 0x800001} CBMutableCharacteristic
+2025-10-21 03:50:34.158 node[92046:67806170] didReceiveWriteRequest: <CBCentral: 0x6000030ac050 identifier = 9F50C53A-CBAA-34B0-2988-89D2EA569356, MTU = 512> 2AD9
+2025-10-21 03:50:34.159 node[92046:67805453] subscription note: {length = 1, bytes = 0x01} CBMutableCharacteristic
+2025-10-21 03:50:34.160 node[92046:67805453] subscription note: {length = 3, bytes = 0x800101} CBMutableCharacteristic
+2025-10-21 03:50:34.161 node[92046:67806170] peripheralManagerIsReadyToUpdateSubscribers
+2025-10-21 03:50:34.382 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006800} CBMutableCharacteristic
+2025-10-21 03:50:35.387 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006800} CBMutableCharacteristic
+2025-10-21 03:50:36.393 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006600} CBMutableCharacteristic
+2025-10-21 03:50:37.394 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006400} CBMutableCharacteristic
+2025-10-21 03:50:38.396 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006400} CBMutableCharacteristic
+2025-10-21 03:50:39.198 node[92046:67806170] didReceiveWriteRequest: <CBCentral: 0x6000030ac050 identifier = 9F50C53A-CBAA-34B0-2988-89D2EA569356, MTU = 512> 2AD9
+2025-10-21 03:50:39.199 node[92046:67805453] subscription note: {length = 3, bytes = 0x800105} CBMutableCharacteristic
+2025-10-21 03:50:39.288 node[92046:67806170] didReceiveWriteRequest: <CBCentral: 0x6000030ac050 identifier = 9F50C53A-CBAA-34B0-2988-89D2EA569356, MTU = 512> 2AD9
+2025-10-21 03:50:39.289 node[92046:67805453] subscription note: {length = 3, bytes = 0x800001} CBMutableCharacteristic
+2025-10-21 03:50:39.378 node[92046:67805460] didReceiveWriteRequest: <CBCentral: 0x6000030ac050 identifier = 9F50C53A-CBAA-34B0-2988-89D2EA569356, MTU = 512> 2AD9
+2025-10-21 03:50:39.379 node[92046:67805453] subscription note: {length = 3, bytes = 0x800704} CBMutableCharacteristic
+2025-10-21 03:50:39.403 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006500} CBMutableCharacteristic
+2025-10-21 03:50:39.439 node[92046:67805460] peripheralManagerIsReadyToUpdateSubscribers
+2025-10-21 03:50:39.528 node[92046:67805460] didReceiveWriteRequest: <CBCentral: 0x6000030ac050 identifier = 9F50C53A-CBAA-34B0-2988-89D2EA569356, MTU = 512> 2AD9
+2025-10-21 03:50:39.529 node[92046:67805453] subscription note: {length = 3, bytes = 0x085000} CBMutableCharacteristic
+2025-10-21 03:50:39.531 node[92046:67805453] subscription note: {length = 3, bytes = 0x800501} CBMutableCharacteristic
+2025-10-21 03:50:39.531 node[92046:67805460] peripheralManagerIsReadyToUpdateSubscribers
+2025-10-21 03:50:40.403 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006400} CBMutableCharacteristic
+2025-10-21 03:50:41.406 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006400} CBMutableCharacteristic
+2025-10-21 03:50:41.569 node[92046:67805460] didReceiveWriteRequest: <CBCentral: 0x6000030ac050 identifier = 9F50C53A-CBAA-34B0-2988-89D2EA569356, MTU = 512> 2AD9
+2025-10-21 03:50:41.569 node[92046:67805453] subscription note: {length = 3, bytes = 0x085000} CBMutableCharacteristic
+2025-10-21 03:50:41.571 node[92046:67805453] subscription note: {length = 3, bytes = 0x800501} CBMutableCharacteristic
+2025-10-21 03:50:42.407 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006400} CBMutableCharacteristic
+2025-10-21 03:50:43.411 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006500} CBMutableCharacteristic
+2025-10-21 03:50:44.413 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006800} CBMutableCharacteristic
+2025-10-21 03:50:45.414 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006400} CBMutableCharacteristic
+2025-10-21 03:50:46.417 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006500} CBMutableCharacteristic
+2025-10-21 03:50:47.421 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006700} CBMutableCharacteristic
+2025-10-21 03:50:48.426 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006800} CBMutableCharacteristic
+2025-10-21 03:50:49.400 node[92046:67806170] didReceiveWriteRequest: <CBCentral: 0x6000030ac050 identifier = 9F50C53A-CBAA-34B0-2988-89D2EA569356, MTU = 512> 2AD9
+2025-10-21 03:50:49.402 node[92046:67805453] subscription note: {length = 7, bytes = 0x12000001000000} CBMutableCharacteristic
+2025-10-21 03:50:49.402 node[92046:67805453] subscription note: {length = 3, bytes = 0x801101} CBMutableCharacteristic
+2025-10-21 03:50:49.405 node[92046:67805460] peripheralManagerIsReadyToUpdateSubscribers
+2025-10-21 03:50:49.430 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006400} CBMutableCharacteristic
+2025-10-21 03:50:50.433 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006800} CBMutableCharacteristic
+2025-10-21 03:50:51.409 node[92046:67806170] didReceiveWriteRequest: <CBCentral: 0x6000030ac050 identifier = 9F50C53A-CBAA-34B0-2988-89D2EA569356, MTU = 512> 2AD9
+2025-10-21 03:50:51.410 node[92046:67805453] subscription note: {length = 7, bytes = 0x12000001000000} CBMutableCharacteristic
+2025-10-21 03:50:51.411 node[92046:67805453] subscription note: {length = 3, bytes = 0x801101} CBMutableCharacteristic
+2025-10-21 03:50:51.412 node[92046:67805460] peripheralManagerIsReadyToUpdateSubscribers
+2025-10-21 03:50:51.436 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006700} CBMutableCharacteristic
+2025-10-21 03:50:52.439 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006600} CBMutableCharacteristic
+2025-10-21 03:50:53.442 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006600} CBMutableCharacteristic
+2025-10-21 03:50:53.450 node[92046:67806170] didReceiveWriteRequest: <CBCentral: 0x6000030ac050 identifier = 9F50C53A-CBAA-34B0-2988-89D2EA569356, MTU = 512> 2AD9
+2025-10-21 03:50:53.450 node[92046:67805453] subscription note: {length = 7, bytes = 0x12000001000000} CBMutableCharacteristic
+2025-10-21 03:50:53.452 node[92046:67805453] subscription note: {length = 3, bytes = 0x801101} CBMutableCharacteristic
+2025-10-21 03:50:53.453 node[92046:67805460] peripheralManagerIsReadyToUpdateSubscribers
+2025-10-21 03:50:54.444 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006700} CBMutableCharacteristic
+2025-10-21 03:50:55.447 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006600} CBMutableCharacteristic
+2025-10-21 03:50:55.489 node[92046:67805460] didReceiveWriteRequest: <CBCentral: 0x6000030ac050 identifier = 9F50C53A-CBAA-34B0-2988-89D2EA569356, MTU = 512> 2AD9
+2025-10-21 03:50:55.489 node[92046:67805453] subscription note: {length = 7, bytes = 0x12000001000000} CBMutableCharacteristic
+2025-10-21 03:50:55.489 node[92046:67805453] subscription note: {length = 3, bytes = 0x801101} CBMutableCharacteristic
+2025-10-21 03:50:55.489 node[92046:67805460] peripheralManagerIsReadyToUpdateSubscribers
+2025-10-21 03:50:56.450 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006800} CBMutableCharacteristic
+2025-10-21 03:50:57.453 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006800} CBMutableCharacteristic
+2025-10-21 03:50:57.562 node[92046:67805460] didReceiveWriteRequest: <CBCentral: 0x6000030ac050 identifier = 9F50C53A-CBAA-34B0-2988-89D2EA569356, MTU = 512> 2AD9
+2025-10-21 03:50:57.563 node[92046:67805453] subscription note: {length = 3, bytes = 0x800001} CBMutableCharacteristic
+2025-10-21 03:50:57.650 node[92046:67805460] didReceiveWriteRequest: <CBCentral: 0x6000030ac050 identifier = 9F50C53A-CBAA-34B0-2988-89D2EA569356, MTU = 512> 2AD9
+2025-10-21 03:50:57.651 node[92046:67805453] subscription note: {length = 1, bytes = 0x01} CBMutableCharacteristic
+2025-10-21 03:50:57.651 node[92046:67805453] subscription note: {length = 3, bytes = 0x800101} CBMutableCharacteristic
+2025-10-21 03:50:57.653 node[92046:67805460] peripheralManagerIsReadyToUpdateSubscribers
+2025-10-21 03:50:58.454 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006700} CBMutableCharacteristic
+2025-10-21 03:50:59.456 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006500} CBMutableCharacteristic
+2025-10-21 03:51:00.457 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006500} CBMutableCharacteristic
+2025-10-21 03:51:01.460 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006700} CBMutableCharacteristic
+2025-10-21 03:51:02.463 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006400} CBMutableCharacteristic
+2025-10-21 03:51:02.688 node[92046:67805460] didReceiveWriteRequest: <CBCentral: 0x6000030ac050 identifier = 9F50C53A-CBAA-34B0-2988-89D2EA569356, MTU = 512> 2AD9
+2025-10-21 03:51:02.689 node[92046:67805453] subscription note: {length = 3, bytes = 0x800105} CBMutableCharacteristic
+2025-10-21 03:51:02.780 node[92046:67806170] didReceiveWriteRequest: <CBCentral: 0x6000030ac050 identifier = 9F50C53A-CBAA-34B0-2988-89D2EA569356, MTU = 512> 2AD9
+2025-10-21 03:51:02.780 node[92046:67805453] subscription note: {length = 3, bytes = 0x800001} CBMutableCharacteristic
+2025-10-21 03:51:02.898 node[92046:67805460] didReceiveWriteRequest: <CBCentral: 0x6000030ac050 identifier = 9F50C53A-CBAA-34B0-2988-89D2EA569356, MTU = 512> 2AD9
+2025-10-21 03:51:02.899 node[92046:67805453] subscription note: {length = 3, bytes = 0x800704} CBMutableCharacteristic
+2025-10-21 03:51:03.466 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006600} CBMutableCharacteristic
+2025-10-21 03:51:04.468 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006700} CBMutableCharacteristic
+2025-10-21 03:51:05.469 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006400} CBMutableCharacteristic
+2025-10-21 03:51:06.472 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006400} CBMutableCharacteristic
+2025-10-21 03:51:07.479 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006500} CBMutableCharacteristic
+2025-10-21 03:51:08.483 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006800} CBMutableCharacteristic
+2025-10-21 03:51:09.487 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006500} CBMutableCharacteristic
+2025-10-21 03:51:10.490 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006400} CBMutableCharacteristic
+2025-10-21 03:51:11.491 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006700} CBMutableCharacteristic
+2025-10-21 03:51:12.492 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006400} CBMutableCharacteristic
+2025-10-21 03:51:13.495 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006700} CBMutableCharacteristic
+2025-10-21 03:51:14.496 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006800} CBMutableCharacteristic
+2025-10-21 03:51:15.497 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006600} CBMutableCharacteristic
+2025-10-21 03:51:16.500 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006400} CBMutableCharacteristic
+2025-10-21 03:51:17.502 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006600} CBMutableCharacteristic
+2025-10-21 03:51:18.505 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006700} CBMutableCharacteristic
+2025-10-21 03:51:19.508 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006800} CBMutableCharacteristic
+2025-10-21 03:51:20.509 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006800} CBMutableCharacteristic
+2025-10-21 03:51:21.511 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006500} CBMutableCharacteristic
+2025-10-21 03:51:22.514 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006500} CBMutableCharacteristic
+2025-10-21 03:51:23.514 node[92046:67805453] subscription note: {length = 8, bytes = 0x44000000b4006800} CBMutableCharacteristic
+❯ npm run simulator -- --variable=ftms --variable=rsc --variable=csp --variable=power --variable=cadence --variable=speed
+
+> zwack@0.1.6 simulator
+> node ./example/simulator.js --variable=ftms --variable=rsc --variable=csp --variable=power --variable=cadence --variable=speed
+
+2025-10-21 03:54:35.474 node[98234:67823899] BlenoMac::Init
+2025-10-21 03:54:35.474 node[98234:67823899] -[BLEPeripheralManager init]
+[ZWack] Faking test data for sensor: Zwack
+[ZWack]  Advertising these services: ftms,rsc,csp,power,cadence,speed
+
+List of Available Keys
+c/C - Decrease/Increase cycling cadence
+p/P - Decrease/Increase cycling power
+s/S - Decrease/Increase running speed
+d/D - Decrease/Increase running cadence
+
+r/R - Decrease/Increase parameter variability
+i/I - Decrease/Increase parameter increment
+x/q - Exit
+
+
+BLE Sensor parameters:
+
+Cycling:
+    Cadence: 90 RPM
+      Power: 100 W
+      Speed: 18 km/h
+
+Running:
+    Speed: 10 m/h, Pace: 06:00 min/mi
+    Cadence: 180 steps/min
+
+Randomness: 5
+Increment: 10
+
+
+(node:98234) [DEP0005] DeprecationWarning: Buffer() is deprecated due to security and usability issues. Please use the Buffer.alloc(), Buffer.allocUnsafe(), or Buffer.from() methods instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+2025-10-21 03:54:35.500 node[98234:67823950] CoreBluetooth BLE hardware is powered on and ready.
+2025-10-21 03:54:35.500 node[98234:67823899] BlenoMac::StartAdvertising
+2025-10-21 03:54:35.500 node[98234:67823899] startAdvertising:Zwack serviceUUIDs:(
+    "Device Information",
+    1826,
+    "Cycling Power",
+    "Running Speed and Cadence"
+)
+2025-10-21 03:54:35.501 node[98234:67823950] peripheralManagerDidStartAdvertising: <CBPeripheralManager: 0x6000017200d0>
+
+╔═════════════════════════════════════════════════════════════════════╗
+║ 📡 BLE ADVERTISING STARTED - READY FOR CONNECTIONS                  ║
+╠═════════════════════════════════════════════════════════════════════╣
+║ Sensor Name:    Zwack                                           ║
+║ Services:       180A, 1826, 1818, 1814                          ║
+║ FTMS Enabled:   true                                            ║
+║ CSP Enabled:    true                                            ║
+║ RSC Enabled:    true                                            ║
+║ Timestamp:      2025-10-21T01:54:35.501Z                        ║
+╚═════════════════════════════════════════════════════════════════════╝
+
+2025-10-21 03:54:35.501 node[98234:67823899] BlenoMac::SetServices
+2025-10-21 03:54:35.501 node[98234:67823899] napiArrayToCBMutableServices
+2025-10-21 03:54:35.501 node[98234:67823899] napiToCBMutableService
+2025-10-21 03:54:35.501 node[98234:67823899] napiArrayToCBMutableService: uuid:180A
+2025-10-21 03:54:35.501 node[98234:67823899] napiArrayToCBMutableCharacteristics
+2025-10-21 03:54:35.501 node[98234:67823899] napiToCBMutableCharacteristic
+2025-10-21 03:54:35.501 node[98234:67823899] napiToCBMutableCharacteristic: cUUID:2A23
+2025-10-21 03:54:35.501 node[98234:67823899] napiToCBMutableCharacteristic: value:{length = 1, bytes = 0x30}
+2025-10-21 03:54:35.501 node[98234:67823899] napiToCBCharacteristicProperties
+2025-10-21 03:54:35.501 node[98234:67823899] napiToCBAttributePermissions
+2025-10-21 03:54:35.501 node[98234:67823899] napiArrayToCBDescriptors
+2025-10-21 03:54:35.501 node[98234:67823899] napiToCBDescriptor uuid:2901 value:System Id
+2025-10-21 03:54:35.501 node[98234:67823899] napiToCBMutableCharacteristic
+2025-10-21 03:54:35.501 node[98234:67823899] napiToCBMutableCharacteristic: cUUID:2A24
+2025-10-21 03:54:35.501 node[98234:67823899] napiToCBMutableCharacteristic: value:{length = 6, bytes = 0x5a572d313031}
+2025-10-21 03:54:35.501 node[98234:67823899] napiToCBCharacteristicProperties
+2025-10-21 03:54:35.501 node[98234:67823899] napiToCBAttributePermissions
+2025-10-21 03:54:35.501 node[98234:67823899] napiArrayToCBDescriptors
+2025-10-21 03:54:35.501 node[98234:67823899] napiToCBDescriptor uuid:2901 value:Model Number
+2025-10-21 03:54:35.501 node[98234:67823899] napiToCBMutableCharacteristic
+2025-10-21 03:54:35.501 node[98234:67823899] napiToCBMutableCharacteristic: cUUID:2A25
+2025-10-21 03:54:35.501 node[98234:67823899] napiToCBMutableCharacteristic: value:{length = 1, bytes = 0x31}
+2025-10-21 03:54:35.502 node[98234:67823899] napiToCBCharacteristicProperties
+2025-10-21 03:54:35.502 node[98234:67823899] napiToCBAttributePermissions
+2025-10-21 03:54:35.502 node[98234:67823899] napiArrayToCBDescriptors
+2025-10-21 03:54:35.502 node[98234:67823899] napiToCBDescriptor uuid:2901 value:Serial Number
+2025-10-21 03:54:35.502 node[98234:67823899] napiToCBMutableCharacteristic
+2025-10-21 03:54:35.502 node[98234:67823899] napiToCBMutableCharacteristic: cUUID:2A26
+2025-10-21 03:54:35.502 node[98234:67823899] napiToCBMutableCharacteristic: value:{length = 3, bytes = 0x302e31}
+2025-10-21 03:54:35.502 node[98234:67823899] napiToCBCharacteristicProperties
+2025-10-21 03:54:35.502 node[98234:67823899] napiToCBAttributePermissions
+2025-10-21 03:54:35.502 node[98234:67823899] napiArrayToCBDescriptors
+2025-10-21 03:54:35.502 node[98234:67823899] napiToCBDescriptor uuid:2901 value:Firmware Revision
+2025-10-21 03:54:35.502 node[98234:67823899] napiToCBMutableCharacteristic
+2025-10-21 03:54:35.502 node[98234:67823899] napiToCBMutableCharacteristic: cUUID:2A27
+2025-10-21 03:54:35.502 node[98234:67823899] napiToCBMutableCharacteristic: value:{length = 3, bytes = 0x302e31}
+2025-10-21 03:54:35.502 node[98234:67823899] napiToCBCharacteristicProperties
+2025-10-21 03:54:35.502 node[98234:67823899] napiToCBAttributePermissions
+2025-10-21 03:54:35.502 node[98234:67823899] napiArrayToCBDescriptors
+2025-10-21 03:54:35.502 node[98234:67823899] napiToCBDescriptor uuid:2901 value:Hardware Revision
+2025-10-21 03:54:35.502 node[98234:67823899] napiToCBMutableCharacteristic
+2025-10-21 03:54:35.502 node[98234:67823899] napiToCBMutableCharacteristic: cUUID:2A28
+2025-10-21 03:54:35.502 node[98234:67823899] napiToCBMutableCharacteristic: value:{length = 3, bytes = 0x302e31}
+2025-10-21 03:54:35.502 node[98234:67823899] napiToCBCharacteristicProperties
+2025-10-21 03:54:35.502 node[98234:67823899] napiToCBAttributePermissions
+2025-10-21 03:54:35.502 node[98234:67823899] napiArrayToCBDescriptors
+2025-10-21 03:54:35.502 node[98234:67823899] napiToCBDescriptor uuid:2901 value:Software Revision
+2025-10-21 03:54:35.502 node[98234:67823899] napiToCBMutableCharacteristic
+2025-10-21 03:54:35.502 node[98234:67823899] napiToCBMutableCharacteristic: cUUID:2A29
+2025-10-21 03:54:35.502 node[98234:67823899] napiToCBMutableCharacteristic: value:{length = 14, bytes = 0x41636d65205a7761636b20496e63}
+2025-10-21 03:54:35.502 node[98234:67823899] napiToCBCharacteristicProperties
+2025-10-21 03:54:35.502 node[98234:67823899] napiToCBAttributePermissions
+2025-10-21 03:54:35.502 node[98234:67823899] napiArrayToCBDescriptors
+2025-10-21 03:54:35.502 node[98234:67823899] napiToCBDescriptor uuid:2901 value:Manufacturer Name
+2025-10-21 03:54:35.502 node[98234:67823899] napiToCBMutableService
+2025-10-21 03:54:35.502 node[98234:67823899] napiArrayToCBMutableService: uuid:1818
+2025-10-21 03:54:35.502 node[98234:67823899] napiArrayToCBMutableCharacteristics
+2025-10-21 03:54:35.502 node[98234:67823899] napiToCBMutableCharacteristic
+2025-10-21 03:54:35.502 node[98234:67823899] napiToCBMutableCharacteristic: cUUID:2A63
+2025-10-21 03:54:35.502 node[98234:67823899] napiToCBMutableCharacteristic: value:(null)
+2025-10-21 03:54:35.502 node[98234:67823899] napiToCBCharacteristicProperties
+2025-10-21 03:54:35.502 node[98234:67823899] napiToCBAttributePermissions
+2025-10-21 03:54:35.502 node[98234:67823899] napiArrayToCBDescriptors
+2025-10-21 03:54:35.502 node[98234:67823899] napiToCBDescriptor uuid:2901 value:Cycling Power Measurement
+2025-10-21 03:54:35.502 node[98234:67823899] napiToCBDescriptor uuid:2902 value:
+2025-10-21 03:54:35.502 node[98234:67823899] napiToCBDescriptor uuid:2903 value:
+2025-10-21 03:54:35.502 node[98234:67823899] napiToCBMutableCharacteristic
+2025-10-21 03:54:35.502 node[98234:67823899] napiToCBMutableCharacteristic: cUUID:A026E005-0A7D-4AB3-97FA-F1500F9FEB8B
+2025-10-21 03:54:35.502 node[98234:67823899] napiToCBMutableCharacteristic: value:(null)
+2025-10-21 03:54:35.502 node[98234:67823899] napiToCBCharacteristicProperties
+2025-10-21 03:54:35.502 node[98234:67823899] napiToCBAttributePermissions
+2025-10-21 03:54:35.502 node[98234:67823899] napiArrayToCBDescriptors
+2025-10-21 03:54:35.502 node[98234:67823899] napiToCBDescriptor uuid:2901 value:Cycling Power Wahoo Extension
+2025-10-21 03:54:35.502 node[98234:67823899] napiToCBMutableCharacteristic
+2025-10-21 03:54:35.502 node[98234:67823899] napiToCBMutableCharacteristic: cUUID:2A65
+2025-10-21 03:54:35.502 node[98234:67823899] napiToCBMutableCharacteristic: value:{length = 4, bytes = 0x08000000}
+2025-10-21 03:54:35.502 node[98234:67823899] napiToCBCharacteristicProperties
+2025-10-21 03:54:35.502 node[98234:67823899] napiToCBAttributePermissions
+2025-10-21 03:54:35.502 node[98234:67823899] napiArrayToCBDescriptors
+2025-10-21 03:54:35.502 node[98234:67823899] napiToCBDescriptor uuid:2901 value:Cycling Power Feature
+2025-10-21 03:54:35.502 node[98234:67823899] napiToCBMutableCharacteristic
+2025-10-21 03:54:35.502 node[98234:67823899] napiToCBMutableCharacteristic: cUUID:2A5D
+2025-10-21 03:54:35.502 node[98234:67823899] napiToCBMutableCharacteristic: value:{length = 1, bytes = 0x0d}
+2025-10-21 03:54:35.502 node[98234:67823899] napiToCBCharacteristicProperties
+2025-10-21 03:54:35.502 node[98234:67823899] napiToCBAttributePermissions
+2025-10-21 03:54:35.502 node[98234:67823899] napiArrayToCBDescriptors
+2025-10-21 03:54:35.502 node[98234:67823899] napiToCBDescriptor uuid:2901 value:Sensor Location
+2025-10-21 03:54:35.502 node[98234:67823899] napiToCBMutableService
+2025-10-21 03:54:35.502 node[98234:67823899] napiArrayToCBMutableService: uuid:1814
+2025-10-21 03:54:35.502 node[98234:67823899] napiArrayToCBMutableCharacteristics
+2025-10-21 03:54:35.502 node[98234:67823899] napiToCBMutableCharacteristic
+2025-10-21 03:54:35.502 node[98234:67823899] napiToCBMutableCharacteristic: cUUID:2A53
+2025-10-21 03:54:35.502 node[98234:67823899] napiToCBMutableCharacteristic: value:(null)
+2025-10-21 03:54:35.502 node[98234:67823899] napiToCBCharacteristicProperties
+2025-10-21 03:54:35.502 node[98234:67823899] napiToCBAttributePermissions
+2025-10-21 03:54:35.502 node[98234:67823899] napiArrayToCBDescriptors
+2025-10-21 03:54:35.502 node[98234:67823899] napiToCBDescriptor uuid:2901 value:Running Speed And Cadence
+2025-10-21 03:54:35.502 node[98234:67823899] napiToCBDescriptor uuid:2902 value:
+2025-10-21 03:54:35.502 node[98234:67823899] napiToCBMutableCharacteristic
+2025-10-21 03:54:35.502 node[98234:67823899] napiToCBMutableCharacteristic: cUUID:2A54
+2025-10-21 03:54:35.502 node[98234:67823899] napiToCBMutableCharacteristic: value:{length = 4, bytes = 0x00000000}
+2025-10-21 03:54:35.502 node[98234:67823899] napiToCBCharacteristicProperties
+2025-10-21 03:54:35.502 node[98234:67823899] napiToCBAttributePermissions
+2025-10-21 03:54:35.502 node[98234:67823899] napiArrayToCBDescriptors
+2025-10-21 03:54:35.502 node[98234:67823899] napiToCBDescriptor uuid:2901 value:RSC Feature
+2025-10-21 03:54:35.502 node[98234:67823899] napiToCBMutableCharacteristic
+2025-10-21 03:54:35.502 node[98234:67823899] napiToCBMutableCharacteristic: cUUID:2A5D
+2025-10-21 03:54:35.502 node[98234:67823899] napiToCBMutableCharacteristic: value:{length = 1, bytes = 0x00}
+2025-10-21 03:54:35.502 node[98234:67823899] napiToCBCharacteristicProperties
+2025-10-21 03:54:35.502 node[98234:67823899] napiToCBAttributePermissions
+2025-10-21 03:54:35.503 node[98234:67823899] napiArrayToCBDescriptors
+2025-10-21 03:54:35.503 node[98234:67823899] napiToCBDescriptor uuid:2901 value:Sensor Location
+2025-10-21 03:54:35.503 node[98234:67823899] napiToCBMutableService
+2025-10-21 03:54:35.503 node[98234:67823899] napiArrayToCBMutableService: uuid:1826
+2025-10-21 03:54:35.503 node[98234:67823899] napiArrayToCBMutableCharacteristics
+2025-10-21 03:54:35.503 node[98234:67823899] napiToCBMutableCharacteristic
+2025-10-21 03:54:35.503 node[98234:67823899] napiToCBMutableCharacteristic: cUUID:2ACC
+2025-10-21 03:54:35.503 node[98234:67823899] napiToCBMutableCharacteristic: value:(null)
+2025-10-21 03:54:35.503 node[98234:67823899] napiToCBCharacteristicProperties
+2025-10-21 03:54:35.503 node[98234:67823899] napiToCBAttributePermissions
+2025-10-21 03:54:35.503 node[98234:67823899] napiArrayToCBDescriptors
+2025-10-21 03:54:35.503 node[98234:67823899] napiToCBDescriptor uuid:2901 value:Fitness Machine Feature
+2025-10-21 03:54:35.503 node[98234:67823899] napiToCBMutableCharacteristic
+2025-10-21 03:54:35.503 node[98234:67823899] napiToCBMutableCharacteristic: cUUID:2AD2
+2025-10-21 03:54:35.503 node[98234:67823899] napiToCBMutableCharacteristic: value:(null)
+2025-10-21 03:54:35.503 node[98234:67823899] napiToCBCharacteristicProperties
+2025-10-21 03:54:35.503 node[98234:67823899] napiToCBAttributePermissions
+2025-10-21 03:54:35.503 node[98234:67823899] napiArrayToCBDescriptors
+2025-10-21 03:54:35.503 node[98234:67823899] napiToCBDescriptor uuid:2901 value:Indoor Bike Data
+2025-10-21 03:54:35.503 node[98234:67823899] napiToCBMutableCharacteristic
+2025-10-21 03:54:35.503 node[98234:67823899] napiToCBMutableCharacteristic: cUUID:2ADA
+2025-10-21 03:54:35.503 node[98234:67823899] napiToCBMutableCharacteristic: value:(null)
+2025-10-21 03:54:35.503 node[98234:67823899] napiToCBCharacteristicProperties
+2025-10-21 03:54:35.503 node[98234:67823899] napiToCBAttributePermissions
+2025-10-21 03:54:35.503 node[98234:67823899] napiArrayToCBDescriptors
+2025-10-21 03:54:35.503 node[98234:67823899] napiToCBDescriptor uuid:2901 value:Fitness Machine Status
+2025-10-21 03:54:35.503 node[98234:67823899] napiToCBMutableCharacteristic
+2025-10-21 03:54:35.503 node[98234:67823899] napiToCBMutableCharacteristic: cUUID:2AD9
+2025-10-21 03:54:35.503 node[98234:67823899] napiToCBMutableCharacteristic: value:(null)
+2025-10-21 03:54:35.503 node[98234:67823899] napiToCBCharacteristicProperties
+2025-10-21 03:54:35.503 node[98234:67823899] napiToCBAttributePermissions
+2025-10-21 03:54:35.503 node[98234:67823899] napiArrayToCBDescriptors
+2025-10-21 03:54:35.503 node[98234:67823899] napiToCBDescriptor uuid:2901 value:Fitness Machine Control Point
+2025-10-21 03:54:35.503 node[98234:67823899] napiToCBMutableCharacteristic
+2025-10-21 03:54:35.503 node[98234:67823899] napiToCBMutableCharacteristic: cUUID:2AD8
+2025-10-21 03:54:35.503 node[98234:67823899] napiToCBMutableCharacteristic: value:(null)
+2025-10-21 03:54:35.503 node[98234:67823899] napiToCBCharacteristicProperties
+2025-10-21 03:54:35.503 node[98234:67823899] napiToCBAttributePermissions
+2025-10-21 03:54:35.503 node[98234:67823899] napiArrayToCBDescriptors
+2025-10-21 03:54:35.503 node[98234:67823899] napiToCBDescriptor uuid:2901 value:Supported Power Range
+2025-10-21 03:54:35.503 node[98234:67823899] napiArrayToUUIDEmitters
+2025-10-21 03:54:35.503 node[98234:67823950] peripheralManagerDidAddService: <CBMutableService: 0x600000f34320 Primary = YES, UUID = Device Information, Included Services = (null), Characteristics = (
+    "<CBMutableCharacteristic: 0x60000071c460 UUID = System ID, Value = {length = 1, bytes = 0x30}, Properties = 0x2, Permissions = 0x1, Descriptors = (\n    \"<CBMutableDescriptor: 0x60000393bf00 UUID = Characteristic User Description, Value = System Id>\"\n), SubscribedCentrals = (\n)>",
+    "<CBMutableCharacteristic: 0x60000071c930 UUID = Model Number String, Value = {length = 6, bytes = 0x5a572d313031}, Properties = 0x2, Permissions = 0x1, Descriptors = (\n    \"<CBMutableDescriptor: 0x60000390c180 UUID = Characteristic User Description, Value = Model Number>\"\n), SubscribedCentrals = (\n)>",
+    "<CBMutableCharacteristic: 0x60000071cb60 UUID = Serial Number String, Value = {length = 1, bytes = 0x31}, Properties = 0x2, Permissions = 0x1, Descriptors = (\n    \"<CBMutableDescriptor: 0x60000390c2c0 UUID = Characteristic User Description, Value = Serial Number>\"\n), SubscribedCentrals = (\n)>",
+    "<CBMutableCharacteristic: 0x60000071cd90 UUID = Firmware Revision String, Value = {length = 3, bytes = 0x302e31}, Properties = 0x2, Permissions = 0x1, Descriptors = (\n    \"<CBMutableDescriptor: 0x60000390c400 UUID = Characteristic User Description, Value = Firmware Revision>\"\n), SubscribedCentrals = (\n)>",
+    "<CBMutableCharacteristic: 0x60000071cfc0 UUID = Hardware Revision String, Value = {length = 3, bytes = 0x302e31}, Properties = 0x2, Permissions = 0x1, Descriptors = (\n    \"<CBMutableDescriptor: 0x60000390c140 UUID = Characteristic User Description, Value = Hardware Revision>\"\n), SubscribedCentrals = (\n)>",
+    "<CBMutableCharacteristic: 0x60000071d2d0 UUID = Software Revision String, Value = {length = 3, bytes = 0x302e31}, Properties = 0x2, Permissions = 0x1, Descriptors = (\n    \"<CBMutableDescriptor: 0x60000390c600 UUID = Characteristic User Description, Value = Software Revision>\"\n), SubscribedCentrals = (\n)>",
+    "<CBMutableCharacteristic: 0x60000071d500 UUID = Manufacturer Name String, Value = {length = 14, bytes = 0x41636d65205a7761636b20496e63}, Properties = 0x2, Permissions = 0x1, Descriptors = (\n    \"<CBMutableDescriptor: 0x60000390c6c0 UUID = Characteristic User Description, Value = Manufacturer Name>\"\n), SubscribedCentrals = (\n)>"
+)> Error Domain=CBErrorDomain Code=8 "The specified UUID is not allowed for this operation." UserInfo={NSLocalizedDescription=The specified UUID is not allowed for this operation.}
+2025-10-21 03:54:35.503 node[98234:67823950] Error publishing service: The specified UUID is not allowed for this operation.
+2025-10-21 03:54:35.504 node[98234:67823950] peripheralManagerDidAddService: <CBMutableService: 0x600000f345f0 Primary = YES, UUID = Cycling Power, Included Services = (null), Characteristics = (
+    "<CBMutableCharacteristic: 0x60000071d7a0 UUID = 2A63, Value = (null), Properties = 0x10, Permissions = 0x0, Descriptors = (\n    \"<CBMutableDescriptor: 0x60000390c900 UUID = Characteristic User Description, Value = Cycling Power Measurement>\",\n    \"<CBMutableDescriptor: 0x60000390c9c0 UUID = Client Characteristic Configuration, Value = >\",\n    \"<CBMutableDescriptor: 0x60000390cb00 UUID = Server Characteristic Configuration, Value = >\"\n), SubscribedCentrals = (\n)>",
+    "<CBMutableCharacteristic: 0x60000071df10 UUID = A026E005-0A7D-4AB3-97FA-F1500F9FEB8B, Value = (null), Properties = 0x8, Permissions = 0x2, Descriptors = (\n    \"<CBMutableDescriptor: 0x60000390cc40 UUID = Characteristic User Description, Value = Cycling Power Wahoo Extension>\"\n), SubscribedCentrals = (\n)>",
+    "<CBMutableCharacteristic: 0x60000071e060 UUID = 2A65, Value = {length = 4, bytes = 0x08000000}, Properties = 0x2, Permissions = 0x1, Descriptors = (\n    \"<CBMutableDescriptor: 0x60000390cec0 UUID = Characteristic User Description, Value = Cycling Power Feature>\"\n), SubscribedCentrals = (\n)>",
+    "<CBMutableCharacteristic: 0x60000071e290 UUID = 2A5D, Value = {length = 1, bytes = 0x0d}, Properties = 0x2, Permissions = 0x1, Descriptors = (\n    \"<CBMutableDescriptor: 0x60000390d080 UUID = Characteristic User Description, Value = Sensor Location>\"\n), SubscribedCentrals = (\n)>"
+)> Error Domain=CBErrorDomain Code=1 "One or more parameters were invalid." UserInfo={NSLocalizedDescription=One or more parameters were invalid.}
+2025-10-21 03:54:35.504 node[98234:67823950] Error publishing service: One or more parameters were invalid.
+2025-10-21 03:54:35.504 node[98234:67823950] peripheralManagerDidAddService: <CBMutableService: 0x600000f34640 Primary = YES, UUID = Running Speed and Cadence, Included Services = (null), Characteristics = (
+    "<CBMutableCharacteristic: 0x60000071e530 UUID = 2A53, Value = (null), Properties = 0x10, Permissions = 0x0, Descriptors = (\n    \"<CBMutableDescriptor: 0x60000390d240 UUID = Characteristic User Description, Value = Running Speed And Cadence>\",\n    \"<CBMutableDescriptor: 0x60000390d300 UUID = Client Characteristic Configuration, Value = >\"\n), SubscribedCentrals = (\n)>",
+    "<CBMutableCharacteristic: 0x60000071ea00 UUID = 2A54, Value = {length = 4, bytes = 0x00000000}, Properties = 0x2, Permissions = 0x1, Descriptors = (\n    \"<CBMutableDescriptor: 0x60000390d440 UUID = Characteristic User Description, Value = RSC Feature>\"\n), SubscribedCentrals = (\n)>",
+    "<CBMutableCharacteristic: 0x60000071ec30 UUID = 2A5D, Value = {length = 1, bytes = 0x00}, Properties = 0x2, Permissions = 0x1, Descriptors = (\n    \"<CBMutableDescriptor: 0x60000390d680 UUID = Characteristic User Description, Value = Sensor Location>\"\n), SubscribedCentrals = (\n)>"
+)> Error Domain=CBErrorDomain Code=1 "One or more parameters were invalid." UserInfo={NSLocalizedDescription=One or more parameters were invalid.}
+2025-10-21 03:54:35.504 node[98234:67823950] Error publishing service: One or more parameters were invalid.
+2025-10-21 03:54:35.504 node[98234:67823950] peripheralManagerDidAddService: <CBMutableService: 0x600000f34690 Primary = YES, UUID = 1826, Included Services = (null), Characteristics = (
+    "<CBMutableCharacteristic: 0x60000071eed0 UUID = 2ACC, Value = (null), Properties = 0x2, Permissions = 0x1, Descriptors = (\n    \"<CBMutableDescriptor: 0x60000390d800 UUID = Characteristic User Description, Value = Fitness Machine Feature>\"\n), SubscribedCentrals = (\n)>",
+    "<CBMutableCharacteristic: 0x60000071f100 UUID = 2AD2, Value = (null), Properties = 0x10, Permissions = 0x0, Descriptors = (\n    \"<CBMutableDescriptor: 0x60000390d940 UUID = Characteristic User Description, Value = Indoor Bike Data>\"\n), SubscribedCentrals = (\n)>",
+    "<CBMutableCharacteristic: 0x60000071f330 UUID = 2ADA, Value = (null), Properties = 0x10, Permissions = 0x0, Descriptors = (\n    \"<CBMutableDescriptor: 0x60000390da80 UUID = Characteristic User Description, Value = Fitness Machine Status>\"\n), SubscribedCentrals = (\n)>",
+    "<CBMutableCharacteristic: 0x60000071f560 UUID = 2AD9, Value = (null), Properties = 0x28, Permissions = 0x2, Descriptors = (\n    \"<CBMutableDescriptor: 0x60000390dc00 UUID = Characteristic User Description, Value = Fitness Machine Control Point>\"\n), SubscribedCentrals = (\n)>",
+    "<CBMutableCharacteristic: 0x60000071f790 UUID = 2AD8, Value = (null), Properties = 0x2, Permissions = 0x1, Descriptors = (\n    \"<CBMutableDescriptor: 0x60000390dd40 UUID = Characteristic User Description, Value = Supported Power Range>\"\n), SubscribedCentrals = (\n)>"
+)> (null)
+❯ npm run simulator -- --variable=ftms --variable=rsc --variable=csp --variable=power --variable=cadence --variable=speed
+
+> zwack@0.1.6 simulator
+> node ./example/simulator.js --variable=ftms --variable=rsc --variable=csp --variable=power --variable=cadence --variable=speed
+
+2025-10-21 03:55:08.439 node[98864:67825954] BlenoMac::Init
+2025-10-21 03:55:08.440 node[98864:67825954] -[BLEPeripheralManager init]
+[ZWack] Faking test data for sensor: Zwack
+[ZWack]  Advertising these services: ftms,rsc,csp,power,cadence,speed
+
+List of Available Keys
+c/C - Decrease/Increase cycling cadence
+p/P - Decrease/Increase cycling power
+s/S - Decrease/Increase running speed
+d/D - Decrease/Increase running cadence
+
+r/R - Decrease/Increase parameter variability
+i/I - Decrease/Increase parameter increment
+x/q - Exit
+
+
+BLE Sensor parameters:
+
+Cycling:
+    Cadence: 90 RPM
+      Power: 100 W
+      Speed: 18 km/h
+
+Running:
+    Speed: 10 m/h, Pace: 06:00 min/mi
+    Cadence: 180 steps/min
+
+Randomness: 5
+Increment: 10
+
+
+(node:98864) [DEP0005] DeprecationWarning: Buffer() is deprecated due to security and usability issues. Please use the Buffer.alloc(), Buffer.allocUnsafe(), or Buffer.from() methods instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+2025-10-21 03:55:08.461 node[98864:67825967] CoreBluetooth BLE hardware is powered on and ready.
+2025-10-21 03:55:08.461 node[98864:67825954] BlenoMac::StartAdvertising
+2025-10-21 03:55:08.461 node[98864:67825954] startAdvertising:Zwack serviceUUIDs:(
+    "Device Information",
+    1826,
+    "Cycling Power",
+    "Running Speed and Cadence"
+)
+2025-10-21 03:55:08.462 node[98864:67825967] peripheralManagerDidStartAdvertising: <CBPeripheralManager: 0x6000022e0000>
+
+╔═════════════════════════════════════════════════════════════════════╗
+║ 📡 BLE ADVERTISING STARTED - READY FOR CONNECTIONS                  ║
+╠═════════════════════════════════════════════════════════════════════╣
+║ Sensor Name:    Zwack                                           ║
+║ Services:       180A, 1826, 1818, 1814                          ║
+║ FTMS Enabled:   true                                            ║
+║ CSP Enabled:    true                                            ║
+║ RSC Enabled:    true                                            ║
+║ Timestamp:      2025-10-21T01:55:08.462Z                        ║
+╚═════════════════════════════════════════════════════════════════════╝
+
+2025-10-21 03:55:08.462 node[98864:67825954] BlenoMac::SetServices
+2025-10-21 03:55:08.462 node[98864:67825954] napiArrayToCBMutableServices
+2025-10-21 03:55:08.462 node[98864:67825954] napiToCBMutableService
+2025-10-21 03:55:08.462 node[98864:67825954] napiArrayToCBMutableService: uuid:180A
+2025-10-21 03:55:08.462 node[98864:67825954] napiArrayToCBMutableCharacteristics
+2025-10-21 03:55:08.462 node[98864:67825954] napiToCBMutableCharacteristic
+2025-10-21 03:55:08.462 node[98864:67825954] napiToCBMutableCharacteristic: cUUID:2A23
+2025-10-21 03:55:08.462 node[98864:67825954] napiToCBMutableCharacteristic: value:{length = 1, bytes = 0x30}
+2025-10-21 03:55:08.462 node[98864:67825954] napiToCBCharacteristicProperties
+2025-10-21 03:55:08.462 node[98864:67825954] napiToCBAttributePermissions
+2025-10-21 03:55:08.462 node[98864:67825954] napiArrayToCBDescriptors
+2025-10-21 03:55:08.462 node[98864:67825954] napiToCBDescriptor uuid:2901 value:System Id
+2025-10-21 03:55:08.462 node[98864:67825954] napiToCBMutableCharacteristic
+2025-10-21 03:55:08.462 node[98864:67825954] napiToCBMutableCharacteristic: cUUID:2A24
+2025-10-21 03:55:08.463 node[98864:67825954] napiToCBMutableCharacteristic: value:{length = 6, bytes = 0x5a572d313031}
+2025-10-21 03:55:08.463 node[98864:67825954] napiToCBCharacteristicProperties
+2025-10-21 03:55:08.463 node[98864:67825954] napiToCBAttributePermissions
+2025-10-21 03:55:08.463 node[98864:67825954] napiArrayToCBDescriptors
+2025-10-21 03:55:08.463 node[98864:67825954] napiToCBDescriptor uuid:2901 value:Model Number
+2025-10-21 03:55:08.463 node[98864:67825954] napiToCBMutableCharacteristic
+2025-10-21 03:55:08.463 node[98864:67825954] napiToCBMutableCharacteristic: cUUID:2A25
+2025-10-21 03:55:08.463 node[98864:67825954] napiToCBMutableCharacteristic: value:{length = 1, bytes = 0x31}
+2025-10-21 03:55:08.463 node[98864:67825954] napiToCBCharacteristicProperties
+2025-10-21 03:55:08.463 node[98864:67825954] napiToCBAttributePermissions
+2025-10-21 03:55:08.463 node[98864:67825954] napiArrayToCBDescriptors
+2025-10-21 03:55:08.463 node[98864:67825954] napiToCBDescriptor uuid:2901 value:Serial Number
+2025-10-21 03:55:08.463 node[98864:67825954] napiToCBMutableCharacteristic
+2025-10-21 03:55:08.463 node[98864:67825954] napiToCBMutableCharacteristic: cUUID:2A26
+2025-10-21 03:55:08.463 node[98864:67825954] napiToCBMutableCharacteristic: value:{length = 3, bytes = 0x302e31}
+2025-10-21 03:55:08.463 node[98864:67825954] napiToCBCharacteristicProperties
+2025-10-21 03:55:08.463 node[98864:67825954] napiToCBAttributePermissions
+2025-10-21 03:55:08.463 node[98864:67825954] napiArrayToCBDescriptors
+2025-10-21 03:55:08.463 node[98864:67825954] napiToCBDescriptor uuid:2901 value:Firmware Revision
+2025-10-21 03:55:08.463 node[98864:67825954] napiToCBMutableCharacteristic
+2025-10-21 03:55:08.463 node[98864:67825954] napiToCBMutableCharacteristic: cUUID:2A27
+2025-10-21 03:55:08.463 node[98864:67825954] napiToCBMutableCharacteristic: value:{length = 3, bytes = 0x302e31}
+2025-10-21 03:55:08.463 node[98864:67825954] napiToCBCharacteristicProperties
+2025-10-21 03:55:08.463 node[98864:67825954] napiToCBAttributePermissions
+2025-10-21 03:55:08.463 node[98864:67825954] napiArrayToCBDescriptors
+2025-10-21 03:55:08.463 node[98864:67825954] napiToCBDescriptor uuid:2901 value:Hardware Revision
+2025-10-21 03:55:08.463 node[98864:67825954] napiToCBMutableCharacteristic
+2025-10-21 03:55:08.463 node[98864:67825954] napiToCBMutableCharacteristic: cUUID:2A28
+2025-10-21 03:55:08.463 node[98864:67825954] napiToCBMutableCharacteristic: value:{length = 3, bytes = 0x302e31}
+2025-10-21 03:55:08.463 node[98864:67825954] napiToCBCharacteristicProperties
+2025-10-21 03:55:08.463 node[98864:67825954] napiToCBAttributePermissions
+2025-10-21 03:55:08.463 node[98864:67825954] napiArrayToCBDescriptors
+2025-10-21 03:55:08.463 node[98864:67825954] napiToCBDescriptor uuid:2901 value:Software Revision
+2025-10-21 03:55:08.463 node[98864:67825954] napiToCBMutableCharacteristic
+2025-10-21 03:55:08.463 node[98864:67825954] napiToCBMutableCharacteristic: cUUID:2A29
+2025-10-21 03:55:08.463 node[98864:67825954] napiToCBMutableCharacteristic: value:{length = 14, bytes = 0x41636d65205a7761636b20496e63}
+2025-10-21 03:55:08.463 node[98864:67825954] napiToCBCharacteristicProperties
+2025-10-21 03:55:08.463 node[98864:67825954] napiToCBAttributePermissions
+2025-10-21 03:55:08.463 node[98864:67825954] napiArrayToCBDescriptors
+2025-10-21 03:55:08.463 node[98864:67825954] napiToCBDescriptor uuid:2901 value:Manufacturer Name
+2025-10-21 03:55:08.463 node[98864:67825954] napiToCBMutableService
+2025-10-21 03:55:08.463 node[98864:67825954] napiArrayToCBMutableService: uuid:1818
+2025-10-21 03:55:08.463 node[98864:67825954] napiArrayToCBMutableCharacteristics
+2025-10-21 03:55:08.463 node[98864:67825954] napiToCBMutableCharacteristic
+2025-10-21 03:55:08.463 node[98864:67825954] napiToCBMutableCharacteristic: cUUID:2A63
+2025-10-21 03:55:08.463 node[98864:67825954] napiToCBMutableCharacteristic: value:(null)
+2025-10-21 03:55:08.463 node[98864:67825954] napiToCBCharacteristicProperties
+2025-10-21 03:55:08.463 node[98864:67825954] napiToCBAttributePermissions
+2025-10-21 03:55:08.463 node[98864:67825954] napiArrayToCBDescriptors
+2025-10-21 03:55:08.463 node[98864:67825954] napiToCBDescriptor uuid:2901 value:Cycling Power Measurement
+2025-10-21 03:55:08.463 node[98864:67825954] napiToCBDescriptor uuid:2902 value:
+2025-10-21 03:55:08.463 node[98864:67825954] napiToCBDescriptor uuid:2903 value:
+2025-10-21 03:55:08.463 node[98864:67825954] napiToCBMutableCharacteristic
+2025-10-21 03:55:08.463 node[98864:67825954] napiToCBMutableCharacteristic: cUUID:A026E005-0A7D-4AB3-97FA-F1500F9FEB8B
+2025-10-21 03:55:08.463 node[98864:67825954] napiToCBMutableCharacteristic: value:(null)
+2025-10-21 03:55:08.463 node[98864:67825954] napiToCBCharacteristicProperties
+2025-10-21 03:55:08.463 node[98864:67825954] napiToCBAttributePermissions
+2025-10-21 03:55:08.463 node[98864:67825954] napiArrayToCBDescriptors
+2025-10-21 03:55:08.463 node[98864:67825954] napiToCBDescriptor uuid:2901 value:Cycling Power Wahoo Extension
+2025-10-21 03:55:08.463 node[98864:67825954] napiToCBMutableCharacteristic
+2025-10-21 03:55:08.463 node[98864:67825954] napiToCBMutableCharacteristic: cUUID:2A65
+2025-10-21 03:55:08.463 node[98864:67825954] napiToCBMutableCharacteristic: value:{length = 4, bytes = 0x08000000}
+2025-10-21 03:55:08.463 node[98864:67825954] napiToCBCharacteristicProperties
+2025-10-21 03:55:08.463 node[98864:67825954] napiToCBAttributePermissions
+2025-10-21 03:55:08.463 node[98864:67825954] napiArrayToCBDescriptors
+2025-10-21 03:55:08.463 node[98864:67825954] napiToCBDescriptor uuid:2901 value:Cycling Power Feature
+2025-10-21 03:55:08.463 node[98864:67825954] napiToCBMutableCharacteristic
+2025-10-21 03:55:08.463 node[98864:67825954] napiToCBMutableCharacteristic: cUUID:2A5D
+2025-10-21 03:55:08.463 node[98864:67825954] napiToCBMutableCharacteristic: value:{length = 1, bytes = 0x0d}
+2025-10-21 03:55:08.463 node[98864:67825954] napiToCBCharacteristicProperties
+2025-10-21 03:55:08.463 node[98864:67825954] napiToCBAttributePermissions
+2025-10-21 03:55:08.463 node[98864:67825954] napiArrayToCBDescriptors
+2025-10-21 03:55:08.463 node[98864:67825954] napiToCBDescriptor uuid:2901 value:Sensor Location
+2025-10-21 03:55:08.463 node[98864:67825954] napiToCBMutableService
+2025-10-21 03:55:08.463 node[98864:67825954] napiArrayToCBMutableService: uuid:1814
+2025-10-21 03:55:08.463 node[98864:67825954] napiArrayToCBMutableCharacteristics
+2025-10-21 03:55:08.463 node[98864:67825954] napiToCBMutableCharacteristic
+2025-10-21 03:55:08.463 node[98864:67825954] napiToCBMutableCharacteristic: cUUID:2A53
+2025-10-21 03:55:08.463 node[98864:67825954] napiToCBMutableCharacteristic: value:(null)
+2025-10-21 03:55:08.463 node[98864:67825954] napiToCBCharacteristicProperties
+2025-10-21 03:55:08.463 node[98864:67825954] napiToCBAttributePermissions
+2025-10-21 03:55:08.463 node[98864:67825954] napiArrayToCBDescriptors
+2025-10-21 03:55:08.463 node[98864:67825954] napiToCBDescriptor uuid:2901 value:Running Speed And Cadence
+2025-10-21 03:55:08.463 node[98864:67825954] napiToCBDescriptor uuid:2902 value:
+2025-10-21 03:55:08.463 node[98864:67825954] napiToCBMutableCharacteristic
+2025-10-21 03:55:08.463 node[98864:67825954] napiToCBMutableCharacteristic: cUUID:2A54
+2025-10-21 03:55:08.463 node[98864:67825954] napiToCBMutableCharacteristic: value:{length = 4, bytes = 0x00000000}
+2025-10-21 03:55:08.463 node[98864:67825954] napiToCBCharacteristicProperties
+2025-10-21 03:55:08.463 node[98864:67825954] napiToCBAttributePermissions
+2025-10-21 03:55:08.463 node[98864:67825954] napiArrayToCBDescriptors
+2025-10-21 03:55:08.463 node[98864:67825954] napiToCBDescriptor uuid:2901 value:RSC Feature
+2025-10-21 03:55:08.463 node[98864:67825954] napiToCBMutableCharacteristic
+2025-10-21 03:55:08.463 node[98864:67825954] napiToCBMutableCharacteristic: cUUID:2A5D
+2025-10-21 03:55:08.463 node[98864:67825954] napiToCBMutableCharacteristic: value:{length = 1, bytes = 0x00}
+2025-10-21 03:55:08.464 node[98864:67825954] napiToCBCharacteristicProperties
+2025-10-21 03:55:08.464 node[98864:67825954] napiToCBAttributePermissions
+2025-10-21 03:55:08.464 node[98864:67825954] napiArrayToCBDescriptors
+2025-10-21 03:55:08.464 node[98864:67825954] napiToCBDescriptor uuid:2901 value:Sensor Location
+2025-10-21 03:55:08.464 node[98864:67825954] napiToCBMutableService
+2025-10-21 03:55:08.464 node[98864:67825954] napiArrayToCBMutableService: uuid:1826
+2025-10-21 03:55:08.464 node[98864:67825954] napiArrayToCBMutableCharacteristics
+2025-10-21 03:55:08.464 node[98864:67825954] napiToCBMutableCharacteristic
+2025-10-21 03:55:08.464 node[98864:67825954] napiToCBMutableCharacteristic: cUUID:2ACC
+2025-10-21 03:55:08.464 node[98864:67825954] napiToCBMutableCharacteristic: value:(null)
+2025-10-21 03:55:08.464 node[98864:67825954] napiToCBCharacteristicProperties
+2025-10-21 03:55:08.464 node[98864:67825954] napiToCBAttributePermissions
+2025-10-21 03:55:08.464 node[98864:67825954] napiArrayToCBDescriptors
+2025-10-21 03:55:08.464 node[98864:67825954] napiToCBDescriptor uuid:2901 value:Fitness Machine Feature
+2025-10-21 03:55:08.464 node[98864:67825954] napiToCBMutableCharacteristic
+2025-10-21 03:55:08.464 node[98864:67825954] napiToCBMutableCharacteristic: cUUID:2AD2
+2025-10-21 03:55:08.464 node[98864:67825954] napiToCBMutableCharacteristic: value:(null)
+2025-10-21 03:55:08.464 node[98864:67825954] napiToCBCharacteristicProperties
+2025-10-21 03:55:08.464 node[98864:67825954] napiToCBAttributePermissions
+2025-10-21 03:55:08.464 node[98864:67825954] napiArrayToCBDescriptors
+2025-10-21 03:55:08.464 node[98864:67825954] napiToCBDescriptor uuid:2901 value:Indoor Bike Data
+2025-10-21 03:55:08.464 node[98864:67825954] napiToCBMutableCharacteristic
+2025-10-21 03:55:08.464 node[98864:67825954] napiToCBMutableCharacteristic: cUUID:2ADA
+2025-10-21 03:55:08.464 node[98864:67825954] napiToCBMutableCharacteristic: value:(null)
+2025-10-21 03:55:08.464 node[98864:67825954] napiToCBCharacteristicProperties
+2025-10-21 03:55:08.464 node[98864:67825954] napiToCBAttributePermissions
+2025-10-21 03:55:08.464 node[98864:67825954] napiArrayToCBDescriptors
+2025-10-21 03:55:08.464 node[98864:67825954] napiToCBDescriptor uuid:2901 value:Fitness Machine Status
+2025-10-21 03:55:08.464 node[98864:67825954] napiToCBMutableCharacteristic
+2025-10-21 03:55:08.464 node[98864:67825954] napiToCBMutableCharacteristic: cUUID:2AD9
+2025-10-21 03:55:08.464 node[98864:67825954] napiToCBMutableCharacteristic: value:(null)
+2025-10-21 03:55:08.464 node[98864:67825954] napiToCBCharacteristicProperties
+2025-10-21 03:55:08.464 node[98864:67825954] napiToCBAttributePermissions
+2025-10-21 03:55:08.464 node[98864:67825954] napiArrayToCBDescriptors
+2025-10-21 03:55:08.464 node[98864:67825954] napiToCBDescriptor uuid:2901 value:Fitness Machine Control Point
+2025-10-21 03:55:08.464 node[98864:67825954] napiToCBMutableCharacteristic
+2025-10-21 03:55:08.464 node[98864:67825954] napiToCBMutableCharacteristic: cUUID:2AD8
+2025-10-21 03:55:08.464 node[98864:67825954] napiToCBMutableCharacteristic: value:(null)
+2025-10-21 03:55:08.464 node[98864:67825954] napiToCBCharacteristicProperties
+2025-10-21 03:55:08.464 node[98864:67825954] napiToCBAttributePermissions
+2025-10-21 03:55:08.464 node[98864:67825954] napiArrayToCBDescriptors
+2025-10-21 03:55:08.464 node[98864:67825954] napiToCBDescriptor uuid:2901 value:Supported Power Range
+2025-10-21 03:55:08.464 node[98864:67825954] napiArrayToUUIDEmitters
+2025-10-21 03:55:08.464 node[98864:67825967] peripheralManagerDidAddService: <CBMutableService: 0x600003af0b90 Primary = YES, UUID = Device Information, Included Services = (null), Characteristics = (
+    "<CBMutableCharacteristic: 0x6000032c04d0 UUID = System ID, Value = {length = 1, bytes = 0x30}, Properties = 0x2, Permissions = 0x1, Descriptors = (\n    \"<CBMutableDescriptor: 0x600000ce1b40 UUID = Characteristic User Description, Value = System Id>\"\n), SubscribedCentrals = (\n)>",
+    "<CBMutableCharacteristic: 0x6000032f16c0 UUID = Model Number String, Value = {length = 6, bytes = 0x5a572d313031}, Properties = 0x2, Permissions = 0x1, Descriptors = (\n    \"<CBMutableDescriptor: 0x600000ce16c0 UUID = Characteristic User Description, Value = Model Number>\"\n), SubscribedCentrals = (\n)>",
+    "<CBMutableCharacteristic: 0x6000032f18f0 UUID = Serial Number String, Value = {length = 1, bytes = 0x31}, Properties = 0x2, Permissions = 0x1, Descriptors = (\n    \"<CBMutableDescriptor: 0x600000ce1680 UUID = Characteristic User Description, Value = Serial Number>\"\n), SubscribedCentrals = (\n)>",
+    "<CBMutableCharacteristic: 0x6000032f1b20 UUID = Firmware Revision String, Value = {length = 3, bytes = 0x302e31}, Properties = 0x2, Permissions = 0x1, Descriptors = (\n    \"<CBMutableDescriptor: 0x600000ce1500 UUID = Characteristic User Description, Value = Firmware Revision>\"\n), SubscribedCentrals = (\n)>",
+    "<CBMutableCharacteristic: 0x6000032f1d50 UUID = Hardware Revision String, Value = {length = 3, bytes = 0x302e31}, Properties = 0x2, Permissions = 0x1, Descriptors = (\n    \"<CBMutableDescriptor: 0x600000ce1800 UUID = Characteristic User Description, Value = Hardware Revision>\"\n), SubscribedCentrals = (\n)>",
+    "<CBMutableCharacteristic: 0x6000032f2060 UUID = Software Revision String, Value = {length = 3, bytes = 0x302e31}, Properties = 0x2, Permissions = 0x1, Descriptors = (\n    \"<CBMutableDescriptor: 0x600000ce1300 UUID = Characteristic User Description, Value = Software Revision>\"\n), SubscribedCentrals = (\n)>",
+    "<CBMutableCharacteristic: 0x6000032f2290 UUID = Manufacturer Name String, Value = {length = 14, bytes = 0x41636d65205a7761636b20496e63}, Properties = 0x2, Permissions = 0x1, Descriptors = (\n    \"<CBMutableDescriptor: 0x600000ce1200 UUID = Characteristic User Description, Value = Manufacturer Name>\"\n), SubscribedCentrals = (\n)>"
+)> Error Domain=CBErrorDomain Code=8 "The specified UUID is not allowed for this operation." UserInfo={NSLocalizedDescription=The specified UUID is not allowed for this operation.}
+2025-10-21 03:55:08.464 node[98864:67825967] Error publishing service: The specified UUID is not allowed for this operation.
+2025-10-21 03:55:08.465 node[98864:67825967] peripheralManagerDidAddService: <CBMutableService: 0x600003ae0be0 Primary = YES, UUID = Cycling Power, Included Services = (null), Characteristics = (
+    "<CBMutableCharacteristic: 0x6000032f2530 UUID = 2A63, Value = (null), Properties = 0x10, Permissions = 0x0, Descriptors = (\n    \"<CBMutableDescriptor: 0x600000ce0480 UUID = Characteristic User Description, Value = Cycling Power Measurement>\",\n    \"<CBMutableDescriptor: 0x600000ce0f40 UUID = Client Characteristic Configuration, Value = >\",\n    \"<CBMutableDescriptor: 0x600000ce0300 UUID = Server Characteristic Configuration, Value = >\"\n), SubscribedCentrals = (\n)>",
+    "<CBMutableCharacteristic: 0x6000032f2ca0 UUID = A026E005-0A7D-4AB3-97FA-F1500F9FEB8B, Value = (null), Properties = 0x8, Permissions = 0x2, Descriptors = (\n    \"<CBMutableDescriptor: 0x600000ce0400 UUID = Characteristic User Description, Value = Cycling Power Wahoo Extension>\"\n), SubscribedCentrals = (\n)>",
+    "<CBMutableCharacteristic: 0x6000032f2df0 UUID = 2A65, Value = {length = 4, bytes = 0x08000000}, Properties = 0x2, Permissions = 0x1, Descriptors = (\n    \"<CBMutableDescriptor: 0x600000ce0200 UUID = Characteristic User Description, Value = Cycling Power Feature>\"\n), SubscribedCentrals = (\n)>",
+    "<CBMutableCharacteristic: 0x6000032f3020 UUID = 2A5D, Value = {length = 1, bytes = 0x0d}, Properties = 0x2, Permissions = 0x1, Descriptors = (\n    \"<CBMutableDescriptor: 0x600000ce1bc0 UUID = Characteristic User Description, Value = Sensor Location>\"\n), SubscribedCentrals = (\n)>"
+)> Error Domain=CBErrorDomain Code=1 "One or more parameters were invalid." UserInfo={NSLocalizedDescription=One or more parameters were invalid.}
+2025-10-21 03:55:08.465 node[98864:67825967] Error publishing service: One or more parameters were invalid.
+2025-10-21 03:55:08.465 node[98864:67825967] peripheralManagerDidAddService: <CBMutableService: 0x600003ae0c30 Primary = YES, UUID = Running Speed and Cadence, Included Services = (null), Characteristics = (
+    "<CBMutableCharacteristic: 0x6000032f32c0 UUID = 2A53, Value = (null), Properties = 0x10, Permissions = 0x0, Descriptors = (\n    \"<CBMutableDescriptor: 0x600000ce1d80 UUID = Characteristic User Description, Value = Running Speed And Cadence>\",\n    \"<CBMutableDescriptor: 0x600000ce1e40 UUID = Client Characteristic Configuration, Value = >\"\n), SubscribedCentrals = (\n)>",
+    "<CBMutableCharacteristic: 0x6000032f3790 UUID = 2A54, Value = {length = 4, bytes = 0x00000000}, Properties = 0x2, Permissions = 0x1, Descriptors = (\n    \"<CBMutableDescriptor: 0x600000ce1f80 UUID = Characteristic User Description, Value = RSC Feature>\"\n), SubscribedCentrals = (\n)>",
+    "<CBMutableCharacteristic: 0x6000032f39c0 UUID = 2A5D, Value = {length = 1, bytes = 0x00}, Properties = 0x2, Permissions = 0x1, Descriptors = (\n    \"<CBMutableDescriptor: 0x600000ce21c0 UUID = Characteristic User Description, Value = Sensor Location>\"\n), SubscribedCentrals = (\n)>"
+)> Error Domain=CBErrorDomain Code=1 "One or more parameters were invalid." UserInfo={NSLocalizedDescription=One or more parameters were invalid.}
+2025-10-21 03:55:08.465 node[98864:67825967] Error publishing service: One or more parameters were invalid.
+2025-10-21 03:55:08.465 node[98864:67825967] peripheralManagerDidAddService: <CBMutableService: 0x600003ae0c80 Primary = YES, UUID = 1826, Included Services = (null), Characteristics = (
+    "<CBMutableCharacteristic: 0x6000032f3c60 UUID = 2ACC, Value = (null), Properties = 0x2, Permissions = 0x1, Descriptors = (\n    \"<CBMutableDescriptor: 0x600000ce2340 UUID = Characteristic User Description, Value = Fitness Machine Feature>\"\n), SubscribedCentrals = (\n)>",
+    "<CBMutableCharacteristic: 0x6000032f3e90 UUID = 2AD2, Value = (null), Properties = 0x10, Permissions = 0x0, Descriptors = (\n    \"<CBMutableDescriptor: 0x600000ce2480 UUID = Characteristic User Description, Value = Indoor Bike Data>\"\n), SubscribedCentrals = (\n)>",
+    "<CBMutableCharacteristic: 0x6000032dc0e0 UUID = 2ADA, Value = (null), Properties = 0x10, Permissions = 0x0, Descriptors = (\n    \"<CBMutableDescriptor: 0x600000ce25c0 UUID = Characteristic User Description, Value = Fitness Machine Status>\"\n), SubscribedCentrals = (\n)>",
+    "<CBMutableCharacteristic: 0x6000032dc310 UUID = 2AD9, Value = (null), Properties = 0x28, Permissions = 0x2, Descriptors = (\n    \"<CBMutableDescriptor: 0x600000ce2740 UUID = Characteristic User Description, Value = Fitness Machine Control Point>\"\n), SubscribedCentrals = (\n)>",
+    "<CBMutableCharacteristic: 0x6000032dc540 UUID = 2AD8, Value = (null), Properties = 0x2, Permissions = 0x1, Descriptors = (\n    \"<CBMutableDescriptor: 0x600000ce2880 UUID = Characteristic User Description, Value = Supported Power Range>\"\n), SubscribedCentrals = (\n)>"
+)> (null)
+2025-10-21 03:55:26.003 node[98864:67825967] didReceiveReadRequest: <CBCentral: 0x600003ae8780 identifier = 9F50C53A-CBAA-34B0-2988-89D2EA569356, MTU = 512> 2ACC
+2025-10-21 03:55:26.129 node[98864:67825967] didSubscribeToCharacteristic
+2025-10-21 03:55:26.249 node[98864:67825967] didSubscribeToCharacteristic
+2025-10-21 03:55:26.369 node[98864:67825967] didSubscribeToCharacteristic
+2025-10-21 03:55:26.473 node[98864:67825954] subscription note: {length = 8, bytes = 0x44000000b4006700} CBMutableCharacteristic
+2025-10-21 03:55:27.476 node[98864:67825954] subscription note: {length = 8, bytes = 0x44000000b4006500} CBMutableCharacteristic
+2025-10-21 03:55:28.477 node[98864:67825954] subscription note: {length = 8, bytes = 0x44000000b4006500} CBMutableCharacteristic
+2025-10-21 03:55:29.479 node[98864:67825954] subscription note: {length = 8, bytes = 0x44000000b4006700} CBMutableCharacteristic
+2025-10-21 03:55:30.482 node[98864:67825954] subscription note: {length = 8, bytes = 0x44000000b4006500} CBMutableCharacteristic
+2025-10-21 03:55:30.568 node[98864:67825967] didReceiveWriteRequest: <CBCentral: 0x600003ae8780 identifier = 9F50C53A-CBAA-34B0-2988-89D2EA569356, MTU = 512> 2AD9
+
+┌─────────────────────────────────────────────────────────────────────┐
+│ [FTMS Control Point] Received Data from Client (e.g., Zwift)       │
+├─────────────────────────────────────────────────────────────────────┤
+│ Raw Buffer: <Buffer 00>                                         │
+│ Hex String: 00                                                  │
+│ Dec Values: [0]                                                     │
+│ Length:     1                                                   │
+│ Offset:     0                                                   │
+│ NoResponse: false                                               │
+└─────────────────────────────────────────────────────────────────────┘
+2025-10-21 03:55:30.570 node[98864:67825954] subscription note: {length = 3, bytes = 0x800001} CBMutableCharacteristic
+2025-10-21 03:55:30.659 node[98864:67825967] didReceiveWriteRequest: <CBCentral: 0x600003ae8780 identifier = 9F50C53A-CBAA-34B0-2988-89D2EA569356, MTU = 512> 2AD9
+
+┌─────────────────────────────────────────────────────────────────────┐
+│ [FTMS Control Point] Received Data from Client (e.g., Zwift)       │
+├─────────────────────────────────────────────────────────────────────┤
+│ Raw Buffer: <Buffer 01>                                         │
+│ Hex String: 01                                                  │
+│ Dec Values: [1]                                                     │
+│ Length:     1                                                   │
+│ Offset:     0                                                   │
+│ NoResponse: false                                               │
+└─────────────────────────────────────────────────────────────────────┘
+2025-10-21 03:55:30.660 node[98864:67825954] subscription note: {length = 1, bytes = 0x01} CBMutableCharacteristic
+2025-10-21 03:55:30.660 node[98864:67825954] subscription note: {length = 3, bytes = 0x800101} CBMutableCharacteristic
+2025-10-21 03:55:30.662 node[98864:67825967] peripheralManagerIsReadyToUpdateSubscribers
+2025-10-21 03:55:31.486 node[98864:67825954] subscription note: {length = 8, bytes = 0x44000000b4006800} CBMutableCharacteristic
+2025-10-21 03:55:32.488 node[98864:67825954] subscription note: {length = 8, bytes = 0x44000000b4006700} CBMutableCharacteristic
+2025-10-21 03:55:33.491 node[98864:67825954] subscription note: {length = 8, bytes = 0x44000000b4006500} CBMutableCharacteristic
+2025-10-21 03:55:34.496 node[98864:67825954] subscription note: {length = 8, bytes = 0x44000000b4006800} CBMutableCharacteristic
+2025-10-21 03:55:35.497 node[98864:67825954] subscription note: {length = 8, bytes = 0x44000000b4006500} CBMutableCharacteristic
+2025-10-21 03:55:35.699 node[98864:67825967] didReceiveWriteRequest: <CBCentral: 0x600003ae8780 identifier = 9F50C53A-CBAA-34B0-2988-89D2EA569356, MTU = 512> 2AD9
+
+┌─────────────────────────────────────────────────────────────────────┐
+│ [FTMS Control Point] Received Data from Client (e.g., Zwift)       │
+├─────────────────────────────────────────────────────────────────────┤
+│ Raw Buffer: <Buffer 01>                                         │
+│ Hex String: 01                                                  │
+│ Dec Values: [1]                                                     │
+│ Length:     1                                                   │
+│ Offset:     0                                                   │
+│ NoResponse: false                                               │
+└─────────────────────────────────────────────────────────────────────┘
+2025-10-21 03:55:35.700 node[98864:67825954] subscription note: {length = 3, bytes = 0x800105} CBMutableCharacteristic
+2025-10-21 03:55:35.789 node[98864:67827276] didReceiveWriteRequest: <CBCentral: 0x600003ae8780 identifier = 9F50C53A-CBAA-34B0-2988-89D2EA569356, MTU = 512> 2AD9
+
+┌─────────────────────────────────────────────────────────────────────┐
+│ [FTMS Control Point] Received Data from Client (e.g., Zwift)       │
+├─────────────────────────────────────────────────────────────────────┤
+│ Raw Buffer: <Buffer 00>                                         │
+│ Hex String: 00                                                  │
+│ Dec Values: [0]                                                     │
+│ Length:     1                                                   │
+│ Offset:     0                                                   │
+│ NoResponse: false                                               │
+└─────────────────────────────────────────────────────────────────────┘
+2025-10-21 03:55:35.790 node[98864:67825954] subscription note: {length = 3, bytes = 0x800001} CBMutableCharacteristic
+2025-10-21 03:55:35.908 node[98864:67827276] didReceiveWriteRequest: <CBCentral: 0x600003ae8780 identifier = 9F50C53A-CBAA-34B0-2988-89D2EA569356, MTU = 512> 2AD9
+
+┌─────────────────────────────────────────────────────────────────────┐
+│ [FTMS Control Point] Received Data from Client (e.g., Zwift)       │
+├─────────────────────────────────────────────────────────────────────┤
+│ Raw Buffer: <Buffer 07>                                         │
+│ Hex String: 07                                                  │
+│ Dec Values: [7]                                                     │
+│ Length:     1                                                   │
+│ Offset:     0                                                   │
+│ NoResponse: false                                               │
+└─────────────────────────────────────────────────────────────────────┘
+2025-10-21 03:55:35.910 node[98864:67825954] subscription note: {length = 1, bytes = 0x04} CBMutableCharacteristic
+2025-10-21 03:55:35.912 node[98864:67825954] subscription note: {length = 3, bytes = 0x800701} CBMutableCharacteristic
+2025-10-21 03:55:35.912 node[98864:67827276] peripheralManagerIsReadyToUpdateSubscribers
+2025-10-21 03:55:36.501 node[98864:67825954] subscription note: {length = 8, bytes = 0x44000000b4006400} CBMutableCharacteristic
+2025-10-21 03:55:37.506 node[98864:67825954] subscription note: {length = 8, bytes = 0x44000000b4006700} CBMutableCharacteristic
+2025-10-21 03:55:38.508 node[98864:67825954] subscription note: {length = 8, bytes = 0x44000000b4006700} CBMutableCharacteristic
+2025-10-21 03:55:39.513 node[98864:67825954] subscription note: {length = 8, bytes = 0x44000000b4006600} CBMutableCharacteristic
+2025-10-21 03:55:40.516 node[98864:67825954] subscription note: {length = 8, bytes = 0x44000000b4006500} CBMutableCharacteristic
+2025-10-21 03:55:40.948 node[98864:67827276] didReceiveWriteRequest: <CBCentral: 0x600003ae8780 identifier = 9F50C53A-CBAA-34B0-2988-89D2EA569356, MTU = 512> 2AD9
+
+┌─────────────────────────────────────────────────────────────────────┐
+│ [FTMS Control Point] Received Data from Client (e.g., Zwift)       │
+├─────────────────────────────────────────────────────────────────────┤
+│ Raw Buffer: <Buffer 07>                                         │
+│ Hex String: 07                                                  │
+│ Dec Values: [7]                                                     │
+│ Length:     1                                                   │
+│ Offset:     0                                                   │
+│ NoResponse: false                                               │
+└─────────────────────────────────────────────────────────────────────┘
+2025-10-21 03:55:40.949 node[98864:67825954] subscription note: {length = 3, bytes = 0x800704} CBMutableCharacteristic
+2025-10-21 03:55:41.517 node[98864:67825954] subscription note: {length = 8, bytes = 0x44000000b4006400} CBMutableCharacteristic
+2025-10-21 03:55:41.788 node[98864:67827276] didReceiveWriteRequest: <CBCentral: 0x600003ae8780 identifier = 9F50C53A-CBAA-34B0-2988-89D2EA569356, MTU = 512> 2AD9
+
+┌─────────────────────────────────────────────────────────────────────┐
+│ [FTMS Control Point] Received Data from Client (e.g., Zwift)       │
+├─────────────────────────────────────────────────────────────────────┤
+│ Raw Buffer: <Buffer 11 00 00 64 00 28 33>                       │
+│ Hex String: 11 00 00 64 00 28 33                                │
+│ Dec Values: [17, 0, 0, 100, 0, 40, 51]                                                     │
+│ Length:     7                                                   │
+│ Offset:     0                                                   │
+│ NoResponse: false                                               │
+└─────────────────────────────────────────────────────────────────────┘
+2025-10-21 03:55:41.790 node[98864:67825954] subscription note: {length = 7, bytes = 0x12000001000000} CBMutableCharacteristic
+2025-10-21 03:55:41.791 node[98864:67825954] subscription note: {length = 3, bytes = 0x801101} CBMutableCharacteristic
+2025-10-21 03:55:41.791 node[98864:67827276] peripheralManagerIsReadyToUpdateSubscribers
+2025-10-21 03:55:42.522 node[98864:67825954] subscription note: {length = 8, bytes = 0x44000000b4006600} CBMutableCharacteristic
+2025-10-21 03:55:43.525 node[98864:67825954] subscription note: {length = 8, bytes = 0x44000000b4006700} CBMutableCharacteristic
+2025-10-21 03:55:43.829 node[98864:67827276] didReceiveWriteRequest: <CBCentral: 0x600003ae8780 identifier = 9F50C53A-CBAA-34B0-2988-89D2EA569356, MTU = 512> 2AD9
+
+┌─────────────────────────────────────────────────────────────────────┐
+│ [FTMS Control Point] Received Data from Client (e.g., Zwift)       │
+├─────────────────────────────────────────────────────────────────────┤
+│ Raw Buffer: <Buffer 11 00 00 64 00 28 33>                       │
+│ Hex String: 11 00 00 64 00 28 33                                │
+│ Dec Values: [17, 0, 0, 100, 0, 40, 51]                                                     │
+│ Length:     7                                                   │
+│ Offset:     0                                                   │
+│ NoResponse: false                                               │
+└─────────────────────────────────────────────────────────────────────┘
+2025-10-21 03:55:43.831 node[98864:67825954] subscription note: {length = 7, bytes = 0x12000001000000} CBMutableCharacteristic
+2025-10-21 03:55:43.832 node[98864:67825954] subscription note: {length = 3, bytes = 0x801101} CBMutableCharacteristic
+2025-10-21 03:55:43.832 node[98864:67827276] peripheralManagerIsReadyToUpdateSubscribers
+2025-10-21 03:55:44.528 node[98864:67825954] subscription note: {length = 8, bytes = 0x44000000b4006700} CBMutableCharacteristic
+2025-10-21 03:55:45.531 node[98864:67825954] subscription note: {length = 8, bytes = 0x44000000b4006500} CBMutableCharacteristic
+2025-10-21 03:55:45.868 node[98864:67827276] didReceiveWriteRequest: <CBCentral: 0x600003ae8780 identifier = 9F50C53A-CBAA-34B0-2988-89D2EA569356, MTU = 512> 2AD9
+
+┌─────────────────────────────────────────────────────────────────────┐
+│ [FTMS Control Point] Received Data from Client (e.g., Zwift)       │
+├─────────────────────────────────────────────────────────────────────┤
+│ Raw Buffer: <Buffer 11 00 00 64 00 28 33>                       │
+│ Hex String: 11 00 00 64 00 28 33                                │
+│ Dec Values: [17, 0, 0, 100, 0, 40, 51]                                                     │
+│ Length:     7                                                   │
+│ Offset:     0                                                   │
+│ NoResponse: false                                               │
+└─────────────────────────────────────────────────────────────────────┘
+2025-10-21 03:55:45.870 node[98864:67825954] subscription note: {length = 7, bytes = 0x12000001000000} CBMutableCharacteristic
+2025-10-21 03:55:45.872 node[98864:67825954] subscription note: {length = 3, bytes = 0x801101} CBMutableCharacteristic
+2025-10-21 03:55:45.872 node[98864:67827276] peripheralManagerIsReadyToUpdateSubscribers
+2025-10-21 03:55:46.532 node[98864:67825954] subscription note: {length = 8, bytes = 0x44000000b4006400} CBMutableCharacteristic
+2025-10-21 03:55:47.533 node[98864:67825954] subscription note: {length = 8, bytes = 0x44000000b4006500} CBMutableCharacteristic
+2025-10-21 03:55:47.909 node[98864:67827276] didReceiveWriteRequest: <CBCentral: 0x600003ae8780 identifier = 9F50C53A-CBAA-34B0-2988-89D2EA569356, MTU = 512> 2AD9
+
+┌─────────────────────────────────────────────────────────────────────┐
+│ [FTMS Control Point] Received Data from Client (e.g., Zwift)       │
+├─────────────────────────────────────────────────────────────────────┤
+│ Raw Buffer: <Buffer 11 00 00 64 00 28 33>                       │
+│ Hex String: 11 00 00 64 00 28 33                                │
+│ Dec Values: [17, 0, 0, 100, 0, 40, 51]                                                     │
+│ Length:     7                                                   │
+│ Offset:     0                                                   │
+│ NoResponse: false                                               │
+└─────────────────────────────────────────────────────────────────────┘
+2025-10-21 03:55:47.911 node[98864:67825954] subscription note: {length = 7, bytes = 0x12000001000000} CBMutableCharacteristic
+2025-10-21 03:55:47.913 node[98864:67825954] subscription note: {length = 3, bytes = 0x801101} CBMutableCharacteristic
+2025-10-21 03:55:47.913 node[98864:67827276] peripheralManagerIsReadyToUpdateSubscribers
+2025-10-21 03:55:48.534 node[98864:67825954] subscription note: {length = 8, bytes = 0x44000000b4006700} CBMutableCharacteristic
+2025-10-21 03:55:49.538 node[98864:67825954] subscription note: {length = 8, bytes = 0x44000000b4006700} CBMutableCharacteristic
+2025-10-21 03:55:49.978 node[98864:67825967] didReceiveWriteRequest: <CBCentral: 0x600003ae8780 identifier = 9F50C53A-CBAA-34B0-2988-89D2EA569356, MTU = 512> 2AD9
+
+┌─────────────────────────────────────────────────────────────────────┐
+│ [FTMS Control Point] Received Data from Client (e.g., Zwift)       │
+├─────────────────────────────────────────────────────────────────────┤
+│ Raw Buffer: <Buffer 00>                                         │
+│ Hex String: 00                                                  │
+│ Dec Values: [0]                                                     │
+│ Length:     1                                                   │
+│ Offset:     0                                                   │
+│ NoResponse: false                                               │
+└─────────────────────────────────────────────────────────────────────┘
+2025-10-21 03:55:49.979 node[98864:67825954] subscription note: {length = 3, bytes = 0x800001} CBMutableCharacteristic
+2025-10-21 03:55:50.069 node[98864:67825967] didReceiveWriteRequest: <CBCentral: 0x600003ae8780 identifier = 9F50C53A-CBAA-34B0-2988-89D2EA569356, MTU = 512> 2AD9
+
+┌─────────────────────────────────────────────────────────────────────┐
+│ [FTMS Control Point] Received Data from Client (e.g., Zwift)       │
+├─────────────────────────────────────────────────────────────────────┤
+│ Raw Buffer: <Buffer 01>                                         │
+│ Hex String: 01                                                  │
+│ Dec Values: [1]                                                     │
+│ Length:     1                                                   │
+│ Offset:     0                                                   │
+│ NoResponse: false                                               │
+└─────────────────────────────────────────────────────────────────────┘
+2025-10-21 03:55:50.070 node[98864:67825954] subscription note: {length = 1, bytes = 0x01} CBMutableCharacteristic
+2025-10-21 03:55:50.071 node[98864:67825954] subscription note: {length = 3, bytes = 0x800101} CBMutableCharacteristic
+2025-10-21 03:55:50.073 node[98864:67827276] peripheralManagerIsReadyToUpdateSubscribers
+2025-10-21 03:55:50.539 node[98864:67825954] subscription note: {length = 8, bytes = 0x44000000b4006400} CBMutableCharacteristic
+2025-10-21 03:55:51.542 node[98864:67825954] subscription note: {length = 8, bytes = 0x44000000b4006400} CBMutableCharacteristic
+2025-10-21 03:55:52.543 node[98864:67825954] subscription note: {length = 8, bytes = 0x44000000b4006400} CBMutableCharacteristic
+2025-10-21 03:55:53.545 node[98864:67825954] subscription note: {length = 8, bytes = 0x44000000b4006700} CBMutableCharacteristic
+2025-10-21 03:55:54.546 node[98864:67825954] subscription note: {length = 8, bytes = 0x44000000b4006700} CBMutableCharacteristic
+2025-10-21 03:55:55.110 node[98864:67825967] didReceiveWriteRequest: <CBCentral: 0x600003ae8780 identifier = 9F50C53A-CBAA-34B0-2988-89D2EA569356, MTU = 512> 2AD9
+
+┌─────────────────────────────────────────────────────────────────────┐
+│ [FTMS Control Point] Received Data from Client (e.g., Zwift)       │
+├─────────────────────────────────────────────────────────────────────┤
+│ Raw Buffer: <Buffer 01>                                         │
+│ Hex String: 01                                                  │
+│ Dec Values: [1]                                                     │
+│ Length:     1                                                   │
+│ Offset:     0                                                   │
+│ NoResponse: false                                               │
+└─────────────────────────────────────────────────────────────────────┘
+2025-10-21 03:55:55.111 node[98864:67825954] subscription note: {length = 3, bytes = 0x800105} CBMutableCharacteristic
+2025-10-21 03:55:55.198 node[98864:67825967] didReceiveWriteRequest: <CBCentral: 0x600003ae8780 identifier = 9F50C53A-CBAA-34B0-2988-89D2EA569356, MTU = 512> 2AD9
+
+┌─────────────────────────────────────────────────────────────────────┐
+│ [FTMS Control Point] Received Data from Client (e.g., Zwift)       │
+├─────────────────────────────────────────────────────────────────────┤
+│ Raw Buffer: <Buffer 00>                                         │
+│ Hex String: 00                                                  │
+│ Dec Values: [0]                                                     │
+│ Length:     1                                                   │
+│ Offset:     0                                                   │
+│ NoResponse: false                                               │
+└─────────────────────────────────────────────────────────────────────┘
+2025-10-21 03:55:55.200 node[98864:67825954] subscription note: {length = 3, bytes = 0x800001} CBMutableCharacteristic
+2025-10-21 03:55:55.348 node[98864:67825967] didReceiveWriteRequest: <CBCentral: 0x600003ae8780 identifier = 9F50C53A-CBAA-34B0-2988-89D2EA569356, MTU = 512> 2AD9
+
+┌─────────────────────────────────────────────────────────────────────┐
+│ [FTMS Control Point] Received Data from Client (e.g., Zwift)       │
+├─────────────────────────────────────────────────────────────────────┤
+│ Raw Buffer: <Buffer 07>                                         │
+│ Hex String: 07                                                  │
+│ Dec Values: [7]                                                     │
+│ Length:     1                                                   │
+│ Offset:     0                                                   │
+│ NoResponse: false                                               │
+└─────────────────────────────────────────────────────────────────────┘
+2025-10-21 03:55:55.350 node[98864:67825954] subscription note: {length = 3, bytes = 0x800704} CBMutableCharacteristic
+2025-10-21 03:55:55.550 node[98864:67825954] subscription note: {length = 8, bytes = 0x44000000b4006600} CBMutableCharacteristic
+2025-10-21 03:55:56.552 node[98864:67825954] subscription note: {length = 8, bytes = 0x44000000b4006800} CBMutableCharacteristic
+2025-10-21 03:55:57.556 node[98864:67825954] subscription note: {length = 8, bytes = 0x44000000b4006400} CBMutableCharacteristic
+2025-10-21 03:55:58.557 node[98864:67825954] subscription note: {length = 8, bytes = 0x44000000b4006600} CBMutableCharacteristic
+2025-10-21 03:55:59.560 node[98864:67825954] subscription note: {length = 8, bytes = 0x44000000b4006700} CBMutableCharacteristic
+2025-10-21 03:56:00.560 node[98864:67825954] subscription note: {length = 8, bytes = 0x44000000b4006500} CBMutableCharacteristic
+2025-10-21 03:56:01.565 node[98864:67825954] subscription note: {length = 8, bytes = 0x44000000b4006800} CBMutableCharacteristic
+2025-10-21 03:56:02.569 node[98864:67825954] subscription note: {length = 8, bytes = 0x44000000b4006600} CBMutableCharacteristic
+2025-10-21 03:56:03.570 node[98864:67825954] subscription note: {length = 8, bytes = 0x44000000b4006500} CBMutableCharacteristic
+2025-10-21 03:56:04.571 node[98864:67825954] subscription note: {length = 8, bytes = 0x44000000b4006700} CBMutableCharacteristic
+2025-10-21 03:56:05.572 node[98864:67825954] subscription note: {length = 8, bytes = 0x44000000b4006700} CBMutableCharacteristic
+2025-10-21 03:56:06.576 node[98864:67825954] subscription note: {length = 8, bytes = 0x44000000b4006800} CBMutableCharacteristic
+2025-10-21 03:56:07.577 node[98864:67825954] subscription note: {length = 8, bytes = 0x44000000b4006500} CBMutableCharacteristic
+2025-10-21 03:56:08.580 node[98864:67825954] subscription note: {length = 8, bytes = 0x44000000b4006600} CBMutableCharacteristic
+2025-10-21 03:56:09.581 node[98864:67825954] subscription note: {length = 8, bytes = 0x44000000b4006700} CBMutableCharacteristic
+2025-10-21 03:56:10.582 node[98864:67825954] subscription note: {length = 8, bytes = 0x44000000b4006400} CBMutableCharacteristic
+2025-10-21 03:56:11.586 node[98864:67825954] subscription note: {length = 8, bytes = 0x44000000b4006800} CBMutableCharacteristic
+2025-10-21 03:56:12.588 node[98864:67825954] subscription note: {length = 8, bytes = 0x44000000b4006700} CBMutableCharacteristic
+2025-10-21 03:56:13.589 node[98864:67825954] subscription note: {length = 8, bytes = 0x44000000b4006400} CBMutableCharacteristic
+2025-10-21 03:56:14.594 node[98864:67825954] subscription note: {length = 8, bytes = 0x44000000b4006400} CBMutableCharacteristic
+2025-10-21 03:56:15.597 node[98864:67825954] subscription note: {length = 8, bytes = 0x44000000b4006700} CBMutableCharacteristic
+2025-10-21 03:56:16.602 node[98864:67825954] subscription note: {length = 8, bytes = 0x44000000b4006500} CBMutableCharacteristic
+2025-10-21 03:56:17.605 node[98864:67825954] subscription note: {length = 8, bytes = 0x44000000b4006400} CBMutableCharacteristic
+2025-10-21 03:56:18.607 node[98864:67825954] subscription note: {length = 8, bytes = 0x44000000b4006800} CBMutableCharacteristic
+2025-10-21 03:56:19.611 node[98864:67825954] subscription note: {length = 8, bytes = 0x44000000b4006400} CBMutableCharacteristic
+2025-10-21 03:56:20.616 node[98864:67825954] subscription note: {length = 8, bytes = 0x44000000b4006800} CBMutableCharacteristic
+2025-10-21 03:56:21.618 node[98864:67825954] subscription note: {length = 8, bytes = 0x44000000b4006700} CBMutableCharacteristic
+2025-10-21 03:56:22.622 node[98864:67825954] subscription note: {length = 8, bytes = 0x44000000b4006400} CBMutableCharacteristic
+2025-10-21 03:56:23.625 node[98864:67825954] subscription note: {length = 8, bytes = 0x44000000b4006800} CBMutableCharacteristic
+2025-10-21 03:56:24.625 node[98864:67825954] subscription note: {length = 8, bytes = 0x44000000b4006800} CBMutableCharacteristic
+2025-10-21 03:56:24.810 node[98864:67825967] didReceiveWriteRequest: <CBCentral: 0x600003ae8780 identifier = 9F50C53A-CBAA-34B0-2988-89D2EA569356, MTU = 512> 2AD9
+
+┌─────────────────────────────────────────────────────────────────────┐
+│ [FTMS Control Point] Received Data from Client (e.g., Zwift)       │
+├─────────────────────────────────────────────────────────────────────┤
+│ Raw Buffer: <Buffer 05 b4 00>                                   │
+│ Hex String: 05 B4 00                                            │
+│ Dec Values: [5, 180, 0]                                                     │
+│ Length:     3                                                   │
+│ Offset:     0                                                   │
+│ NoResponse: false                                               │
+└─────────────────────────────────────────────────────────────────────┘
+2025-10-21 03:56:24.811 node[98864:67825954] subscription note: {length = 3, bytes = 0x08b400} CBMutableCharacteristic
+2025-10-21 03:56:24.812 node[98864:67825954] subscription note: {length = 3, bytes = 0x800501} CBMutableCharacteristic
+2025-10-21 03:56:24.814 node[98864:67827276] peripheralManagerIsReadyToUpdateSubscribers
+2025-10-21 03:56:25.628 node[98864:67825954] subscription note: {length = 8, bytes = 0x44000000b4006800} CBMutableCharacteristic
+2025-10-21 03:56:26.630 node[98864:67825954] subscription note: {length = 8, bytes = 0x44000000b4006400} CBMutableCharacteristic
+2025-10-21 03:56:26.789 node[98864:67825967] didReceiveWriteRequest: <CBCentral: 0x600003ae8780 identifier = 9F50C53A-CBAA-34B0-2988-89D2EA569356, MTU = 512> 2AD9
+
+┌─────────────────────────────────────────────────────────────────────┐
+│ [FTMS Control Point] Received Data from Client (e.g., Zwift)       │
+├─────────────────────────────────────────────────────────────────────┤
+│ Raw Buffer: <Buffer 05 b4 00>                                   │
+│ Hex String: 05 B4 00                                            │
+│ Dec Values: [5, 180, 0]                                                     │
+│ Length:     3                                                   │
+│ Offset:     0                                                   │
+│ NoResponse: false                                               │
+└─────────────────────────────────────────────────────────────────────┘
+2025-10-21 03:56:26.791 node[98864:67825954] subscription note: {length = 3, bytes = 0x08b400} CBMutableCharacteristic
+2025-10-21 03:56:26.794 node[98864:67825954] subscription note: {length = 3, bytes = 0x800501} CBMutableCharacteristic
+2025-10-21 03:56:27.631 node[98864:67825954] subscription note: {length = 8, bytes = 0x44000000b4006600} CBMutableCharacteristic
+2025-10-21 03:56:28.640 node[98864:67825954] subscription note: {length = 8, bytes = 0x44000000b4006800} CBMutableCharacteristic
+2025-10-21 03:56:29.645 node[98864:67825954] subscription note: {length = 8, bytes = 0x44000000b4006400} CBMutableCharacteristic
+2025-10-21 03:56:30.647 node[98864:67825954] subscription note: {length = 8, bytes = 0x44000000b4006500} CBMutableCharacteristic
+2025-10-21 03:56:31.650 node[98864:67825954] subscription note: {length = 8, bytes = 0x44000000b4006500} CBMutableCharacteristic
+2025-10-21 03:56:32.655 node[98864:67825954] subscription note: {length = 8, bytes = 0x44000000b4006700} CBMutableCharacteristic
+2025-10-21 03:56:33.659 node[98864:67825954] subscription note: {length = 8, bytes = 0x44000000b4006500} CBMutableCharacteristic
+2025-10-21 03:56:34.662 node[98864:67825954] subscription note: {length = 8, bytes = 0x44000000b4006800} CBMutableCharacteristic
+
