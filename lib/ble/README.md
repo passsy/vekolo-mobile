@@ -136,16 +136,16 @@ class FakeBlePermissions implements BlePermissions {
 
 ## Implementation Steps
 1. ✅ Write this plan to `lib/ble/README.md`
-2. Create ble_permissions.dart (abstract + impl wrapping existing utils/ble_permissions.dart)
-3. Create ble_platform.dart (abstract + impl wrapping FlutterBluePlus)
-4. Create ble_scanner.dart with dependency injection
-5. Implement token management
-6. Implement device expiry using Clock
-7. Implement state monitoring and auto-restart
-8. Implement lifecycle monitoring (WidgetsBindingObserver)
-9. Create FakeBlePlatform and FakeBlePermissions
-10. Write comprehensive unit tests
-11. Add inline documentation
+2. ✅ Create ble_permissions.dart (abstract + impl wrapping existing utils/ble_permissions.dart)
+3. ✅ Create ble_platform.dart (abstract + impl wrapping FlutterBluePlus)
+4. ✅ Create ble_scanner.dart with dependency injection
+5. ✅ Implement token management
+6. ✅ Implement device expiry using Clock
+7. ✅ Implement state monitoring and auto-restart
+8. ✅ Implement lifecycle monitoring (WidgetsBindingObserver)
+9. ✅ Create FakeBlePlatform and FakeBlePermissions
+10. ✅ Write comprehensive unit tests
+11. ✅ Add inline documentation
 
 ## Test Coverage Areas
 - Token management: Multiple start/stop operations
