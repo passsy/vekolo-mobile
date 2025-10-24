@@ -201,11 +201,11 @@ class BleScanner with WidgetsBindingObserver {
   /// Writable beacon for Bluetooth state.
   late final WritableBeacon<BluetoothState> _bluetoothStateBeacon;
 
-  /// Subscription to adapter state changes.
-  StreamSubscription<BluetoothAdapterState>? _adapterStateSubscription;
+  /// Unsubscribe function for adapter state beacon.
+  VoidCallback? _adapterStateUnsubscribe;
 
-  /// Subscription to scan results.
-  StreamSubscription<List<ScanResult>>? _scanResultsSubscription;
+  /// Unsubscribe function for scan results beacon.
+  VoidCallback? _scanResultsUnsubscribe;
 
   /// Timer for periodically checking device expiry and permissions.
   Timer? _periodicCheckTimer;
@@ -271,28 +271,16 @@ class BleScanner with WidgetsBindingObserver {
 
   /// Start monitoring Bluetooth adapter state and permissions.
   void _startMonitoring() {
-    // Listen to adapter state changes
-    _adapterStateSubscription = _platform.adapterStateStream.listen(
-      (state) {
-        developer.log('[BleScanner] Adapter state changed to: $state');
-        _updateBluetoothState(adapterState: state);
-      },
-      onError: (e, stackTrace) {
-        developer.log('[BleScanner] Error in adapter state stream: $e');
-        developer.log('$stackTrace');
-      },
-    );
+    // Subscribe to adapter state changes
+    _adapterStateUnsubscribe = _platform.adapterState.subscribe((state) {
+      developer.log('[BleScanner] Adapter state changed to: $state');
+      _updateBluetoothState(adapterState: state);
+    });
 
-    // Listen to scan results
-    _scanResultsSubscription = _platform.scanResultsStream.listen(
-      (results) {
-        _handleScanResults(results);
-      },
-      onError: (e, stackTrace) {
-        developer.log('[BleScanner] Error in scan results stream: $e');
-        developer.log('$stackTrace');
-      },
-    );
+    // Subscribe to scan results
+    _scanResultsUnsubscribe = _platform.scanResults.subscribe((results) {
+      _handleScanResults(results);
+    });
 
     // Start periodic checks for device expiry and permissions
     _periodicCheckTimer = Timer.periodic(
@@ -568,9 +556,9 @@ class BleScanner with WidgetsBindingObserver {
     // Clear tokens
     _activeTokens.clear();
 
-    // Cancel subscriptions
-    _adapterStateSubscription?.cancel();
-    _scanResultsSubscription?.cancel();
+    // Unsubscribe from beacons
+    _adapterStateUnsubscribe?.call();
+    _scanResultsUnsubscribe?.call();
 
     // Cancel timers
     _periodicCheckTimer?.cancel();

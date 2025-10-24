@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+import 'package:state_beacon/state_beacon.dart';
 import 'package:vekolo/ble/ble_platform.dart';
 
 /// Fake implementation of [BlePlatform] for testing.
@@ -24,7 +25,7 @@ import 'package:vekolo/ble/ble_platform.dart';
 /// await platform.startScan();
 ///
 /// // Device appears in scan results
-/// await platform.scanResultsStream.first; // Contains device
+/// final devices = platform.scanResults.value; // Contains device
 ///
 /// // Update signal strength
 /// device.updateRssi(-70);
@@ -33,31 +34,31 @@ import 'package:vekolo/ble/ble_platform.dart';
 /// device.turnOff();
 /// ```
 class FakeBlePlatform implements BlePlatform {
-  final _adapterStateController = StreamController<BluetoothAdapterState>.broadcast();
-  final _scanResultsController = StreamController<List<ScanResult>>.broadcast();
+  late final WritableBeacon<BluetoothAdapterState> _adapterStateBeacon;
+  late final WritableBeacon<List<ScanResult>> _scanResultsBeacon;
 
   final Map<String, FakeDevice> _devices = {};
-  BluetoothAdapterState _currentAdapterState = BluetoothAdapterState.off;
   bool _isScanning = false;
   Timer? _advertisingTimer;
 
   FakeBlePlatform() {
-    // Emit initial adapter state
-    _adapterStateController.add(_currentAdapterState);
+    // Initialize beacons with default values
+    _adapterStateBeacon = Beacon.writable(BluetoothAdapterState.off);
+    _scanResultsBeacon = Beacon.writable(<ScanResult>[]);
 
     // Start advertising loop that continuously emits active devices
     _startAdvertisingLoop();
   }
 
   @override
-  Stream<BluetoothAdapterState> get adapterStateStream => _adapterStateController.stream;
+  ReadableBeacon<BluetoothAdapterState> get adapterState => _adapterStateBeacon;
 
   @override
-  Stream<List<ScanResult>> get scanResultsStream => _scanResultsController.stream;
+  ReadableBeacon<List<ScanResult>> get scanResults => _scanResultsBeacon;
 
   @override
   Future<void> startScan() async {
-    if (_currentAdapterState != BluetoothAdapterState.on) {
+    if (_adapterStateBeacon.value != BluetoothAdapterState.on) {
       throw Exception('Bluetooth is not on');
     }
     _isScanning = true;
@@ -71,11 +72,10 @@ class FakeBlePlatform implements BlePlatform {
 
   /// Change the Bluetooth adapter state.
   ///
-  /// Emits the new state on [adapterStateStream]. If the adapter is turned off
+  /// Updates the [adapterState] beacon. If the adapter is turned off
   /// while scanning, the scan automatically stops.
   void setAdapterState(BluetoothAdapterState state) {
-    _currentAdapterState = state;
-    _adapterStateController.add(state);
+    _adapterStateBeacon.value = state;
 
     if (state != BluetoothAdapterState.on && _isScanning) {
       _isScanning = false;
@@ -113,10 +113,11 @@ class FakeBlePlatform implements BlePlatform {
   /// Clean up resources.
   ///
   /// Call this when done with the fake platform to prevent memory leaks.
+  @override
   void dispose() {
     _advertisingTimer?.cancel();
-    _adapterStateController.close();
-    _scanResultsController.close();
+    _adapterStateBeacon.dispose();
+    _scanResultsBeacon.dispose();
   }
 
   /// Start the advertising loop that simulates continuous BLE advertisements.
@@ -139,7 +140,7 @@ class FakeBlePlatform implements BlePlatform {
         .map((device) => device._toScanResult())
         .toList();
 
-    _scanResultsController.add(activeDevices);
+    _scanResultsBeacon.value = activeDevices;
   }
 }
 

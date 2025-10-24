@@ -1,4 +1,5 @@
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+import 'package:state_beacon/state_beacon.dart';
 
 /// Platform abstraction for BLE operations.
 ///
@@ -11,15 +12,15 @@ import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 /// operations needed by BleScanner:
 /// - Monitoring Bluetooth adapter state (on/off/unavailable)
 /// - Starting and stopping device scans
-/// - Receiving scan results as a stream
+/// - Receiving scan results as beacons
 ///
 /// Note: This does NOT handle permissions. Permission checking is handled
 /// by the separate BlePermissions abstraction since FlutterBluePlus doesn't
 /// provide permission APIs.
 abstract class BlePlatform {
-  /// Stream of Bluetooth adapter state changes.
+  /// Beacon of Bluetooth adapter state changes.
   ///
-  /// Emits the current state immediately when subscribed, then emits whenever
+  /// Provides the current state immediately when accessed, then updates whenever
   /// the adapter state changes (e.g., user turns Bluetooth on/off).
   ///
   /// Possible states:
@@ -29,12 +30,12 @@ abstract class BlePlatform {
   /// - BluetoothAdapterState.turningOn: Bluetooth is currently turning on
   /// - BluetoothAdapterState.turningOff: Bluetooth is currently turning off
   /// - BluetoothAdapterState.unauthorized: App lacks Bluetooth permissions
-  Stream<BluetoothAdapterState> get adapterStateStream;
+  ReadableBeacon<BluetoothAdapterState> get adapterState;
 
-  /// Stream of BLE scan results.
+  /// Beacon of BLE scan results.
   ///
-  /// Emits all currently discovered devices immediately when subscribed,
-  /// then emits updated lists whenever new devices are discovered or existing
+  /// Provides all currently discovered devices immediately when accessed,
+  /// then updates whenever new devices are discovered or existing
   /// devices send new advertisements.
   ///
   /// Each ScanResult contains:
@@ -43,16 +44,16 @@ abstract class BlePlatform {
   /// - advertisementData: Service UUIDs, manufacturer data, device name, etc.
   /// - timeStamp: When this advertisement was received
   ///
-  /// The stream continues emitting even when not actively scanning, allowing
+  /// The beacon continues updating even when not actively scanning, allowing
   /// subscribers to see all devices that have been discovered.
-  Stream<List<ScanResult>> get scanResultsStream;
+  ReadableBeacon<List<ScanResult>> get scanResults;
 
   /// Start scanning for BLE devices.
   ///
   /// Scans for all BLE devices without filtering by service UUIDs. This allows
   /// discovering any nearby device regardless of what services it advertises.
   ///
-  /// Scan results are delivered via [scanResultsStream]. Multiple calls to
+  /// Scan results are delivered via [scanResults]. Multiple calls to
   /// startScan() are safe - FlutterBluePlus handles this gracefully.
   ///
   /// The scan continues indefinitely until [stopScan] is called or the
@@ -64,16 +65,21 @@ abstract class BlePlatform {
   /// Stop the active BLE scan.
   ///
   /// Safe to call even if no scan is active. After stopping, the
-  /// [scanResultsStream] continues to emit the most recently discovered
+  /// [scanResults] beacon continues to emit the most recently discovered
   /// devices, but no new devices will be discovered until [startScan]
   /// is called again.
   Future<void> stopScan();
+
+  /// Clean up resources.
+  ///
+  /// Call this when done with the platform to prevent memory leaks.
+  void dispose();
 }
 
 /// Default implementation of [BlePlatform] that wraps FlutterBluePlus.
 ///
-/// This implementation delegates all operations directly to FlutterBluePlus's
-/// static API. It's a thin wrapper that exists solely to enable dependency
+/// This implementation wraps FlutterBluePlus streams in beacons and delegates
+/// all operations to FlutterBluePlus's static API. It exists to enable dependency
 /// injection and testing.
 ///
 /// In production code, create this once and inject it into BleScanner:
@@ -87,13 +93,29 @@ abstract class BlePlatform {
 /// In tests, inject a FakeBlePlatform instead to simulate BLE behavior
 /// without requiring real hardware.
 class BlePlatformImpl implements BlePlatform {
-  @override
-  Stream<BluetoothAdapterState> get adapterStateStream =>
-      FlutterBluePlus.adapterState;
+  late final WritableBeacon<BluetoothAdapterState> _adapterStateBeacon;
+  late final WritableBeacon<List<ScanResult>> _scanResultsBeacon;
+
+  BlePlatformImpl() {
+    // Create beacons that wrap FlutterBluePlus streams
+    _adapterStateBeacon = Beacon.writable(BluetoothAdapterState.unknown);
+    _scanResultsBeacon = Beacon.writable(<ScanResult>[]);
+
+    // Subscribe to FlutterBluePlus streams and update beacons
+    FlutterBluePlus.adapterState.listen((state) {
+      _adapterStateBeacon.value = state;
+    });
+
+    FlutterBluePlus.scanResults.listen((results) {
+      _scanResultsBeacon.value = results;
+    });
+  }
 
   @override
-  Stream<List<ScanResult>> get scanResultsStream =>
-      FlutterBluePlus.scanResults;
+  ReadableBeacon<BluetoothAdapterState> get adapterState => _adapterStateBeacon;
+
+  @override
+  ReadableBeacon<List<ScanResult>> get scanResults => _scanResultsBeacon;
 
   @override
   Future<void> startScan() async {
@@ -108,5 +130,11 @@ class BlePlatformImpl implements BlePlatform {
   @override
   Future<void> stopScan() async {
     await FlutterBluePlus.stopScan();
+  }
+
+  @override
+  void dispose() {
+    _adapterStateBeacon.dispose();
+    _scanResultsBeacon.dispose();
   }
 }

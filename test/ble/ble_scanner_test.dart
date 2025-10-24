@@ -404,7 +404,8 @@ void main() {
       await Future.delayed(const Duration(milliseconds: 100));
 
       final state = scanner.bluetoothState.value;
-      expect(state.adapterState, BluetoothAdapterState.unknown);
+      // FakeBlePlatform initializes with BluetoothAdapterState.off
+      expect(state.adapterState, BluetoothAdapterState.off);
       expect(state.hasPermission, false);
       expect(state.canScan, false);
     });

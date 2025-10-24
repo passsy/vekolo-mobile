@@ -75,14 +75,15 @@ class BluetoothState {
 
 ```dart
 abstract class BlePlatform {
-  Stream<BluetoothAdapterState> get adapterStateStream;
-  Stream<List<ScanResult>> get scanResultsStream;
+  ReadableBeacon<BluetoothAdapterState> get adapterState;
+  ReadableBeacon<List<ScanResult>> get scanResults;
   Future<void> startScan();
   Future<void> stopScan();
+  void dispose();
 }
 
 class BlePlatformImpl implements BlePlatform {
-  // Wraps FlutterBluePlus only (no permissions)
+  // Wraps FlutterBluePlus streams in beacons (no permissions)
 }
 ```
 
@@ -113,6 +114,7 @@ class FakeBlePlatform implements BlePlatform {
   // Device simulation - devices advertise until turned off
   FakeDevice addDevice(String id, String name, {int rssi, List<Guid>? services});
   void removeDevice(String id);
+  void dispose();
 }
 
 class FakeDevice {
@@ -121,6 +123,12 @@ class FakeDevice {
   void updateRssi(int rssi);
 }
 ```
+
+**Key differences from production:**
+- Uses `WritableBeacon` internally, exposes as `ReadableBeacon`
+- No StreamControllers needed
+- Simple `.value` assignment to update state
+- Cleaner disposal with beacon disposal
 
 ### FakeBlePermissions (fake_ble_permissions.dart)
 ```dart
