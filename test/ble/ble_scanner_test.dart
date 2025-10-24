@@ -12,34 +12,38 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('BleScanner - Token Management', () {
-    late FakeBlePlatform platform;
-    late FakeBlePermissions permissions;
-    late BleScanner scanner;
-
-    setUp(() {
-      platform = FakeBlePlatform();
-      permissions = FakeBlePermissions();
-      scanner = BleScanner(platform: platform, permissions: permissions);
+    BleScanner createScanner({
+      FakeBlePlatform? platform,
+      FakeBlePermissions? permissions,
+    }) {
+      final p = platform ?? FakeBlePlatform();
+      final perms = permissions ?? FakeBlePermissions();
+      final scanner = BleScanner(platform: p, permissions: perms);
       scanner.initialize();
 
-      // Set up favorable conditions for scanning
-      platform.setAdapterState(BluetoothAdapterState.on);
-      permissions.setHasPermission(true);
-      permissions.setLocationServiceEnabled(true);
-    });
+      // Set up favorable conditions by default
+      p.setAdapterState(BluetoothAdapterState.on);
+      perms.setHasPermission(true);
+      perms.setLocationServiceEnabled(true);
 
-    tearDown(() {
-      scanner.dispose();
-      platform.dispose();
-    });
+      // Register cleanup
+      addTearDown(() {
+        scanner.dispose();
+        p.dispose();
+      });
+
+      return scanner;
+    }
 
     test('startScan returns a token', () {
+      final scanner = createScanner();
       final token = scanner.startScan();
       expect(token, isNotNull);
       expect(token, isA<ScanToken>());
     });
 
     test('single startScan starts platform scanning', () async {
+      final scanner = createScanner();
       expect(scanner.isScanning.value, false);
 
       scanner.startScan();
@@ -49,6 +53,7 @@ void main() {
     });
 
     test('multiple startScan calls create different tokens', () {
+      final scanner = createScanner();
       final token1 = scanner.startScan();
       final token2 = scanner.startScan();
       final token3 = scanner.startScan();
@@ -59,6 +64,7 @@ void main() {
     });
 
     test('multiple tokens keep scanning active', () async {
+      final scanner = createScanner();
       final token1 = scanner.startScan();
       final token2 = scanner.startScan();
       await Future.delayed(Duration.zero);
@@ -77,10 +83,10 @@ void main() {
     });
 
     test('stopScan with unrelated token has no effect', () async {
+      final scanner = createScanner();
       final validToken = scanner.startScan();
       final unrelatedToken = scanner.startScan();
-      final otherScanner = BleScanner(platform: platform, permissions: permissions);
-      otherScanner.initialize();
+      final otherScanner = createScanner();
       final otherToken = otherScanner.startScan();
       await Future.delayed(Duration.zero);
 
@@ -96,11 +102,10 @@ void main() {
       await Future.delayed(Duration.zero);
 
       expect(scanner.isScanning.value, false);
-
-      otherScanner.dispose();
     });
 
     test('stopScan can be called multiple times with same token', () async {
+      final scanner = createScanner();
       final token = scanner.startScan();
       await Future.delayed(Duration.zero);
 
@@ -113,6 +118,7 @@ void main() {
     });
 
     test('rapid start/stop sequences work correctly', () async {
+      final scanner = createScanner();
       final token1 = scanner.startScan();
       final token2 = scanner.startScan();
       scanner.stopScan(token1);
@@ -125,11 +131,13 @@ void main() {
     });
 
     test('throws when starting scan after dispose', () {
+      final scanner = createScanner();
       scanner.dispose();
       expect(() => scanner.startScan(), throwsStateError);
     });
 
     test('stopScan after dispose does not throw', () {
+      final scanner = createScanner();
       final token = scanner.startScan();
       scanner.dispose();
       expect(() => scanner.stopScan(token), returnsNormally);
@@ -137,27 +145,31 @@ void main() {
   });
 
   group('BleScanner - Device Discovery', () {
-    late FakeBlePlatform platform;
-    late FakeBlePermissions permissions;
-    late BleScanner scanner;
-
-    setUp(() {
-      platform = FakeBlePlatform();
-      permissions = FakeBlePermissions();
-      scanner = BleScanner(platform: platform, permissions: permissions);
+    ({BleScanner scanner, FakeBlePlatform platform}) createScanner({
+      FakeBlePlatform? platform,
+      FakeBlePermissions? permissions,
+    }) {
+      final p = platform ?? FakeBlePlatform();
+      final perms = permissions ?? FakeBlePermissions();
+      final scanner = BleScanner(platform: p, permissions: perms);
       scanner.initialize();
 
-      platform.setAdapterState(BluetoothAdapterState.on);
-      permissions.setHasPermission(true);
-      permissions.setLocationServiceEnabled(true);
-    });
+      // Set up favorable conditions by default
+      p.setAdapterState(BluetoothAdapterState.on);
+      perms.setHasPermission(true);
+      perms.setLocationServiceEnabled(true);
 
-    tearDown(() {
-      scanner.dispose();
-      platform.dispose();
-    });
+      // Register cleanup
+      addTearDown(() {
+        scanner.dispose();
+        p.dispose();
+      });
+
+      return (scanner: scanner, platform: p);
+    }
 
     test('discovers devices when scanning', () async {
+      final (:scanner, :platform) = createScanner();
       final device = platform.addDevice('D1', 'Heart Monitor', rssi: -60);
       device.turnOn();
 
@@ -171,6 +183,7 @@ void main() {
     });
 
     test('discovers multiple devices', () async {
+      final (:scanner, :platform) = createScanner();
       final device1 = platform.addDevice('D1', 'Heart Monitor', rssi: -60);
       final device2 = platform.addDevice('D2', 'Speed Sensor', rssi: -55);
       final device3 = platform.addDevice('D3', 'Cadence Sensor', rssi: -65);
@@ -187,6 +200,7 @@ void main() {
     });
 
     test('maintains discovery order', () async {
+      final (:scanner, :platform) = createScanner();
       scanner.startScan();
       await Future.delayed(const Duration(milliseconds: 50));
 
@@ -207,6 +221,7 @@ void main() {
     });
 
     test('updates existing device when seen again', () async {
+      final (:scanner, :platform) = createScanner();
       final device = platform.addDevice('D1', 'Heart Monitor', rssi: -60);
       device.turnOn();
 
@@ -227,6 +242,7 @@ void main() {
     });
 
     test('tracks service UUIDs', () async {
+      final (:scanner, :platform) = createScanner();
       final services = [
         Guid('0000180d-0000-1000-8000-00805f9b34fb'), // Heart Rate
         Guid('00001816-0000-1000-8000-00805f9b34fb'), // Cycling Speed
@@ -242,10 +258,12 @@ void main() {
     });
 
     test('devices list is empty before scanning', () {
+      final (:scanner, :platform) = createScanner();
       expect(scanner.devices.value, isEmpty);
     });
 
     test('devices list is empty when no devices advertising', () async {
+      final (:scanner, :platform) = createScanner();
       scanner.startScan();
       await Future.delayed(const Duration(milliseconds: 200));
 
@@ -254,23 +272,27 @@ void main() {
   });
 
   group('BleScanner - Device Expiry', () {
-    late FakeBlePlatform platform;
-    late FakeBlePermissions permissions;
-    late BleScanner scanner;
-    setUp(() {
-      platform = FakeBlePlatform();
-      permissions = FakeBlePermissions();
-      scanner = BleScanner(platform: platform, permissions: permissions);
+    ({BleScanner scanner, FakeBlePlatform platform}) createScanner({
+      FakeBlePlatform? platform,
+      FakeBlePermissions? permissions,
+    }) {
+      final p = platform ?? FakeBlePlatform();
+      final perms = permissions ?? FakeBlePermissions();
+      final scanner = BleScanner(platform: p, permissions: perms);
       scanner.initialize();
 
-      platform.setAdapterState(BluetoothAdapterState.on);
-      permissions.setHasPermission(true);
-      permissions.setLocationServiceEnabled(true);
-    });
+      // Set up favorable conditions by default
+      p.setAdapterState(BluetoothAdapterState.on);
+      perms.setHasPermission(true);
+      perms.setLocationServiceEnabled(true);
 
-    tearDown() {
-      scanner.dispose();
-      platform.dispose();
+      // Register cleanup
+      addTearDown(() {
+        scanner.dispose();
+        p.dispose();
+      });
+
+      return (scanner: scanner, platform: p);
     }
 
     // Note: Device expiry tests using FakeClock are challenging because:
@@ -280,6 +302,7 @@ void main() {
     // In production, device expiry works correctly based on wall clock time.
 
     test('device expires after 5 seconds without advertisement', () async {
+      final (:scanner, :platform) = createScanner();
       final device = platform.addDevice('D1', 'Heart Monitor', rssi: -60);
       device.turnOn();
 
@@ -298,6 +321,7 @@ void main() {
     }, skip: 'Requires real time delays - takes too long for unit tests');
 
     test('device does not expire if still advertising', () async {
+      final (:scanner, :platform) = createScanner();
       final device = platform.addDevice('D1', 'Heart Monitor', rssi: -60);
       device.turnOn();
 
@@ -312,6 +336,7 @@ void main() {
     });
 
     test('device expires when turned off', () async {
+      final (:scanner, :platform) = createScanner();
       final device = platform.addDevice('D1', 'Heart Monitor', rssi: -60);
       device.turnOn();
 
@@ -328,6 +353,7 @@ void main() {
     }, skip: 'Requires real time delays - takes too long for unit tests');
 
     test('multiple devices expire independently', () async {
+      final (:scanner, :platform) = createScanner();
       final device1 = platform.addDevice('D1', 'First', rssi: -60);
       final device2 = platform.addDevice('D2', 'Second', rssi: -60);
 
@@ -357,6 +383,7 @@ void main() {
     }, skip: 'Requires real time delays - takes too long for unit tests');
 
     test('expired device reappears if it starts advertising again', () async {
+      final (:scanner, :platform) = createScanner();
       final device = platform.addDevice('D1', 'Heart Monitor', rssi: -60);
       device.turnOn();
 
@@ -384,23 +411,29 @@ void main() {
   });
 
   group('BleScanner - Bluetooth State', () {
-    late FakeBlePlatform platform;
-    late FakeBlePermissions permissions;
-    late BleScanner scanner;
-
-    setUp(() {
-      platform = FakeBlePlatform();
-      permissions = FakeBlePermissions();
-      scanner = BleScanner(platform: platform, permissions: permissions);
+    ({BleScanner scanner, FakeBlePlatform platform, FakeBlePermissions permissions}) createScanner({
+      FakeBlePlatform? platform,
+      FakeBlePermissions? permissions,
+    }) {
+      final p = platform ?? FakeBlePlatform();
+      final perms = permissions ?? FakeBlePermissions();
+      final scanner = BleScanner(platform: p, permissions: perms);
       scanner.initialize();
-    });
 
-    tearDown(() {
-      scanner.dispose();
-      platform.dispose();
-    });
+      // Note: No favorable conditions setup for this group
+      // Tests need to set up their own states
+
+      // Register cleanup
+      addTearDown(() {
+        scanner.dispose();
+        p.dispose();
+      });
+
+      return (scanner: scanner, platform: p, permissions: perms);
+    }
 
     test('initial state reflects unknown Bluetooth and no permission', () async {
+      final (:scanner, :platform, :permissions) = createScanner();
       await Future.delayed(const Duration(milliseconds: 100));
 
       final state = scanner.bluetoothState.value;
@@ -411,6 +444,7 @@ void main() {
     });
 
     test('state updates when Bluetooth turns on', () async {
+      final (:scanner, :platform, :permissions) = createScanner();
       await Future.delayed(const Duration(milliseconds: 100));
 
       platform.setAdapterState(BluetoothAdapterState.on);
@@ -428,6 +462,7 @@ void main() {
     });
 
     test('state updates when permissions change', () async {
+      final (:scanner, :platform, :permissions) = createScanner();
       await Future.delayed(const Duration(milliseconds: 100));
 
       platform.setAdapterState(BluetoothAdapterState.on);
@@ -449,6 +484,7 @@ void main() {
     });
 
     test('state updates when location services change', () async {
+      final (:scanner, :platform, :permissions) = createScanner();
       await Future.delayed(const Duration(milliseconds: 100));
 
       platform.setAdapterState(BluetoothAdapterState.on);
@@ -472,6 +508,7 @@ void main() {
     });
 
     test('permanent permission denial is tracked', () async {
+      final (:scanner, :platform, :permissions) = createScanner();
       permissions.setPermanentlyDenied(true);
       await Future.delayed(const Duration(seconds: 2)); // Wait for periodic check
 
@@ -482,6 +519,7 @@ void main() {
     });
 
     test('all adapter states are reflected correctly', () async {
+      final (:scanner, :platform, :permissions) = createScanner();
       final states = [
         BluetoothAdapterState.unknown,
         BluetoothAdapterState.unavailable,
@@ -500,6 +538,7 @@ void main() {
     });
 
     test('unavailable Bluetooth is detected', () async {
+      final (:scanner, :platform, :permissions) = createScanner();
       platform.setAdapterState(BluetoothAdapterState.unavailable);
       await Future.delayed(const Duration(milliseconds: 100));
 
@@ -509,23 +548,29 @@ void main() {
   });
 
   group('BleScanner - Auto-Restart', () {
-    late FakeBlePlatform platform;
-    late FakeBlePermissions permissions;
-    late BleScanner scanner;
-
-    setUp(() {
-      platform = FakeBlePlatform();
-      permissions = FakeBlePermissions();
-      scanner = BleScanner(platform: platform, permissions: permissions);
+    ({BleScanner scanner, FakeBlePlatform platform, FakeBlePermissions permissions}) createScanner({
+      FakeBlePlatform? platform,
+      FakeBlePermissions? permissions,
+    }) {
+      final p = platform ?? FakeBlePlatform();
+      final perms = permissions ?? FakeBlePermissions();
+      final scanner = BleScanner(platform: p, permissions: perms);
       scanner.initialize();
-    });
 
-    tearDown(() {
-      scanner.dispose();
-      platform.dispose();
-    });
+      // Note: No favorable conditions setup for this group
+      // Tests need to set up their own states
+
+      // Register cleanup
+      addTearDown(() {
+        scanner.dispose();
+        p.dispose();
+      });
+
+      return (scanner: scanner, platform: p, permissions: perms);
+    }
 
     test('auto-restarts when Bluetooth turns on', () async {
+      final (:scanner, :platform, :permissions) = createScanner();
       // Start with Bluetooth off
       platform.setAdapterState(BluetoothAdapterState.off);
       permissions.setHasPermission(true);
@@ -546,6 +591,7 @@ void main() {
     });
 
     test('auto-restarts when permissions are granted', () async {
+      final (:scanner, :platform, :permissions) = createScanner();
       // Start with no permissions
       platform.setAdapterState(BluetoothAdapterState.on);
       permissions.setHasPermission(false);
@@ -566,6 +612,7 @@ void main() {
     });
 
     test('auto-restarts when location services are enabled', () async {
+      final (:scanner, :platform, :permissions) = createScanner();
       // Start with location disabled
       platform.setAdapterState(BluetoothAdapterState.on);
       permissions.setHasPermission(true);
@@ -586,6 +633,7 @@ void main() {
     });
 
     test('does not auto-restart when no tokens are active', () async {
+      final (:scanner, :platform, :permissions) = createScanner();
       platform.setAdapterState(BluetoothAdapterState.off);
       permissions.setHasPermission(true);
       permissions.setLocationServiceEnabled(true);
@@ -602,6 +650,7 @@ void main() {
     });
 
     test('does not auto-restart after all tokens are stopped', () async {
+      final (:scanner, :platform, :permissions) = createScanner();
       platform.setAdapterState(BluetoothAdapterState.on);
       permissions.setHasPermission(true);
       permissions.setLocationServiceEnabled(true);
@@ -626,6 +675,7 @@ void main() {
     });
 
     test('handles multiple condition changes before auto-restart', () async {
+      final (:scanner, :platform, :permissions) = createScanner();
       // Start with everything unavailable
       platform.setAdapterState(BluetoothAdapterState.off);
       permissions.setHasPermission(false);
@@ -655,27 +705,31 @@ void main() {
   });
 
   group('BleScanner - Lifecycle Handling', () {
-    late FakeBlePlatform platform;
-    late FakeBlePermissions permissions;
-    late BleScanner scanner;
-
-    setUp(() {
-      platform = FakeBlePlatform();
-      permissions = FakeBlePermissions();
-      scanner = BleScanner(platform: platform, permissions: permissions);
+    BleScanner createScanner({
+      FakeBlePlatform? platform,
+      FakeBlePermissions? permissions,
+    }) {
+      final p = platform ?? FakeBlePlatform();
+      final perms = permissions ?? FakeBlePermissions();
+      final scanner = BleScanner(platform: p, permissions: perms);
       scanner.initialize();
 
-      platform.setAdapterState(BluetoothAdapterState.on);
-      permissions.setHasPermission(true);
-      permissions.setLocationServiceEnabled(true);
-    });
+      // Set up favorable conditions by default
+      p.setAdapterState(BluetoothAdapterState.on);
+      perms.setHasPermission(true);
+      perms.setLocationServiceEnabled(true);
 
-    tearDown(() {
-      scanner.dispose();
-      platform.dispose();
-    });
+      // Register cleanup
+      addTearDown(() {
+        scanner.dispose();
+        p.dispose();
+      });
+
+      return scanner;
+    }
 
     test('stops scanning when app goes to background (inactive)', () async {
+      final scanner = createScanner();
       final token = scanner.startScan();
       await Future.delayed(const Duration(milliseconds: 100));
 
@@ -690,6 +744,7 @@ void main() {
     });
 
     test('stops scanning when app goes to background (paused)', () async {
+      final scanner = createScanner();
       final token = scanner.startScan();
       await Future.delayed(const Duration(milliseconds: 100));
 
@@ -704,6 +759,7 @@ void main() {
     });
 
     test('stops scanning when app is detached', () async {
+      final scanner = createScanner();
       final token = scanner.startScan();
       await Future.delayed(const Duration(milliseconds: 100));
 
@@ -718,6 +774,7 @@ void main() {
     });
 
     test('stops scanning when app is hidden', () async {
+      final scanner = createScanner();
       final token = scanner.startScan();
       await Future.delayed(const Duration(milliseconds: 100));
 
@@ -732,6 +789,7 @@ void main() {
     });
 
     test('resumes scanning when app comes to foreground', () async {
+      final scanner = createScanner();
       final token = scanner.startScan();
       await Future.delayed(const Duration(milliseconds: 100));
 
@@ -751,6 +809,7 @@ void main() {
     });
 
     test('does not resume if no tokens are active', () async {
+      final scanner = createScanner();
       scanner.didChangeAppLifecycleState(AppLifecycleState.paused);
       await Future.delayed(const Duration(milliseconds: 100));
 
@@ -761,6 +820,7 @@ void main() {
     });
 
     test('does not resume if all tokens were stopped while backgrounded', () async {
+      final scanner = createScanner();
       final token = scanner.startScan();
       await Future.delayed(const Duration(milliseconds: 100));
 
@@ -776,6 +836,7 @@ void main() {
     });
 
     test('multiple background/foreground cycles work correctly', () async {
+      final scanner = createScanner();
       final token = scanner.startScan();
       await Future.delayed(const Duration(milliseconds: 100));
 
@@ -797,6 +858,7 @@ void main() {
     });
 
     test('lifecycle changes after dispose are ignored', () async {
+      final scanner = createScanner();
       final token = scanner.startScan();
       await Future.delayed(const Duration(milliseconds: 100));
 
@@ -808,23 +870,29 @@ void main() {
   });
 
   group('BleScanner - Edge Cases', () {
-    late FakeBlePlatform platform;
-    late FakeBlePermissions permissions;
-    late BleScanner scanner;
-
-    setUp(() {
-      platform = FakeBlePlatform();
-      permissions = FakeBlePermissions();
-      scanner = BleScanner(platform: platform, permissions: permissions);
+    ({BleScanner scanner, FakeBlePlatform platform, FakeBlePermissions permissions}) createScanner({
+      FakeBlePlatform? platform,
+      FakeBlePermissions? permissions,
+    }) {
+      final p = platform ?? FakeBlePlatform();
+      final perms = permissions ?? FakeBlePermissions();
+      final scanner = BleScanner(platform: p, permissions: perms);
       scanner.initialize();
-    });
 
-    tearDown(() {
-      scanner.dispose();
-      platform.dispose();
-    });
+      // Note: No favorable conditions setup for this group
+      // Tests need to set up their own states
+
+      // Register cleanup
+      addTearDown(() {
+        scanner.dispose();
+        p.dispose();
+      });
+
+      return (scanner: scanner, platform: p, permissions: perms);
+    }
 
     test('Bluetooth turning off during scan stops scanning', () async {
+      final (:scanner, :platform, :permissions) = createScanner();
       platform.setAdapterState(BluetoothAdapterState.on);
       permissions.setHasPermission(true);
       permissions.setLocationServiceEnabled(true);
@@ -844,6 +912,7 @@ void main() {
     });
 
     test('rapid Bluetooth state changes are handled', () async {
+      final (:scanner, :platform, :permissions) = createScanner();
       permissions.setHasPermission(true);
       permissions.setLocationServiceEnabled(true);
 
@@ -859,6 +928,7 @@ void main() {
     });
 
     test('starting scan while Bluetooth is turning on waits for on state', () async {
+      final (:scanner, :platform, :permissions) = createScanner();
       platform.setAdapterState(BluetoothAdapterState.turningOn);
       permissions.setHasPermission(true);
       permissions.setLocationServiceEnabled(true);
@@ -877,6 +947,7 @@ void main() {
     });
 
     test('starting scan with unavailable Bluetooth never starts', () async {
+      final (:scanner, :platform, :permissions) = createScanner();
       platform.setAdapterState(BluetoothAdapterState.unavailable);
       permissions.setHasPermission(true);
       permissions.setLocationServiceEnabled(true);
@@ -890,6 +961,7 @@ void main() {
     });
 
     test('concurrent state changes and token operations', () async {
+      final (:scanner, :platform, :permissions) = createScanner();
       platform.setAdapterState(BluetoothAdapterState.on);
       permissions.setHasPermission(true);
       permissions.setLocationServiceEnabled(true);
@@ -910,6 +982,7 @@ void main() {
     });
 
     test('devices persist across stop/start when not expired', () async {
+      final (:scanner, :platform, :permissions) = createScanner();
       platform.setAdapterState(BluetoothAdapterState.on);
       permissions.setHasPermission(true);
       permissions.setLocationServiceEnabled(true);
@@ -937,6 +1010,7 @@ void main() {
     });
 
     test('platform errors during start are handled gracefully', () async {
+      final (:scanner, :platform, :permissions) = createScanner();
       platform.setAdapterState(BluetoothAdapterState.on);
       permissions.setHasPermission(true);
       permissions.setLocationServiceEnabled(true);
@@ -953,27 +1027,31 @@ void main() {
   });
 
   group('BleScanner - Resource Cleanup', () {
-    late FakeBlePlatform platform;
-    late FakeBlePermissions permissions;
-    late BleScanner scanner;
-
-    setUp(() {
-      platform = FakeBlePlatform();
-      permissions = FakeBlePermissions();
-      scanner = BleScanner(platform: platform, permissions: permissions);
+    ({BleScanner scanner, FakeBlePlatform platform}) createScanner({
+      FakeBlePlatform? platform,
+      FakeBlePermissions? permissions,
+    }) {
+      final p = platform ?? FakeBlePlatform();
+      final perms = permissions ?? FakeBlePermissions();
+      final scanner = BleScanner(platform: p, permissions: perms);
       scanner.initialize();
 
-      platform.setAdapterState(BluetoothAdapterState.on);
-      permissions.setHasPermission(true);
-      permissions.setLocationServiceEnabled(true);
-    });
+      // Set up favorable conditions by default
+      p.setAdapterState(BluetoothAdapterState.on);
+      perms.setHasPermission(true);
+      perms.setLocationServiceEnabled(true);
 
-    tearDown(() {
-      scanner.dispose();
-      platform.dispose();
-    });
+      // Register cleanup
+      addTearDown(() {
+        scanner.dispose();
+        p.dispose();
+      });
+
+      return (scanner: scanner, platform: p);
+    }
 
     test('dispose stops active scan', () async {
+      final (:scanner, :platform) = createScanner();
       scanner.startScan();
       await Future.delayed(const Duration(milliseconds: 100));
 
@@ -987,6 +1065,7 @@ void main() {
     });
 
     test('dispose clears all devices', () async {
+      final (:scanner, :platform) = createScanner();
       final device = platform.addDevice('D1', 'Heart Monitor', rssi: -60);
       device.turnOn();
 
@@ -1001,12 +1080,14 @@ void main() {
     });
 
     test('dispose can be called multiple times', () {
+      final (:scanner, :platform) = createScanner();
       scanner.dispose();
       expect(() => scanner.dispose(), returnsNormally);
       expect(() => scanner.dispose(), returnsNormally);
     });
 
     test('dispose cancels all subscriptions', () async {
+      final (:scanner, :platform) = createScanner();
       // Start scan to ensure subscriptions are active
       scanner.startScan();
       await Future.delayed(const Duration(milliseconds: 100));
@@ -1021,8 +1102,9 @@ void main() {
     });
 
     test('dispose stops periodic checks', () async {
-      final scanner2 = BleScanner(platform: platform, permissions: permissions);
-      scanner2.initialize();
+      final (:scanner, :platform) = createScanner();
+      final result2 = createScanner(platform: platform);
+      final scanner2 = result2.scanner;
 
       final device = platform.addDevice('D1', 'Heart Monitor', rssi: -60);
       device.turnOn();
@@ -1044,27 +1126,31 @@ void main() {
   });
 
   group('BleScanner - State Beacons', () {
-    late FakeBlePlatform platform;
-    late FakeBlePermissions permissions;
-    late BleScanner scanner;
-
-    setUp(() {
-      platform = FakeBlePlatform();
-      permissions = FakeBlePermissions();
-      scanner = BleScanner(platform: platform, permissions: permissions);
+    ({BleScanner scanner, FakeBlePlatform platform}) createScanner({
+      FakeBlePlatform? platform,
+      FakeBlePermissions? permissions,
+    }) {
+      final p = platform ?? FakeBlePlatform();
+      final perms = permissions ?? FakeBlePermissions();
+      final scanner = BleScanner(platform: p, permissions: perms);
       scanner.initialize();
 
-      platform.setAdapterState(BluetoothAdapterState.on);
-      permissions.setHasPermission(true);
-      permissions.setLocationServiceEnabled(true);
-    });
+      // Set up favorable conditions by default
+      p.setAdapterState(BluetoothAdapterState.on);
+      perms.setHasPermission(true);
+      perms.setLocationServiceEnabled(true);
 
-    tearDown(() {
-      scanner.dispose();
-      platform.dispose();
-    });
+      // Register cleanup
+      addTearDown(() {
+        scanner.dispose();
+        p.dispose();
+      });
+
+      return (scanner: scanner, platform: p);
+    }
 
     test('isScanning beacon updates on state change', () async {
+      final (:scanner, :platform) = createScanner();
       expect(scanner.isScanning.value, false);
 
       final token = scanner.startScan();
@@ -1079,6 +1165,7 @@ void main() {
     });
 
     test('devices beacon updates on device discovery', () async {
+      final (:scanner, :platform) = createScanner();
       expect(scanner.devices.value, isEmpty);
 
       scanner.startScan();
@@ -1096,6 +1183,7 @@ void main() {
     });
 
     test('bluetoothState beacon updates on adapter state change', () async {
+      final (:scanner, :platform) = createScanner();
       await Future.delayed(const Duration(milliseconds: 100));
 
       // Set to on first
@@ -1111,6 +1199,7 @@ void main() {
     });
 
     test('beacons can be read without observing', () {
+      final (:scanner, :platform) = createScanner();
       expect(scanner.isScanning.value, false);
       expect(scanner.devices.value, isEmpty);
       expect(scanner.bluetoothState.value, isA<BluetoothState>());
