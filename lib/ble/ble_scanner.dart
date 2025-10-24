@@ -186,9 +186,6 @@ class BleScanner with WidgetsBindingObserver {
   /// Permissions abstraction for checking/requesting permissions.
   final BlePermissions _permissions;
 
-  /// Clock for testable time operations.
-  final Clock _clock;
-
   /// Active scan tokens. Scanning continues as long as this is non-empty.
   final Set<ScanToken> _activeTokens = {};
 
@@ -233,14 +230,14 @@ class BleScanner with WidgetsBindingObserver {
   /// All parameters are optional for easy testing:
   /// - [platform]: BLE platform abstraction (defaults to production impl)
   /// - [permissions]: Permissions abstraction (defaults to production impl)
-  /// - [clock]: Clock for time operations (defaults to system clock)
+  ///
+  /// IMPORTANT: You must call [initialize] after construction to start monitoring
+  /// Bluetooth state and app lifecycle.
   BleScanner({
     BlePlatform? platform,
     BlePermissions? permissions,
-    Clock? clock,
   })  : _platform = platform ?? BlePlatformImpl(),
-        _permissions = permissions ?? BlePermissionsImpl(),
-        _clock = clock ?? const Clock() {
+        _permissions = permissions ?? BlePermissionsImpl() {
     // Initialize beacons with default values
     _devicesBeacon = Beacon.writable(<DiscoveredDevice>[]);
     _isScanningBeacon = Beacon.writable(false);
@@ -252,6 +249,18 @@ class BleScanner with WidgetsBindingObserver {
         isLocationServiceEnabled: false,
       ),
     );
+  }
+
+  /// Initialize the scanner by starting state monitoring and lifecycle observation.
+  ///
+  /// Must be called after construction before using the scanner. This is separate
+  /// from the constructor to avoid doing work during construction, which makes
+  /// testing more predictable.
+  void initialize() {
+    if (_disposed) {
+      developer.log('[BleScanner] Cannot initialize after disposal');
+      return;
+    }
 
     // Register for app lifecycle events
     WidgetsBinding.instance.addObserver(this);
@@ -339,7 +348,7 @@ class BleScanner with WidgetsBindingObserver {
 
   /// Remove devices that haven't been seen in 5 seconds.
   void _removeExpiredDevices() {
-    final now = _clock.now();
+    final now = clock.now();
     final expiryThreshold = const Duration(seconds: 5);
 
     final expiredIds = _discoveredDevices.entries
@@ -360,7 +369,7 @@ class BleScanner with WidgetsBindingObserver {
   void _handleScanResults(List<ScanResult> results) {
     if (_disposed) return;
 
-    final now = _clock.now();
+    final now = clock.now();
     bool updated = false;
 
     for (final result in results) {

@@ -20,6 +20,7 @@ void main() {
       platform = FakeBlePlatform();
       permissions = FakeBlePermissions();
       scanner = BleScanner(platform: platform, permissions: permissions);
+      scanner.initialize();
 
       // Set up favorable conditions for scanning
       platform.setAdapterState(BluetoothAdapterState.on);
@@ -79,6 +80,7 @@ void main() {
       final validToken = scanner.startScan();
       final unrelatedToken = scanner.startScan();
       final otherScanner = BleScanner(platform: platform, permissions: permissions);
+      otherScanner.initialize();
       final otherToken = otherScanner.startScan();
       await Future.delayed(Duration.zero);
 
@@ -143,6 +145,7 @@ void main() {
       platform = FakeBlePlatform();
       permissions = FakeBlePermissions();
       scanner = BleScanner(platform: platform, permissions: permissions);
+      scanner.initialize();
 
       platform.setAdapterState(BluetoothAdapterState.on);
       permissions.setHasPermission(true);
@@ -254,13 +257,11 @@ void main() {
     late FakeBlePlatform platform;
     late FakeBlePermissions permissions;
     late BleScanner scanner;
-    late FakeClock clock;
-
     setUp(() {
       platform = FakeBlePlatform();
       permissions = FakeBlePermissions();
-      clock = FakeClock(DateTime(2024, 1, 1, 12, 0, 0));
-      scanner = BleScanner(platform: platform, permissions: permissions, clock: clock);
+      scanner = BleScanner(platform: platform, permissions: permissions);
+      scanner.initialize();
 
       platform.setAdapterState(BluetoothAdapterState.on);
       permissions.setHasPermission(true);
@@ -391,6 +392,7 @@ void main() {
       platform = FakeBlePlatform();
       permissions = FakeBlePermissions();
       scanner = BleScanner(platform: platform, permissions: permissions);
+      scanner.initialize();
     });
 
     tearDown(() {
@@ -514,6 +516,7 @@ void main() {
       platform = FakeBlePlatform();
       permissions = FakeBlePermissions();
       scanner = BleScanner(platform: platform, permissions: permissions);
+      scanner.initialize();
     });
 
     tearDown(() {
@@ -659,6 +662,7 @@ void main() {
       platform = FakeBlePlatform();
       permissions = FakeBlePermissions();
       scanner = BleScanner(platform: platform, permissions: permissions);
+      scanner.initialize();
 
       platform.setAdapterState(BluetoothAdapterState.on);
       permissions.setHasPermission(true);
@@ -811,6 +815,7 @@ void main() {
       platform = FakeBlePlatform();
       permissions = FakeBlePermissions();
       scanner = BleScanner(platform: platform, permissions: permissions);
+      scanner.initialize();
     });
 
     tearDown(() {
@@ -955,6 +960,7 @@ void main() {
       platform = FakeBlePlatform();
       permissions = FakeBlePermissions();
       scanner = BleScanner(platform: platform, permissions: permissions);
+      scanner.initialize();
 
       platform.setAdapterState(BluetoothAdapterState.on);
       permissions.setHasPermission(true);
@@ -1014,8 +1020,8 @@ void main() {
     });
 
     test('dispose stops periodic checks', () async {
-      final clock = FakeClock(DateTime(2024, 1, 1, 12, 0, 0));
-      final scanner2 = BleScanner(platform: platform, permissions: permissions, clock: clock);
+      final scanner2 = BleScanner(platform: platform, permissions: permissions);
+      scanner2.initialize();
 
       final device = platform.addDevice('D1', 'Heart Monitor', rssi: -60);
       device.turnOn();
@@ -1023,16 +1029,16 @@ void main() {
       scanner2.startScan();
       await Future.delayed(const Duration(milliseconds: 200));
 
+      // Scanner should have discovered the device
+      expect(scanner2.devices.value, hasLength(1));
+
       scanner2.dispose();
 
-      // Advance time - periodic checks should not run
-      clock.advance(const Duration(seconds: 10));
+      // Wait a bit - periodic checks should not run after dispose
       await Future.delayed(const Duration(seconds: 2));
 
-      // No errors should occur
-      expect(() => clock.advance(const Duration(seconds: 10)), returnsNormally);
-
-      scanner2.dispose();
+      // Multiple dispose calls should be safe
+      expect(() => scanner2.dispose(), returnsNormally);
     });
   });
 
@@ -1045,6 +1051,7 @@ void main() {
       platform = FakeBlePlatform();
       permissions = FakeBlePermissions();
       scanner = BleScanner(platform: platform, permissions: permissions);
+      scanner.initialize();
 
       platform.setAdapterState(BluetoothAdapterState.on);
       permissions.setHasPermission(true);

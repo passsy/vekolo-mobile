@@ -42,8 +42,9 @@ class BleScanner {
   BleScanner({
     BlePlatform? platform,
     BlePermissions? permissions,
-    Clock? clock,
   });
+
+  void initialize(); // Must be called after construction
 
   ReadableBeacon<List<DiscoveredDevice>> get devices;
   ReadableBeacon<bool> get isScanning;
