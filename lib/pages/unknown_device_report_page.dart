@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:reactive_forms/reactive_forms.dart';
-import 'package:vekolo/infrastructure/ble/ble_scanner.dart';
 import 'dart:developer' as developer;
 import 'dart:io' show Platform;
 import 'dart:async';
@@ -13,6 +12,21 @@ import 'package:flutter_blue_plus/flutter_blue_plus.dart' as fbp;
 /// Page state enum for managing UI flow
 enum UnknownDevicePageState { scanning, deviceList, connecting, review, success, error }
 
+/// Simple device data structure for unknown device reporting
+class _SimpleDevice {
+  final String id;
+  final String name;
+  final int rssi;
+  final List<fbp.Guid> serviceUuids;
+
+  _SimpleDevice({
+    required this.id,
+    required this.name,
+    required this.rssi,
+    required this.serviceUuids,
+  });
+}
+
 class UnknownDeviceReportPage extends StatefulWidget {
   const UnknownDeviceReportPage({super.key});
 
@@ -23,9 +37,9 @@ class UnknownDeviceReportPage extends StatefulWidget {
 class _UnknownDeviceReportPageState extends State<UnknownDeviceReportPage> {
   UnknownDevicePageState _pageState = UnknownDevicePageState.scanning;
 
-  // Real BLE devices
-  final List<DiscoveredDevice> _devices = [];
-  DiscoveredDevice? _selectedDevice;
+  // Real BLE devices - use a simple data class instead of the scanner's DiscoveredDevice
+  final List<_SimpleDevice> _devices = [];
+  _SimpleDevice? _selectedDevice;
   String _errorMessage = '';
   String _collectedData = '';
 
@@ -84,7 +98,7 @@ class _UnknownDeviceReportPageState extends State<UnknownDeviceReportPage> {
       await fbp.FlutterBluePlus.startScan(timeout: const Duration(seconds: 10));
 
       // Map to track unique devices by ID
-      final Map<String, DiscoveredDevice> deviceMap = {};
+      final Map<String, _SimpleDevice> deviceMap = {};
 
       // Listen to scan results
       _scanSubscription = fbp.FlutterBluePlus.scanResults.listen(
@@ -98,8 +112,8 @@ class _UnknownDeviceReportPageState extends State<UnknownDeviceReportPage> {
             if (!deviceMap.containsKey(deviceId)) {
               hasNewDevices = true;
 
-              // Convert to DiscoveredDevice
-              deviceMap[deviceId] = DiscoveredDevice(
+              // Convert to _SimpleDevice
+              deviceMap[deviceId] = _SimpleDevice(
                 id: deviceId,
                 name: result.device.platformName,
                 rssi: result.rssi,
@@ -162,7 +176,7 @@ class _UnknownDeviceReportPageState extends State<UnknownDeviceReportPage> {
   }
 
   /// Connects to device and collects data
-  Future<void> _onDeviceSelected(DiscoveredDevice device) async {
+  Future<void> _onDeviceSelected(_SimpleDevice device) async {
     developer.log('[UnknownDeviceReportPage] Device selected: ${device.id}');
 
     // Get current user from AuthService before async operations
@@ -260,7 +274,7 @@ class _UnknownDeviceReportPageState extends State<UnknownDeviceReportPage> {
 
   /// Generates device data report from real BLE connection
   Future<String> _generateDeviceData(
-    DiscoveredDevice device,
+    _SimpleDevice device,
     fbp.BluetoothDevice bleDevice,
     List<fbp.BluetoothService> services, {
     User? userInfo,

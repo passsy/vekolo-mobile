@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:vekolo/infrastructure/ble/ble_scanner.dart';
-import 'dart:async';
+import 'package:vekolo/ble/ble_scanner.dart';
 import 'dart:developer' as developer;
 
 class ScannerPage extends StatefulWidget {
@@ -14,33 +13,43 @@ class ScannerPage extends StatefulWidget {
 class _ScannerPageState extends State<ScannerPage> {
   final _scanner = BleScanner();
   final _devices = <DiscoveredDevice>[];
-  StreamSubscription<List<DiscoveredDevice>>? _devicesSubscription;
-  StreamSubscription<ScanState>? _scanStateSubscription;
-  ScanState? _scanState;
+  VoidCallback? _devicesUnsubscribe;
+  VoidCallback? _bluetoothStateUnsubscribe;
+  VoidCallback? _isScanningUnsubscribe;
+  BluetoothState? _bluetoothState;
+  bool _isScanning = false;
+  ScanToken? _scanToken;
 
   @override
   void initState() {
     super.initState();
     developer.log('[ScannerPage] Initializing scanner page');
 
-    // Initialize scanner and listen to state changes
+    // Initialize scanner
     _scanner.initialize();
 
-    // Listen to scan state
-    _scanStateSubscription = _scanner.scanState.listen((state) {
+    // Listen to Bluetooth state
+    _bluetoothStateUnsubscribe = _scanner.bluetoothState.subscribe((state) {
       setState(() {
-        _scanState = state;
+        _bluetoothState = state;
       });
 
       // Auto-start scan when ready
-      if (state.canScan && !state.isScanning && _devices.isEmpty) {
+      if (state.canScan && !_isScanning && _devices.isEmpty && _scanToken == null) {
         developer.log('[ScannerPage] Ready to scan, auto-starting');
         _startScan();
       }
     });
 
+    // Listen to scanning state
+    _isScanningUnsubscribe = _scanner.isScanning.subscribe((scanning) {
+      setState(() {
+        _isScanning = scanning;
+      });
+    });
+
     // Listen to discovered devices
-    _devicesSubscription = _scanner.discoveredDevices.listen((devices) {
+    _devicesUnsubscribe = _scanner.devices.subscribe((devices) {
       setState(() {
         _devices.clear();
         _devices.addAll(devices);
@@ -51,26 +60,42 @@ class _ScannerPageState extends State<ScannerPage> {
   @override
   void dispose() {
     developer.log('[ScannerPage] Disposing scanner page');
-    _devicesSubscription?.cancel();
-    _scanStateSubscription?.cancel();
+    if (_scanToken != null) {
+      _scanner.stopScan(_scanToken!);
+    }
+    _devicesUnsubscribe?.call();
+    _bluetoothStateUnsubscribe?.call();
+    _isScanningUnsubscribe?.call();
     _scanner.dispose();
     super.dispose();
   }
 
-  Future<void> _startScan() async {
-    await _scanner.startScan();
+  void _startScan() {
+    _scanToken = _scanner.startScan();
   }
 
   void _stopScan() {
-    _scanner.stopScan();
+    if (_scanToken != null) {
+      _scanner.stopScan(_scanToken!);
+      _scanToken = null;
+    }
+  }
+
+  String _getStatusMessage(BluetoothState? state) {
+    if (state == null) return 'Initializing...';
+    if (!state.isBluetoothOn) return 'Please turn on Bluetooth';
+    if (!state.hasPermission) return 'Bluetooth permissions required';
+    if (!state.isLocationServiceEnabled) return 'Location services required';
+    if (state.canScan && _devices.isEmpty) return 'No devices found yet. Press Scan to start.';
+    return 'Ready to scan';
   }
 
   @override
   Widget build(BuildContext context) {
-    final scanState = _scanState;
-    final isScanning = scanState?.isScanning ?? false;
-    final canScan = scanState?.canScan ?? false;
-    final statusMessage = scanState?.statusMessage ?? 'Initializing...';
+    final bluetoothState = _bluetoothState;
+    final isScanning = _isScanning;
+    final canScan = bluetoothState?.canScan ?? false;
+    final statusMessage = _getStatusMessage(bluetoothState);
 
     return Scaffold(
       appBar: AppBar(
@@ -115,11 +140,13 @@ class _ScannerPageState extends State<ScannerPage> {
                           ),
                           textAlign: TextAlign.center,
                         ),
-                        if (!canScan && scanState?.permissionsGranted == false) ...[
+                        if (!canScan && bluetoothState?.needsPermission == true) ...[
                           const SizedBox(height: 24),
                           ElevatedButton.icon(
-                            onPressed: () async {
-                              await _scanner.checkAndRequestPermissions();
+                            onPressed: () {
+                              // Permissions are checked automatically by the scanner
+                              // Just trigger a state update
+                              setState(() {});
                             },
                             icon: const Icon(Icons.security),
                             label: const Text('Grant Permissions'),
@@ -135,18 +162,20 @@ class _ScannerPageState extends State<ScannerPage> {
                     itemCount: _devices.length,
                     itemBuilder: (context, index) {
                       final device = _devices[index];
+                      final deviceName = device.name ?? '';
+                      final deviceId = device.deviceId;
                       return ListTile(
                         leading: const Icon(Icons.bluetooth),
-                        title: Text(device.name.isEmpty ? 'Unknown Device' : device.name),
-                        subtitle: Text('${device.id}\nRSSI: ${device.rssi}'),
+                        title: Text(deviceName.isEmpty ? 'Unknown Device' : deviceName),
+                        subtitle: Text('$deviceId\nRSSI: ${device.rssi}'),
                         trailing: const Icon(Icons.chevron_right),
                         onTap: () {
                           developer.log(
-                            '[ScannerPage] ✅ Selected device: ${device.name.isEmpty ? "Unknown" : device.name} '
-                            '(ID: ${device.id}, RSSI: ${device.rssi})',
+                            '[ScannerPage] ✅ Selected device: ${deviceName.isEmpty ? "Unknown" : deviceName} '
+                            '(ID: $deviceId, RSSI: ${device.rssi})',
                           );
                           _stopScan();
-                          context.push('/trainer?deviceId=${device.id}&deviceName=${device.name}');
+                          context.push('/trainer?deviceId=$deviceId&deviceName=$deviceName');
                         },
                       );
                     },

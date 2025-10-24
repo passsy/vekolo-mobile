@@ -2,7 +2,6 @@ import 'dart:developer' as developer;
 
 import 'package:context_plus/context_plus.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_blue_plus/flutter_blue_plus.dart' as fbp;
 import 'package:go_router/go_router.dart';
 import 'package:state_beacon/state_beacon.dart';
 import 'package:vekolo/domain/devices/device_manager.dart';
@@ -10,9 +9,9 @@ import 'package:vekolo/domain/devices/fitness_device.dart';
 import 'package:vekolo/domain/models/device_info.dart' as device_info;
 import 'package:vekolo/domain/models/erg_command.dart';
 import 'package:vekolo/domain/protocols/ftms_device.dart';
-import 'package:vekolo/infrastructure/ble/ble_scanner.dart';
+import 'package:vekolo/ble/ble_scanner.dart';
 import 'package:vekolo/state/device_state.dart';
-import 'package:vekolo/utils/ble_permissions.dart';
+import 'package:vekolo/ble/ble_permissions.dart';
 
 /// Page for managing connected fitness devices and assigning them to data sources.
 ///
@@ -873,13 +872,15 @@ class _DevicesPageState extends State<DevicesPage> {
   }
 
   Future<void> _handleDeviceSelected(DiscoveredDevice device) async {
-    developer.log('[DevicesPage] Device selected: ${device.name} (${device.id})');
+    final deviceName = device.name ?? '';
+    final deviceId = device.deviceId;
+    developer.log('[DevicesPage] Device selected: $deviceName ($deviceId)');
 
     try {
       final deviceManager = deviceManagerRef.of(context);
 
       // Create FTMS device from scanned device
-      final newDevice = FtmsDevice(deviceId: device.id, name: device.name.isEmpty ? 'Unknown Device' : device.name);
+      final newDevice = FtmsDevice(deviceId: deviceId, name: deviceName.isEmpty ? 'Unknown Device' : deviceName);
 
       // Add to device manager (or get existing if already exists)
       final ftmsDevice = await deviceManager.addOrGetExistingDevice(newDevice) as FtmsDevice;
@@ -963,8 +964,13 @@ class _BleScanDialog extends StatefulWidget {
 class _BleScanDialogState extends State<_BleScanDialog> {
   late final BleScanner _scanner;
   List<DiscoveredDevice> _devices = [];
-  ScanState? _scanState;
+  BluetoothState? _bluetoothState;
+  bool _isScanning = false;
   bool _isInitialized = false;
+  ScanToken? _scanToken;
+  VoidCallback? _devicesUnsubscribe;
+  VoidCallback? _bluetoothStateUnsubscribe;
+  VoidCallback? _isScanningUnsubscribe;
 
   @override
   void initState() {
@@ -972,11 +978,11 @@ class _BleScanDialogState extends State<_BleScanDialog> {
     _initializeScanner();
   }
 
-  Future<void> _initializeScanner() async {
+  void _initializeScanner() {
     _scanner = BleScanner();
 
     // Listen to discovered devices
-    _scanner.discoveredDevices.listen((devices) {
+    _devicesUnsubscribe = _scanner.devices.subscribe((devices) {
       if (mounted) {
         setState(() {
           _devices = devices;
@@ -984,57 +990,64 @@ class _BleScanDialogState extends State<_BleScanDialog> {
       }
     });
 
-    // Listen to scan state
-    _scanner.scanState.listen((state) {
+    // Listen to Bluetooth state
+    _bluetoothStateUnsubscribe = _scanner.bluetoothState.subscribe((state) {
       if (mounted) {
         setState(() {
-          _scanState = state;
+          _bluetoothState = state;
+        });
+
+        // Auto-start scan if ready
+        if (state.canScan && !_isScanning && _scanToken == null) {
+          _handleScanButtonPressed();
+        }
+      }
+    });
+
+    // Listen to scanning state
+    _isScanningUnsubscribe = _scanner.isScanning.subscribe((scanning) {
+      if (mounted) {
+        setState(() {
+          _isScanning = scanning;
         });
       }
     });
 
-    // Initialize and start scanning
-    await _scanner.initialize();
+    // Initialize scanner
+    _scanner.initialize();
     setState(() {
       _isInitialized = true;
     });
-
-    // Auto-start scan if ready
-    if (_scanner.bleStatus == fbp.BluetoothAdapterState.on && _scanner.permissionsGranted) {
-      await _scanner.startScan();
-    }
   }
 
   @override
   void dispose() {
+    if (_scanToken != null) {
+      _scanner.stopScan(_scanToken!);
+    }
+    _devicesUnsubscribe?.call();
+    _bluetoothStateUnsubscribe?.call();
+    _isScanningUnsubscribe?.call();
     _scanner.dispose();
     super.dispose();
   }
 
-  Future<void> _handleScanButtonPressed() async {
-    if (_scanner.isScanning) {
-      _scanner.stopScan();
-    } else {
-      final result = await _scanner.startScan();
-      if (!result.success && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(result.errorMessage ?? 'Failed to start scan'),
-            backgroundColor: Colors.red,
-            action: result.permanentlyDenied
-                ? SnackBarAction(label: 'Settings', onPressed: () => _scanner.openSettings())
-                : null,
-          ),
-        );
+  void _handleScanButtonPressed() {
+    if (_isScanning) {
+      if (_scanToken != null) {
+        _scanner.stopScan(_scanToken!);
+        _scanToken = null;
       }
+    } else {
+      _scanToken = _scanner.startScan();
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final canScan = _scanState?.canScan ?? false;
-    final isScanning = _scanner.isScanning;
-    final statusMessage = _scanState?.statusMessage ?? 'Initializing...';
+    final canScan = _bluetoothState?.canScan ?? false;
+    final isScanning = _isScanning;
+    final statusMessage = _getStatusMessage(_bluetoothState);
 
     return AlertDialog(
       title: const Text('Scan for Devices'),
@@ -1072,24 +1085,25 @@ class _BleScanDialogState extends State<_BleScanDialog> {
                             isScanning ? 'Searching for devices...' : 'No devices found',
                             style: TextStyle(fontSize: 16, color: canScan ? Colors.grey[600] : Colors.red[400]),
                           ),
-                          if (!canScan && _scanState != null) ...[
+                          if (!canScan && _bluetoothState != null) ...[
                             const SizedBox(height: 16),
-                            if (!_scanState!.permissionsGranted)
+                            if (_bluetoothState!.needsPermission)
                               ElevatedButton.icon(
                                 onPressed: () async {
                                   final messenger = ScaffoldMessenger.of(context);
-                                  final granted = await _scanner.checkAndRequestPermissions();
+                                  final permissions = BlePermissionsImpl();
+                                  final granted = await permissions.request();
                                   if (granted && mounted) {
-                                    await _scanner.startScan();
+                                    _handleScanButtonPressed();
                                   } else {
-                                    final permanentlyDenied = await BlePermissions.isAnyPermissionPermanentlyDenied();
+                                    final permanentlyDenied = await permissions.isPermanentlyDenied();
                                     if (permanentlyDenied && mounted) {
                                       messenger.showSnackBar(
                                         SnackBar(
                                           content: const Text('Please enable permissions in app settings'),
                                           action: SnackBarAction(
                                             label: 'Settings',
-                                            onPressed: () => _scanner.openSettings(),
+                                            onPressed: () => permissions.openSettings(),
                                           ),
                                         ),
                                       );
@@ -1099,7 +1113,7 @@ class _BleScanDialogState extends State<_BleScanDialog> {
                                 icon: const Icon(Icons.security),
                                 label: const Text('Grant Permissions'),
                               )
-                            else if (_scanState!.bleStatus == fbp.BluetoothAdapterState.off)
+                            else if (!_bluetoothState!.isBluetoothOn)
                               const Text('Please turn on Bluetooth', style: TextStyle(color: Colors.red)),
                           ],
                         ],
@@ -1109,10 +1123,11 @@ class _BleScanDialogState extends State<_BleScanDialog> {
                       itemCount: _devices.length,
                       itemBuilder: (context, index) {
                         final device = _devices[index];
+                        final deviceName = device.name ?? '';
                         return ListTile(
                           leading: const Icon(Icons.bluetooth),
-                          title: Text(device.name.isEmpty ? 'Unknown Device' : device.name),
-                          subtitle: Text('${device.id}\nRSSI: ${device.rssi}'),
+                          title: Text(deviceName.isEmpty ? 'Unknown Device' : deviceName),
+                          subtitle: Text('${device.deviceId}\nRSSI: ${device.rssi}'),
                           trailing: const Icon(Icons.arrow_forward),
                           onTap: () => widget.onDeviceSelected(device),
                         );
@@ -1124,5 +1139,14 @@ class _BleScanDialogState extends State<_BleScanDialog> {
       ),
       actions: [TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Close'))],
     );
+  }
+
+  String _getStatusMessage(BluetoothState? state) {
+    if (state == null) return 'Initializing...';
+    if (!state.isBluetoothOn) return 'Bluetooth is off';
+    if (!state.hasPermission) return 'Bluetooth permissions required';
+    if (!state.isLocationServiceEnabled) return 'Location services required';
+    if (_isScanning) return 'Scanning for devices...';
+    return 'Ready to scan';
   }
 }
