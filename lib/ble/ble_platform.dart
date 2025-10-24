@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:state_beacon/state_beacon.dart';
 
@@ -95,6 +97,8 @@ abstract class BlePlatform {
 class BlePlatformImpl implements BlePlatform {
   late final WritableBeacon<BluetoothAdapterState> _adapterStateBeacon;
   late final WritableBeacon<List<ScanResult>> _scanResultsBeacon;
+  StreamSubscription<BluetoothAdapterState>? _adapterStateSubscription;
+  StreamSubscription<List<ScanResult>>? _scanResultsSubscription;
 
   BlePlatformImpl() {
     // Create beacons that wrap FlutterBluePlus streams
@@ -102,11 +106,11 @@ class BlePlatformImpl implements BlePlatform {
     _scanResultsBeacon = Beacon.writable(<ScanResult>[]);
 
     // Subscribe to FlutterBluePlus streams and update beacons
-    FlutterBluePlus.adapterState.listen((state) {
+    _adapterStateSubscription = FlutterBluePlus.adapterState.listen((state) {
       _adapterStateBeacon.value = state;
     });
 
-    FlutterBluePlus.scanResults.listen((results) {
+    _scanResultsSubscription = FlutterBluePlus.scanResults.listen((results) {
       _scanResultsBeacon.value = results;
     });
   }
@@ -134,6 +138,8 @@ class BlePlatformImpl implements BlePlatform {
 
   @override
   void dispose() {
+    _adapterStateSubscription?.cancel();
+    _scanResultsSubscription?.cancel();
     _adapterStateBeacon.dispose();
     _scanResultsBeacon.dispose();
   }
