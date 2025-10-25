@@ -30,6 +30,7 @@ class _ScannerPageState extends State<ScannerPage> {
 
     // Listen to Bluetooth state
     _bluetoothStateUnsubscribe = _scanner.bluetoothState.subscribe((state) {
+      if (!mounted) return;
       setState(() {
         _bluetoothState = state;
       });
@@ -43,6 +44,7 @@ class _ScannerPageState extends State<ScannerPage> {
 
     // Listen to scanning state
     _isScanningUnsubscribe = _scanner.isScanning.subscribe((scanning) {
+      if (!mounted) return;
       setState(() {
         _isScanning = scanning;
       });
@@ -50,8 +52,12 @@ class _ScannerPageState extends State<ScannerPage> {
 
     // Listen to discovered devices
     _devicesUnsubscribe = _scanner.devices.subscribe((devices) {
+      if (!mounted) return;
       setState(() {
-        if (devices.isEmpty && !_isScanning) {
+        // Check scanner's current scanning state, not our local state
+        // to avoid race conditions between beacon updates
+        final isCurrentlyScanning = _scanner.isScanning.value;
+        if (devices.isEmpty && !isCurrentlyScanning) {
           // Scanner stopped - keep existing devices, we'll show them with unknown RSSI
           return;
         }
