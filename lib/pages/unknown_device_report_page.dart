@@ -28,6 +28,10 @@ class _SimpleDevice {
   });
 }
 
+/// Collects device BLE data and generates email report for support.
+///
+/// Scans for all Bluetooth devices (no filter), connects to selected device,
+/// reads services/characteristics, then opens email client with formatted report.
 class UnknownDeviceReportPage extends StatefulWidget {
   const UnknownDeviceReportPage({super.key});
 
