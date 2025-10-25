@@ -245,5 +245,6 @@ void main() {
       scanner.dispose();
       platform.dispose();
     });
+
   });
 }

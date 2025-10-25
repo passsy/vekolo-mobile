@@ -50,6 +50,16 @@ class DiscoveredDevice {
   /// List of service UUIDs advertised by this device.
   List<Guid> get serviceUuids => scanResult.advertisementData.serviceUuids;
 
+  /// Check if device has recent signal (seen within the last few seconds).
+  ///
+  /// Devices without recent signal are shown as "No signal" in the UI
+  /// but remain in the list until completely expired (30s).
+  bool hasRecentSignal([DateTime? now]) {
+    final currentTime = now ?? clock.now();
+    final timeSinceLastSeen = currentTime.difference(lastSeen);
+    return timeSinceLastSeen < const Duration(seconds: 5);
+  }
+
   /// Create a copy with updated lastSeen timestamp.
   DiscoveredDevice copyWithLastSeen(DateTime newLastSeen) {
     return DiscoveredDevice(
@@ -351,10 +361,13 @@ class BleScanner with WidgetsBindingObserver {
     await _updateBluetoothState();
   }
 
-  /// Remove devices that haven't been seen in 5 seconds.
+  /// Remove devices that haven't been seen in 30 seconds.
+  ///
+  /// Devices remain visible in the UI but show "no signal" status
+  /// until they are completely removed after 30 seconds of inactivity.
   void _removeExpiredDevices() {
     final now = clock.now();
-    final expiryThreshold = const Duration(seconds: 5);
+    final expiryThreshold = const Duration(seconds: 30);
 
     final expiredIds = _discoveredDevices.entries
         .where((entry) => now.difference(entry.value.lastSeen) > expiryThreshold)

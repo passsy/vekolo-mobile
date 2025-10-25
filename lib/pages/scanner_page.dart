@@ -194,22 +194,27 @@ class _ScannerPageState extends State<ScannerPage> {
                       final device = _devices[index];
                       final deviceName = device.name ?? '';
                       final deviceId = device.deviceId;
-                      final rssiText = _isScanning ? '${device.rssi}' : 'Unknown';
+                      final hasSignal = device.hasRecentSignal();
+                      final rssiText = _isScanning && hasSignal
+                          ? '${device.rssi}'
+                          : (_isScanning ? 'No signal' : 'Unknown');
+                      final isActive = _isScanning && hasSignal;
+
                       return ListTile(
                         leading: Icon(
                           Icons.bluetooth,
-                          color: _isScanning ? null : Colors.grey,
+                          color: isActive ? null : Colors.grey,
                         ),
                         title: Text(
                           deviceName.isEmpty ? 'Unknown Device' : deviceName,
                           style: TextStyle(
-                            color: _isScanning ? null : Colors.grey[700],
+                            color: isActive ? null : Colors.grey[700],
                           ),
                         ),
                         subtitle: Text(
                           '$deviceId\nRSSI: $rssiText',
                           style: TextStyle(
-                            color: _isScanning ? null : Colors.grey[600],
+                            color: isActive ? null : Colors.grey[600],
                           ),
                         ),
                         trailing: const Icon(Icons.chevron_right),

@@ -11,6 +11,81 @@ void main() {
   // Ensure Flutter binding is initialized for WidgetsBindingObserver
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  group('DiscoveredDevice - Signal Status', () {
+    test('hasRecentSignal returns true for devices seen within 5 seconds', () {
+      final device = DiscoveredDevice(
+        scanResult: ScanResult(
+          device: BluetoothDevice(remoteId: const DeviceIdentifier('00:11:22:33:44:55')),
+          advertisementData: AdvertisementData(
+            advName: 'Test Device',
+            txPowerLevel: null,
+            appearance: null,
+            connectable: true,
+            manufacturerData: {},
+            serviceData: {},
+            serviceUuids: [],
+          ),
+          rssi: -50,
+          timeStamp: DateTime.now(),
+        ),
+        firstSeen: DateTime(2025, 1, 1, 12, 0, 0),
+        lastSeen: DateTime(2025, 1, 1, 12, 0, 3), // 3 seconds ago
+      );
+
+      final now = DateTime(2025, 1, 1, 12, 0, 6);
+      expect(device.hasRecentSignal(now), isTrue);
+    });
+
+    test('hasRecentSignal returns false for devices not seen for >5 seconds', () {
+      final device = DiscoveredDevice(
+        scanResult: ScanResult(
+          device: BluetoothDevice(remoteId: const DeviceIdentifier('00:11:22:33:44:55')),
+          advertisementData: AdvertisementData(
+            advName: 'Test Device',
+            txPowerLevel: null,
+            appearance: null,
+            connectable: true,
+            manufacturerData: {},
+            serviceData: {},
+            serviceUuids: [],
+          ),
+          rssi: -50,
+          timeStamp: DateTime.now(),
+        ),
+        firstSeen: DateTime(2025, 1, 1, 12, 0, 0),
+        lastSeen: DateTime(2025, 1, 1, 12, 0, 0), // 10 seconds ago
+      );
+
+      final now = DateTime(2025, 1, 1, 12, 0, 10);
+      expect(device.hasRecentSignal(now), isFalse);
+    });
+
+    test('hasRecentSignal uses clock.now() when now parameter not provided', () {
+      withClock(Clock.fixed(DateTime(2025, 1, 1, 12, 0, 10)), () {
+        final device = DiscoveredDevice(
+          scanResult: ScanResult(
+            device: BluetoothDevice(remoteId: const DeviceIdentifier('00:11:22:33:44:55')),
+            advertisementData: AdvertisementData(
+              advName: 'Test Device',
+              txPowerLevel: null,
+              appearance: null,
+              connectable: true,
+              manufacturerData: {},
+              serviceData: {},
+              serviceUuids: [],
+            ),
+            rssi: -50,
+            timeStamp: DateTime.now(),
+          ),
+          firstSeen: DateTime(2025, 1, 1, 12, 0, 0),
+          lastSeen: DateTime(2025, 1, 1, 12, 0, 8), // 2 seconds ago from fixed clock
+        );
+
+        expect(device.hasRecentSignal(), isTrue);
+      });
+    });
+  });
+
   group('BleScanner - Token Management', () {
     BleScanner createScanner({
       FakeBlePlatform? platform,
