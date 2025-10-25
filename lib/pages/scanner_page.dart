@@ -194,11 +194,11 @@ class _ScannerPageState extends State<ScannerPage> {
                       final device = _devices[index];
                       final deviceName = device.name ?? '';
                       final deviceId = device.deviceId;
-                      final hasSignal = device.hasRecentSignal();
-                      final rssiText = _isScanning && hasSignal
-                          ? '${device.rssi}'
-                          : (_isScanning ? 'No signal' : 'Unknown');
-                      final isActive = _isScanning && hasSignal;
+                      final rssi = device.rssi;
+                      final rssiText = _isScanning
+                          ? (rssi != null ? '$rssi' : 'No signal')
+                          : 'Unknown';
+                      final isActive = _isScanning && rssi != null;
 
                       return ListTile(
                         leading: Icon(
@@ -221,7 +221,7 @@ class _ScannerPageState extends State<ScannerPage> {
                         onTap: () {
                           developer.log(
                             '[ScannerPage] ✅ Selected device: ${deviceName.isEmpty ? "Unknown" : deviceName} '
-                            '(ID: $deviceId, RSSI: ${device.rssi})',
+                            '(ID: $deviceId, RSSI: ${rssi ?? "unknown"})',
                           );
                           _stopScan();
                           context.push('/trainer?deviceId=$deviceId&deviceName=$deviceName');

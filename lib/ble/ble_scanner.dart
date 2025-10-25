@@ -45,7 +45,15 @@ class DiscoveredDevice {
   String? get name => scanResult.advertisementData.advName;
 
   /// Signal strength indicator (more negative = weaker signal).
-  int get rssi => scanResult.rssi;
+  ///
+  /// Returns null if device hasn't been seen recently (>5 seconds),
+  /// indicating the RSSI value is stale and shouldn't be used.
+  int? get rssi {
+    if (hasRecentSignal()) {
+      return scanResult.rssi;
+    }
+    return null;
+  }
 
   /// List of service UUIDs advertised by this device.
   List<Guid> get serviceUuids => scanResult.advertisementData.serviceUuids;

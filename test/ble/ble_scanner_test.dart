@@ -84,6 +84,59 @@ void main() {
         expect(device.hasRecentSignal(), isTrue);
       });
     });
+
+    test('rssi returns value when device has recent signal', () {
+      final device = DiscoveredDevice(
+        scanResult: ScanResult(
+          device: BluetoothDevice(remoteId: const DeviceIdentifier('00:11:22:33:44:55')),
+          advertisementData: AdvertisementData(
+            advName: 'Test Device',
+            txPowerLevel: null,
+            appearance: null,
+            connectable: true,
+            manufacturerData: {},
+            serviceData: {},
+            serviceUuids: [],
+          ),
+          rssi: -50,
+          timeStamp: DateTime.now(),
+        ),
+        firstSeen: DateTime(2025, 1, 1, 12, 0, 0),
+        lastSeen: DateTime(2025, 1, 1, 12, 0, 3), // 3 seconds ago
+      );
+
+      final now = DateTime(2025, 1, 1, 12, 0, 6);
+      // hasRecentSignal needs to be called with the same 'now' that rssi getter will use
+      withClock(Clock.fixed(now), () {
+        expect(device.rssi, equals(-50));
+      });
+    });
+
+    test('rssi returns null when device has no recent signal', () {
+      final device = DiscoveredDevice(
+        scanResult: ScanResult(
+          device: BluetoothDevice(remoteId: const DeviceIdentifier('00:11:22:33:44:55')),
+          advertisementData: AdvertisementData(
+            advName: 'Test Device',
+            txPowerLevel: null,
+            appearance: null,
+            connectable: true,
+            manufacturerData: {},
+            serviceData: {},
+            serviceUuids: [],
+          ),
+          rssi: -50,
+          timeStamp: DateTime.now(),
+        ),
+        firstSeen: DateTime(2025, 1, 1, 12, 0, 0),
+        lastSeen: DateTime(2025, 1, 1, 12, 0, 0), // 10 seconds ago
+      );
+
+      final now = DateTime(2025, 1, 1, 12, 0, 10);
+      withClock(Clock.fixed(now), () {
+        expect(device.rssi, isNull);
+      });
+    });
   });
 
   group('BleScanner - Token Management', () {
