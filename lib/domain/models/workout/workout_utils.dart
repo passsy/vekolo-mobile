@@ -51,14 +51,17 @@ List<dynamic> flattenWorkoutPlan(
         ),
       );
     } else if (item is WorkoutInterval) {
-      List.generate(item.repeat, (_) {
-        item.parts.forEach(processItem);
-        return null;
-      });
+      for (var i = 0; i < item.repeat; i++) {
+        for (final part in item.parts) {
+          processItem(part);
+        }
+      }
     }
   }
 
-  plan.forEach(processItem);
+  for (final item in plan) {
+    processItem(item);
+  }
 
   return flattened;
 }
@@ -138,7 +141,7 @@ List<dynamic> flattenWorkoutEvents(
   final blockStartTimes = <String, int>{};
   var cumulativeTime = 0;
 
-  plan.forEach((planItem) {
+  for (final planItem in plan) {
     if (planItem is PowerBlock) {
       blockStartTimes[planItem.id] = cumulativeTime;
       cumulativeTime += planItem.duration;
@@ -150,7 +153,7 @@ List<dynamic> flattenWorkoutEvents(
       final intervalDuration = calculateBlockDuration(planItem);
       cumulativeTime += intervalDuration;
     }
-  });
+  }
 
   // Flatten events by adding block start time to relative offset
   final flattenedEvents = events.where((event) {
@@ -348,11 +351,15 @@ int? calculateCadenceAtTime(dynamic block, int elapsedTime) {
       maxPower = maxPower > item.powerStart ? maxPower : item.powerStart;
       maxPower = maxPower > item.powerEnd ? maxPower : item.powerEnd;
     } else if (item is WorkoutInterval) {
-      item.parts.forEach(processItem);
+      for (final part in item.parts) {
+        processItem(part);
+      }
     }
   }
 
-  plan.forEach(processItem);
+  for (final item in plan) {
+    processItem(item);
+  }
 
   return (
     minPower: minPower.isInfinite ? 0.0 : minPower,
@@ -396,11 +403,15 @@ int? calculateCadenceAtTime(dynamic block, int elapsedTime) {
         maxCadence = maxCadence > item.cadenceHigh! ? maxCadence : item.cadenceHigh!.toDouble();
       }
     } else if (item is WorkoutInterval) {
-      item.parts.forEach(processItem);
+      for (final part in item.parts) {
+        processItem(part);
+      }
     }
   }
 
-  plan.forEach(processItem);
+  for (final item in plan) {
+    processItem(item);
+  }
 
   return (
     minCadence: minCadence.isInfinite ? 0 : minCadence.round(),
