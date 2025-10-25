@@ -5,6 +5,10 @@ import 'package:vekolo/ble/ble_scanner.dart';
 import 'package:vekolo/config/ble_config.dart';
 import 'dart:developer' as developer;
 
+/// BLE device scanner with auto-start when Bluetooth is ready.
+///
+/// Keeps discovered devices visible after scan stops.
+/// Navigates to TrainerPage on device selection.
 class ScannerPage extends StatefulWidget {
   const ScannerPage({super.key});
 

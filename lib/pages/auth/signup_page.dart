@@ -6,6 +6,9 @@ import 'package:vekolo/config/api_config.dart';
 import 'package:vekolo/utils/device_info.dart';
 import 'package:vekolo/utils/dio_error_handler.dart';
 
+/// Account creation with email, profile details, and code verification.
+///
+/// Redirects to home after successful signup.
 class SignupPage extends StatefulWidget {
   const SignupPage({super.key});
 

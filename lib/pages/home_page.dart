@@ -5,6 +5,9 @@ import 'package:state_beacon/state_beacon.dart';
 import 'package:vekolo/config/api_config.dart';
 import 'package:vekolo/widgets/user_avatar.dart';
 
+/// Entry point after app startup.
+///
+/// Shows login/signup buttons for unauthenticated users.
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
 

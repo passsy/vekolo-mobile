@@ -7,6 +7,9 @@ import 'package:vekolo/config/api_config.dart';
 import 'package:vekolo/utils/device_info.dart';
 import 'package:vekolo/utils/dio_error_handler.dart';
 
+/// Two-step authentication flow: email input, then code verification.
+///
+/// Redirects to home after successful login.
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 

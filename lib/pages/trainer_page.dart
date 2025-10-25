@@ -6,6 +6,10 @@ import 'package:go_router/go_router.dart';
 import 'package:vekolo/services/ble_manager.dart';
 import 'dart:developer' as developer;
 
+/// Live trainer control with manual power target adjustment.
+///
+/// Connects to device on init, disconnects on dispose.
+/// Auto-navigates home when connection is lost.
 class TrainerPage extends StatefulWidget {
   final String deviceId;
   final String deviceName;

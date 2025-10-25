@@ -7,6 +7,9 @@ import 'package:vekolo/config/api_config.dart';
 import 'package:vekolo/utils/dio_error_handler.dart';
 import 'package:vekolo/widgets/user_avatar.dart';
 
+/// User profile with editable FTP and weight.
+///
+/// Only sends changed fields to the server on save.
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
 
