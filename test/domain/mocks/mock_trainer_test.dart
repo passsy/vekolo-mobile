@@ -5,17 +5,14 @@ import 'package:vekolo/domain/models/fitness_data.dart';
 
 void main() {
   group('MockTrainer', () {
-    late MockTrainer trainer;
-
-    setUp(() {
-      trainer = MockTrainer(id: 'test-001', name: 'Test Trainer');
-    });
-
-    tearDown(() {
-      trainer.dispose();
-    });
+    MockTrainer createTrainer() {
+      final trainer = MockTrainer(id: 'test-001', name: 'Test Trainer');
+      addTearDown(() => trainer.dispose());
+      return trainer;
+    }
 
     test('has correct identity properties', () {
+      final trainer = createTrainer();
       expect(trainer.id, 'test-001');
       expect(trainer.name, 'Test Trainer');
       expect(trainer.type, DeviceType.trainer);
@@ -23,10 +20,14 @@ void main() {
     });
 
     test('supports ERG mode', () {
+      final trainer = createTrainer();
+
       expect(trainer.supportsErgMode, true);
     });
 
     test('starts disconnected', () async {
+      final trainer = createTrainer();
+
       final states = <ConnectionState>[];
       final subscription = trainer.connectionState.listen(states.add);
 
@@ -37,6 +38,8 @@ void main() {
     });
 
     test('connects successfully', () async {
+      final trainer = createTrainer();
+
       final states = <ConnectionState>[];
       final subscription = trainer.connectionState.listen(states.add);
 
@@ -51,6 +54,8 @@ void main() {
     });
 
     test('disconnects successfully', () async {
+      final trainer = createTrainer();
+
       await trainer.connect().value;
 
       final states = <ConnectionState>[];
@@ -64,22 +69,30 @@ void main() {
     });
 
     test('setTargetPower fails when disconnected', () {
+      final trainer = createTrainer();
+
       expect(() => trainer.setTargetPower(200), throwsA(isA<StateError>()));
     });
 
     test('setTargetPower rejects negative power', () async {
+      final trainer = createTrainer();
+
       await trainer.connect().value;
 
       expect(() => trainer.setTargetPower(-50), throwsA(isA<ArgumentError>()));
     });
 
     test('setTargetPower rejects excessive power', () async {
+      final trainer = createTrainer();
+
       await trainer.connect().value;
 
       expect(() => trainer.setTargetPower(2000), throwsA(isA<ArgumentError>()));
     });
 
     test('emits power data when target is set', () async {
+      final trainer = createTrainer();
+
       await trainer.connect().value;
 
       final powerData = <PowerData>[];
@@ -97,6 +110,8 @@ void main() {
     });
 
     test('power ramps gradually to target', () async {
+      final trainer = createTrainer();
+
       await trainer.connect().value;
 
       final powerData = <PowerData>[];
@@ -120,6 +135,8 @@ void main() {
     });
 
     test('emits cadence data when connected', () async {
+      final trainer = createTrainer();
+
       await trainer.connect().value;
 
       final cadenceData = <CadenceData>[];
@@ -137,6 +154,8 @@ void main() {
     });
 
     test('cadence correlates with power', () async {
+      final trainer = createTrainer();
+
       await trainer.connect().value;
 
       final cadenceData = <CadenceData>[];
@@ -159,6 +178,8 @@ void main() {
     });
 
     test('power stops when disconnected', () async {
+      final trainer = createTrainer();
+
       await trainer.connect().value;
 
       final powerData = <PowerData>[];
@@ -179,6 +200,8 @@ void main() {
     });
 
     test('can reconnect after disconnect', () async {
+      final trainer = createTrainer();
+
       await trainer.connect().value;
       await trainer.disconnect();
 
@@ -196,6 +219,8 @@ void main() {
     });
 
     test('configurable continuous refresh requirement', () {
+      final trainer = createTrainer();
+
       final refreshTrainer = MockTrainer(
         id: 'test-002',
         name: 'Refresh Trainer',
@@ -210,6 +235,8 @@ void main() {
     });
 
     test('dispose prevents further operations', () async {
+      final trainer = createTrainer();
+
       await trainer.connect().value;
       trainer.dispose();
 
