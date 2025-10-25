@@ -40,13 +40,6 @@ class _DevicesPageState extends State<DevicesPage> {
   bool _isConnecting = false;
   String? _connectingDeviceId;
   double _targetPower = 100.0;
-  BleScanner? _bleScanner;
-
-  @override
-  void dispose() {
-    _bleScanner?.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {

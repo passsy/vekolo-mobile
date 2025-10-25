@@ -5,7 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:vekolo/api/pretty_log_interceptor.dart';
 import 'package:vekolo/api/vekolo_api_client.dart';
+import 'package:vekolo/ble/ble_scanner.dart';
 import 'package:vekolo/config/api_config.dart';
+import 'package:vekolo/config/ble_config.dart';
 import 'package:vekolo/domain/devices/device_manager.dart';
 import 'package:vekolo/app/router.dart';
 import 'package:vekolo/services/auth_service.dart';
@@ -74,8 +76,15 @@ class _VekoloAppState extends State<VekoloApp> {
             ),
           );
 
-          // Initialize DeviceManager
+          // Initialize BLE services
+          bleScannerRef.bindLazy(context, () {
+            final scanner = BleScanner();
+            scanner.initialize();
+            return scanner;
+          });
           bleManagerRef.bindLazy(context, () => BleManager());
+
+          // Initialize DeviceManager
           deviceManagerRef.bindLazy(context, () => DeviceManager());
 
           // Initialize WorkoutSyncService with DeviceManager dependency

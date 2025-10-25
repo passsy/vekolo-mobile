@@ -1,6 +1,8 @@
+import 'package:context_plus/context_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:vekolo/ble/ble_scanner.dart';
+import 'package:vekolo/config/ble_config.dart';
 import 'dart:developer' as developer;
 
 class ScannerPage extends StatefulWidget {
@@ -11,7 +13,7 @@ class ScannerPage extends StatefulWidget {
 }
 
 class _ScannerPageState extends State<ScannerPage> {
-  final _scanner = BleScanner();
+  late final BleScanner _scanner;
   final _devices = <DiscoveredDevice>[];
   VoidCallback? _devicesUnsubscribe;
   VoidCallback? _bluetoothStateUnsubscribe;
@@ -21,13 +23,25 @@ class _ScannerPageState extends State<ScannerPage> {
   ScanToken? _scanToken;
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Get scanner from dependency injection
+    _scanner = bleScannerRef.of(context);
+  }
+
+  @override
   void initState() {
     super.initState();
     developer.log('[ScannerPage] Initializing scanner page');
 
-    // Initialize scanner
-    _scanner.initialize();
+    // Note: _scanner will be initialized in didChangeDependencies
+    // We set up listeners in a post-frame callback to ensure _scanner is ready
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _setupListeners();
+    });
+  }
 
+  void _setupListeners() {
     // Listen to Bluetooth state
     _bluetoothStateUnsubscribe = _scanner.bluetoothState.subscribe((state) {
       if (!mounted) return;
@@ -76,7 +90,7 @@ class _ScannerPageState extends State<ScannerPage> {
     _devicesUnsubscribe?.call();
     _bluetoothStateUnsubscribe?.call();
     _isScanningUnsubscribe?.call();
-    _scanner.dispose();
+    // Don't dispose scanner - it's managed by the app's dependency injection
     super.dispose();
   }
 
