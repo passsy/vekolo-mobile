@@ -45,9 +45,10 @@ class SecureTokenStorage extends TokenStorage<VekoloToken> {
 /// Service for managing authentication state and secure token storage
 class AuthService {
   AuthService({required this.fresh, required VekoloApiClient Function() this.apiClient})
-      : authenticationStatus = Beacon.streamRaw(
-          () => fresh.authenticationStatus,
-        );
+    : authenticationStatus = Beacon.streamRaw(
+        () => fresh.authenticationStatus,
+        initialValue: AuthenticationStatus.initial,
+      );
 
   final Fresh<VekoloToken> fresh;
 

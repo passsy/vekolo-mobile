@@ -53,8 +53,8 @@ class _ScannerPageState extends State<ScannerPage> {
         _bluetoothState = state;
       });
 
-      // Auto-start scan when ready
-      if (state.canScan && !_isScanning && _devices.isEmpty && _scanToken == null) {
+      // Auto-start scan when ready (even if we have old devices from previous session)
+      if (state.canScan && !_isScanning && _scanToken == null) {
         developer.log('[ScannerPage] Ready to scan, auto-starting');
         _startScan();
       }
