@@ -98,8 +98,8 @@ class Rekord {
   static Map<String, Object?> _processMap(Map data) {
     return SplayTreeMap<String, Object?>.fromIterable(
       data.entries,
-      key: (entry) => entry.key as String,
-      value: (entry) => _processValue(entry.value),
+      key: (entry) => (entry as dynamic).key as String,
+      value: (entry) => _processValue((entry as dynamic).value),
     );
   }
 

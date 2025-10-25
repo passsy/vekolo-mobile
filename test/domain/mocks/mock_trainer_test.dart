@@ -219,7 +219,7 @@ void main() {
     });
 
     test('configurable continuous refresh requirement', () {
-      final trainer = createTrainer();
+      createTrainer();
 
       final refreshTrainer = MockTrainer(
         id: 'test-002',

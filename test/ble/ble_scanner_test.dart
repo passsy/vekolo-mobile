@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'package:clock/clock.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart' hide BluetoothState;
@@ -28,7 +27,7 @@ void main() {
           rssi: -50,
           timeStamp: clock.now(),
         ),
-        firstSeen: DateTime(2025, 1, 1, 12, 0, 0),
+        firstSeen: DateTime(2025, 1, 1, 12),
         lastSeen: DateTime(2025, 1, 1, 12, 0, 3),
         rssi: -50,
       );
@@ -52,8 +51,8 @@ void main() {
           rssi: -50,
           timeStamp: clock.now(),
         ),
-        firstSeen: DateTime(2025, 1, 1, 12, 0, 0),
-        lastSeen: DateTime(2025, 1, 1, 12, 0, 0),
+        firstSeen: DateTime(2025, 1, 1, 12),
+        lastSeen: DateTime(2025, 1, 1, 12),
         rssi: null,
       );
 
@@ -76,7 +75,7 @@ void main() {
           rssi: -50,
           timeStamp: clock.now(),
         ),
-        firstSeen: DateTime(2025, 1, 1, 12, 0, 0),
+        firstSeen: DateTime(2025, 1, 1, 12),
         lastSeen: DateTime(2025, 1, 1, 12, 0, 3),
         rssi: -50,
       );
@@ -935,7 +934,7 @@ void main() {
 
     test('lifecycle changes after dispose are ignored', () async {
       final scanner = createScanner();
-      final token = scanner.startScan();
+      scanner.startScan();
       await Future.delayed(const Duration(milliseconds: 100));
 
       scanner.dispose();
@@ -1373,18 +1372,18 @@ void main() {
           serviceUuids: [],
         ),
         rssi: -60,
-        timeStamp: DateTime(2024, 1, 1, 12, 0, 0),
+        timeStamp: DateTime(2024, 1, 1, 12),
       );
 
       final device = DiscoveredDevice(
         scanResult: scanResult,
-        firstSeen: DateTime(2024, 1, 1, 12, 0, 0),
-        lastSeen: DateTime(2024, 1, 1, 12, 0, 0),
+        firstSeen: DateTime(2024, 1, 1, 12),
+        lastSeen: DateTime(2024, 1, 1, 12),
         rssi: -60,
       );
 
-      expect(device.firstSeen, DateTime(2024, 1, 1, 12, 0, 0));
-      expect(device.lastSeen, DateTime(2024, 1, 1, 12, 0, 0));
+      expect(device.firstSeen, DateTime(2024, 1, 1, 12));
+      expect(device.lastSeen, DateTime(2024, 1, 1, 12));
       expect(device.rssi, -60);
     });
 
@@ -1401,7 +1400,7 @@ void main() {
           serviceUuids: [],
         ),
         rssi: -60,
-        timeStamp: DateTime(2024, 1, 1, 12, 0, 0),
+        timeStamp: DateTime(2024, 1, 1, 12),
       );
 
       final scanResult2 = ScanResult(
@@ -1421,14 +1420,14 @@ void main() {
 
       final device = DiscoveredDevice(
         scanResult: scanResult1,
-        firstSeen: DateTime(2024, 1, 1, 12, 0, 0),
-        lastSeen: DateTime(2024, 1, 1, 12, 0, 0),
+        firstSeen: DateTime(2024, 1, 1, 12),
+        lastSeen: DateTime(2024, 1, 1, 12),
         rssi: -60,
       );
 
       final updated = device.copyWithScanResult(scanResult2, DateTime(2024, 1, 1, 12, 0, 5));
 
-      expect(updated.firstSeen, DateTime(2024, 1, 1, 12, 0, 0));
+      expect(updated.firstSeen, DateTime(2024, 1, 1, 12));
       expect(updated.lastSeen, DateTime(2024, 1, 1, 12, 0, 5));
       expect(updated.scanResult, same(scanResult2));
       expect(updated.rssi, -50); // Updates to new scan result's RSSI

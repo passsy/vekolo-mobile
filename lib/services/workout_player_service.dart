@@ -113,7 +113,7 @@ class WorkoutPlayerService {
   // Flattened Workout Data
   // ==========================================================================
 
-  List<dynamic> _flattenedPlan; // List of PowerBlock or RampBlock
+  final List<dynamic> _flattenedPlan; // List of PowerBlock or RampBlock
   final List<dynamic> _flattenedEvents; // List of FlattenedMessageEvent or FlattenedEffectEvent
   final int _totalDuration;
 

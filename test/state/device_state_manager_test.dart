@@ -20,7 +20,7 @@ void main() {
 
     test('initializes all beacons with empty/null values', () {
       final deviceManager = createDeviceManager();
-      final stateManager = createStateManager(deviceManager);
+      createStateManager(deviceManager);
       expect(connectedDevicesBeacon.value, isEmpty);
       expect(primaryTrainerBeacon.value, isNull);
       expect(powerSourceBeacon.value, isNull);
@@ -33,7 +33,7 @@ void main() {
 
     test('updates connectedDevicesBeacon when device is added', () async {
       final deviceManager = createDeviceManager();
-      final stateManager = createStateManager(deviceManager);
+      createStateManager(deviceManager);
       final trainer = DeviceSimulator.createRealisticTrainer(name: 'Test Trainer');
 
       await deviceManager.addDevice(trainer);
@@ -47,7 +47,7 @@ void main() {
 
     test('updates primaryTrainerBeacon when trainer is assigned', () async {
       final deviceManager = createDeviceManager();
-      final stateManager = createStateManager(deviceManager);
+      createStateManager(deviceManager);
       final trainer = DeviceSimulator.createRealisticTrainer(name: 'Test Trainer');
 
       await deviceManager.addDevice(trainer);
@@ -62,7 +62,7 @@ void main() {
 
     test('updates currentPowerBeacon when power data is emitted', () async {
       final deviceManager = createDeviceManager();
-      final stateManager = createStateManager(deviceManager);
+      createStateManager(deviceManager);
       final trainer = DeviceSimulator.createRealisticTrainer(name: 'Test Trainer');
 
       await deviceManager.addDevice(trainer);
@@ -81,7 +81,7 @@ void main() {
 
     test('updates currentCadenceBeacon when cadence data is emitted', () async {
       final deviceManager = createDeviceManager();
-      final stateManager = createStateManager(deviceManager);
+      createStateManager(deviceManager);
       final trainer = DeviceSimulator.createRealisticTrainer(name: 'Test Trainer');
 
       await deviceManager.addDevice(trainer);
@@ -100,7 +100,7 @@ void main() {
 
     test('updates heartRateSourceBeacon when HR monitor is assigned', () async {
       final deviceManager = createDeviceManager();
-      final stateManager = createStateManager(deviceManager);
+      createStateManager(deviceManager);
       final hrMonitor = DeviceSimulator.createHeartRateMonitor(name: 'Test HRM');
 
       await deviceManager.addDevice(hrMonitor);
@@ -115,7 +115,7 @@ void main() {
 
     test('updates currentHeartRateBeacon when HR data is emitted', () async {
       final deviceManager = createDeviceManager();
-      final stateManager = createStateManager(deviceManager);
+      createStateManager(deviceManager);
       final hrMonitor = DeviceSimulator.createHeartRateMonitor(name: 'Test HRM');
 
       await deviceManager.addDevice(hrMonitor);
@@ -133,7 +133,7 @@ void main() {
 
     test('clears beacons when devices are removed', () async {
       final deviceManager = createDeviceManager();
-      final stateManager = createStateManager(deviceManager);
+      createStateManager(deviceManager);
       final trainer = DeviceSimulator.createRealisticTrainer(name: 'Test Trainer');
 
       await deviceManager.addDevice(trainer);

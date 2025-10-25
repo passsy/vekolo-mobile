@@ -161,7 +161,7 @@ List<dynamic> flattenWorkoutEvents(
     final startTime = blockStartTimes[parentBlockId];
     if (startTime == null) {
       developer.log(
-        'Event ${event.id} references unknown block $parentBlockId',
+        'Event ${(event as dynamic).id} references unknown block $parentBlockId',
         name: 'WorkoutUtils',
       );
       return false;
@@ -177,9 +177,10 @@ List<dynamic> flattenWorkoutEvents(
         startTime + event.relativeTimeOffset,
       );
     } else {
+      final effectEvent = event as EffectEvent;
       return FlattenedEffectEvent.fromEffectEvent(
-        event as EffectEvent,
-        startTime + (event).relativeTimeOffset,
+        effectEvent,
+        startTime + effectEvent.relativeTimeOffset,
       );
     }
   }).toList();

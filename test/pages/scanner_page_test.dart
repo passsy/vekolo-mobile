@@ -42,7 +42,7 @@ void main() {
       expect(scanner.isScanning.value, isTrue, reason: 'Scanner should auto-start when Bluetooth is ready');
 
       // Add some devices
-      final device1 = platform.addDevice('00:11:22:33:44:55', 'Trainer 1', rssi: -50);
+      final device1 = platform.addDevice('00:11:22:33:44:55', 'Trainer 1');
       final device2 = platform.addDevice('00:11:22:33:44:66', 'Trainer 2', rssi: -60);
       device1.turnOn();
       device2.turnOn();
@@ -106,13 +106,13 @@ void main() {
       // Scanner should auto-start when ready
       expect(scanner.isScanning.value, isTrue);
 
-      final device = platform.addDevice('00:11:22:33:44:55', 'Trainer 1', rssi: -50);
+      final device = platform.addDevice('00:11:22:33:44:55', 'Trainer 1');
       device.turnOn();
       await tester.pumpAndSettle();
 
       // Find the ListTile while scanning
       final listTileWhileScanning = tester.widget<ListTile>(find.byType(ListTile));
-      final iconWhileScanning = listTileWhileScanning.leading as Icon;
+      final iconWhileScanning = listTileWhileScanning.leading! as Icon;
 
       // Icon should not be grayed out while scanning
       expect(iconWhileScanning.color, isNull); // null means default color
@@ -123,7 +123,7 @@ void main() {
 
       // Find the ListTile after stopping
       final listTileAfterStop = tester.widget<ListTile>(find.byType(ListTile));
-      final iconAfterStop = listTileAfterStop.leading as Icon;
+      final iconAfterStop = listTileAfterStop.leading! as Icon;
 
       // Icon should be grayed out after stopping
       expect(iconAfterStop.color, equals(Colors.grey));
@@ -163,7 +163,7 @@ void main() {
       // Scanner should auto-start when ready
       expect(scanner.isScanning.value, isTrue);
 
-      final device = platform.addDevice('00:11:22:33:44:55', 'Trainer 1', rssi: -50);
+      final device = platform.addDevice('00:11:22:33:44:55', 'Trainer 1');
       device.turnOn();
       await tester.pumpAndSettle();
 
@@ -214,7 +214,7 @@ void main() {
       // Scanner should auto-start when ready
       expect(scanner.isScanning.value, isTrue);
 
-      final device1 = platform.addDevice('00:11:22:33:44:55', 'Trainer 1', rssi: -50);
+      final device1 = platform.addDevice('00:11:22:33:44:55', 'Trainer 1');
       device1.turnOn();
       await tester.pumpAndSettle();
       expect(find.text('Trainer 1'), findsOneWidget);
