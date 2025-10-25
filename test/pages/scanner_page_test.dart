@@ -62,9 +62,9 @@ void main() {
       await tester.pumpAndSettle();
 
       // CRITICAL: Devices should still be visible
-      expect(find.text('Trainer 1'), findsOneWidget);
-      expect(find.text('Trainer 2'), findsOneWidget);
-      expect(find.byType(ListTile), findsNWidgets(2));
+      expect(find.text('Trainer 1'), findsOneWidget, reason: 'Trainer 1 should still be visible after stop');
+      expect(find.text('Trainer 2'), findsOneWidget, reason: 'Trainer 2 should still be visible after stop');
+      expect(find.byType(ListTile), findsNWidgets(2), reason: 'Both device ListTiles should still be visible');
 
       // But RSSI should show "Unknown" instead of numeric values
       expect(find.textContaining('RSSI: Unknown'), findsNWidgets(2));

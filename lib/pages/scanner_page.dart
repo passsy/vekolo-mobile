@@ -68,13 +68,19 @@ class _ScannerPageState extends State<ScannerPage> {
     _devicesUnsubscribe = _scanner.devices.subscribe((devices) {
       if (!mounted) return;
       setState(() {
-        // Check scanner's current scanning state, not our local state
-        // to avoid race conditions between beacon updates
-        final isCurrentlyScanning = _scanner.isScanning.value;
-        if (devices.isEmpty && !isCurrentlyScanning) {
-          // Scanner stopped - keep existing devices, we'll show them with unknown RSSI
+        // If scanner's device list becomes empty, keep our local devices.
+        // This handles:
+        // 1. User stopping scan (scanner clears devices)
+        // 2. Race condition where devices beacon fires before isScanning beacon
+        // The devices will be shown with "Unknown" RSSI when not scanning.
+        if (devices.isEmpty && _devices.isNotEmpty) {
+          // Keep existing devices - don't clear them
           return;
         }
+
+        // Update device list when:
+        // - New devices discovered (devices.isNotEmpty)
+        // - Initial state (both empty)
         _devices.clear();
         _devices.addAll(devices);
       });
