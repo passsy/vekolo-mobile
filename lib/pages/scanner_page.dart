@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:vekolo/ble/ble_scanner.dart';
 import 'package:vekolo/config/ble_config.dart';
+import 'package:visibility_detector/visibility_detector.dart';
 import 'dart:developer' as developer;
 
 /// BLE device scanner with auto-start when Bluetooth is ready.
@@ -53,7 +54,7 @@ class _ScannerPageState extends State<ScannerPage> {
         _bluetoothState = state;
       });
 
-      // Auto-start scan when ready (even if we have old devices from previous session)
+      // Auto-start scan when ready
       if (state.canScan && !_isScanning && _scanToken == null) {
         developer.log('[ScannerPage] Ready to scan, auto-starting');
         _startScan();
@@ -115,6 +116,26 @@ class _ScannerPageState extends State<ScannerPage> {
     }
   }
 
+  void _onVisibilityChanged(VisibilityInfo info) {
+    if (!mounted) return;
+
+    if (info.visibleFraction == 0) {
+      // Page is no longer visible, stop scanning
+      developer.log('[ScannerPage] Page hidden, stopping scan');
+      _stopScan();
+    } else if (info.visibleFraction > 0) {
+      // Page became visible again
+      final bluetoothState = _bluetoothState;
+      if (bluetoothState != null &&
+          bluetoothState.canScan &&
+          !_isScanning &&
+          _scanToken == null) {
+        developer.log('[ScannerPage] Page visible again, restarting scan');
+        _startScan();
+      }
+    }
+  }
+
   String _getStatusMessage(BluetoothState? state) {
     if (state == null) return 'Initializing...';
     if (!state.isBluetoothOn) return 'Please turn on Bluetooth';
@@ -131,7 +152,10 @@ class _ScannerPageState extends State<ScannerPage> {
     final canScan = bluetoothState?.canScan ?? false;
     final statusMessage = _getStatusMessage(bluetoothState);
 
-    return Scaffold(
+    return VisibilityDetector(
+      key: const Key('scanner-page-visibility'),
+      onVisibilityChanged: _onVisibilityChanged,
+      child: Scaffold(
       appBar: AppBar(
         title: const Text('Scan for Trainers'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
@@ -251,6 +275,7 @@ class _ScannerPageState extends State<ScannerPage> {
           ),
         ],
       ),
+    ),
     );
   }
 }

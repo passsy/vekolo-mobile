@@ -5,11 +5,17 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:vekolo/ble/ble_scanner.dart';
 import 'package:vekolo/config/ble_config.dart';
 import 'package:vekolo/pages/scanner_page.dart';
+import 'package:visibility_detector/visibility_detector.dart';
 
 import '../ble/fake_ble_permissions.dart';
 import '../ble/fake_ble_platform.dart';
 
 void main() {
+  // Required for VisibilityDetector to work in tests without pending timers
+  setUpAll(() {
+    VisibilityDetectorController.instance.updateInterval = Duration.zero;
+  });
+
   group('ScannerPage - Device Persistence', () {
     testWidgets('devices stay visible after pressing stop button', (tester) async {
       // Create test infrastructure
