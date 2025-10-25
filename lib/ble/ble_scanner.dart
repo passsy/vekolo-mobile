@@ -472,6 +472,10 @@ class BleScanner with WidgetsBindingObserver {
   ///
   /// It's safe to call this multiple times with the same token - only the
   /// first call has any effect.
+  ///
+  /// Note: The device list is cleared immediately when scanning stops.
+  /// UI layers should maintain their own local state if they want to keep
+  /// displaying devices after scanning stops.
   void stopScan(ScanToken token) {
     if (_disposed) {
       return;
@@ -484,6 +488,10 @@ class BleScanner with WidgetsBindingObserver {
 
       // Stop platform scan if no tokens remain
       if (_activeTokens.isEmpty && _isScanningBeacon.value) {
+        // Clear devices immediately when stopping scan
+        _discoveredDevices.clear();
+        _updateDevicesBeacon();
+
         _stopPlatformScan();
       }
     }
