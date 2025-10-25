@@ -869,6 +869,83 @@ void main() {
     });
   });
 
+  group('BleScanner - Bluetooth Off', () {
+    ({BleScanner scanner, FakeBlePlatform platform, FakeBlePermissions permissions}) createScanner({
+      FakeBlePlatform? platform,
+      FakeBlePermissions? permissions,
+    }) {
+      final p = platform ?? FakeBlePlatform();
+      final perms = permissions ?? FakeBlePermissions();
+      final scanner = BleScanner(platform: p, permissions: perms);
+      scanner.initialize();
+
+      // Set up favorable conditions by default
+      p.setAdapterState(BluetoothAdapterState.on);
+      perms.setHasPermission(true);
+      perms.setLocationServiceEnabled(true);
+
+      // Register cleanup
+      addTearDown(() {
+        scanner.dispose();
+        p.dispose();
+      });
+
+      return (scanner: scanner, platform: p, permissions: perms);
+    }
+
+    test('clears all devices when Bluetooth turns off', () async {
+      final result = createScanner();
+      final scanner = result.scanner;
+      final platform = result.platform;
+
+      // Add and turn on devices first
+      final device1 = platform.addDevice('00:11:22:33:44:55', 'Device 1');
+      final device2 = platform.addDevice('00:11:22:33:44:66', 'Device 2');
+      device1.turnOn();
+      device2.turnOn();
+
+      // Start scanning and wait for discovery
+      scanner.startScan();
+      await Future.delayed(const Duration(milliseconds: 200));
+
+      // Verify devices are discovered
+      expect(scanner.devices.value, hasLength(2));
+      expect(scanner.isScanning.value, isTrue);
+
+      // Turn off Bluetooth
+      platform.setAdapterState(BluetoothAdapterState.off);
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      // Devices should be cleared immediately
+      expect(scanner.devices.value, isEmpty, reason: 'Devices should be cleared when Bluetooth turns off');
+      expect(scanner.isScanning.value, isFalse, reason: 'Scanning should stop when Bluetooth turns off');
+    });
+
+    test('clears devices when Bluetooth becomes unavailable', () async {
+      final result = createScanner();
+      final scanner = result.scanner;
+      final platform = result.platform;
+
+      // Add and turn on device first
+      final device = platform.addDevice('00:11:22:33:44:55', 'Device 1');
+      device.turnOn();
+
+      // Start scanning and wait for discovery
+      scanner.startScan();
+      await Future.delayed(const Duration(milliseconds: 200));
+
+      expect(scanner.devices.value, hasLength(1));
+
+      // Bluetooth becomes unavailable
+      platform.setAdapterState(BluetoothAdapterState.unavailable);
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      // Devices should be cleared
+      expect(scanner.devices.value, isEmpty);
+      expect(scanner.isScanning.value, isFalse);
+    });
+  });
+
   group('BleScanner - Edge Cases', () {
     ({BleScanner scanner, FakeBlePlatform platform, FakeBlePermissions permissions}) createScanner({
       FakeBlePlatform? platform,

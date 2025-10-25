@@ -317,6 +317,20 @@ class BleScanner with WidgetsBindingObserver {
 
         developer.log('[BleScanner] Bluetooth state updated: $newState');
 
+        // Clear devices and stop scanning when Bluetooth turns off or becomes unavailable
+        if (!newState.isBluetoothOn) {
+          if (_discoveredDevices.isNotEmpty) {
+            developer.log('[BleScanner] Bluetooth turned off, clearing ${_discoveredDevices.length} devices');
+            _discoveredDevices.clear();
+            _updateDevicesBeacon();
+          }
+          // Stop platform scanning if it's active
+          if (_isScanningBeacon.value) {
+            developer.log('[BleScanner] Bluetooth turned off, stopping scan');
+            _stopPlatformScan();
+          }
+        }
+
         // Auto-restart scanning if conditions became favorable
         _maybeAutoRestartScanning();
       }
@@ -359,6 +373,11 @@ class BleScanner with WidgetsBindingObserver {
   /// Handle new scan results from the platform.
   void _handleScanResults(List<ScanResult> results) {
     if (_disposed) return;
+
+    // Ignore scan results if Bluetooth is not on
+    if (!_bluetoothStateBeacon.value.isBluetoothOn) {
+      return;
+    }
 
     final now = clock.now();
     bool updated = false;
