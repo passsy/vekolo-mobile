@@ -96,14 +96,11 @@ class Rekord {
 
   /// Converts all nested [Rekord] and [RekordMixin] objects to plain maps
   static Map<String, Object?> _processMap(Map data) {
-    final map = SplayTreeMap<String, Object?>();
-    for (final entry in data.entries) {
-      final key = entry.key as String;
-      final value = entry.value;
-      final unboxed = _processValue(value);
-      map[key] = unboxed;
-    }
-    return map;
+    return SplayTreeMap<String, Object?>.fromIterable(
+      data.entries,
+      key: (entry) => entry.key as String,
+      value: (entry) => _processValue(entry.value),
+    );
   }
 
   /// Process a list of values, recursively processing each value

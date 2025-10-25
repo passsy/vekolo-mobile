@@ -110,13 +110,13 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
     if (!context.mounted) return false;
     final result = await showDialog<bool>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
+      builder: (ctx) => AlertDialog(
         title: const Text('End Workout?'),
         content: const Text('Are you sure you want to end this workout? Your progress will not be saved.'),
         actions: [
-          TextButton(onPressed: () => Navigator.of(dialogContext).pop(false), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Cancel')),
           TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
+            onPressed: () => Navigator.of(ctx).pop(true),
             style: TextButton.styleFrom(foregroundColor: Colors.red),
             child: const Text('End Workout'),
           ),
@@ -276,13 +276,13 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
                 if (!context.mounted) return;
                 final confirm = await showDialog<bool>(
                   context: context,
-                  builder: (dialogContext) => AlertDialog(
+                  builder: (ctx) => AlertDialog(
                     title: const Text('End Workout?'),
                     content: const Text('Are you sure you want to end this workout early?'),
                     actions: [
-                      TextButton(onPressed: () => Navigator.of(dialogContext).pop(false), child: const Text('Cancel')),
+                      TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Cancel')),
                       TextButton(
-                        onPressed: () => Navigator.of(dialogContext).pop(true),
+                        onPressed: () => Navigator.of(ctx).pop(true),
                         style: TextButton.styleFrom(foregroundColor: Colors.red),
                         child: const Text('End'),
                       ),

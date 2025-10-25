@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:async/async.dart';
+import 'package:clock/clock.dart';
 import 'package:vekolo/domain/devices/fitness_device.dart';
 import 'package:vekolo/domain/models/device_info.dart';
 import 'package:vekolo/domain/models/fitness_data.dart';
@@ -126,7 +127,7 @@ class FtmsDevice extends FitnessDevice {
     } catch (e, stackTrace) {
       _lastConnectionError = ConnectionError(
         message: 'Failed to connect to FTMS device: $e',
-        timestamp: DateTime.now(),
+        timestamp: clock.now(),
         error: e,
         stackTrace: stackTrace,
       );

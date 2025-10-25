@@ -134,8 +134,5 @@ class DeviceInfo {
 /// Helper for set equality comparison.
 bool _setEquals<T>(Set<T> a, Set<T> b) {
   if (a.length != b.length) return false;
-  for (final element in a) {
-    if (!b.contains(element)) return false;
-  }
-  return true;
+  return a.every((element) => b.contains(element));
 }

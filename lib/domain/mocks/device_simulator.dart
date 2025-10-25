@@ -23,6 +23,7 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:async/async.dart';
+import 'package:clock/clock.dart';
 import 'package:vekolo/domain/devices/fitness_device.dart';
 import 'package:vekolo/domain/mocks/mock_trainer.dart';
 import 'package:vekolo/domain/models/device_info.dart';
@@ -59,7 +60,7 @@ class DeviceSimulator {
   }) {
     // Create base trainer with realistic ramp characteristics
     final trainer = MockTrainer(
-      id: 'mock-trainer-${DateTime.now().millisecondsSinceEpoch}',
+      id: 'mock-trainer-${clock.now().millisecondsSinceEpoch}',
       name: name,
       requiresContinuousRefresh: requiresContinuousRefresh,
     );
@@ -81,7 +82,7 @@ class DeviceSimulator {
   /// - High accuracy
   static MockTrainer createHighEndTrainer({String name = 'Virtual KICKR'}) {
     return MockTrainer(
-      id: 'mock-high-end-${DateTime.now().millisecondsSinceEpoch}',
+      id: 'mock-high-end-${clock.now().millisecondsSinceEpoch}',
       name: name,
       rampStepWatts: 10, // Larger steps for faster response
       rampStepIntervalMs: 150, // Faster updates
@@ -97,7 +98,7 @@ class DeviceSimulator {
   /// - Good accuracy
   static MockTrainer createMidRangeTrainer({String name = 'Virtual Trainer'}) {
     return MockTrainer(
-      id: 'mock-mid-range-${DateTime.now().millisecondsSinceEpoch}',
+      id: 'mock-mid-range-${clock.now().millisecondsSinceEpoch}',
       name: name,
       requiresContinuousRefresh: true, // Some need refresh
     );
@@ -112,7 +113,7 @@ class DeviceSimulator {
   /// - Requires continuous command refresh
   static MockTrainer createBudgetTrainer({String name = 'Basic Trainer'}) {
     return MockTrainer(
-      id: 'mock-budget-${DateTime.now().millisecondsSinceEpoch}',
+      id: 'mock-budget-${clock.now().millisecondsSinceEpoch}',
       name: name,
       requiresContinuousRefresh: true, // Budget trainers often need this
       refreshInterval: const Duration(seconds: 3),
@@ -128,7 +129,7 @@ class DeviceSimulator {
   /// a separate sensor rather than the trainer.
   static FitnessDevice createPowerMeter({String name = 'Virtual Power Meter', double variability = 0.03}) {
     return _MockPowerMeter(
-      id: 'mock-pm-${DateTime.now().millisecondsSinceEpoch}',
+      id: 'mock-pm-${clock.now().millisecondsSinceEpoch}',
       name: name,
       variability: variability,
     );
@@ -139,7 +140,7 @@ class DeviceSimulator {
   /// Provides cadence measurements without power or control.
   /// Useful for testing scenarios where cadence comes from a dedicated sensor.
   static FitnessDevice createCadenceSensor({String name = 'Virtual Cadence Sensor'}) {
-    return _MockCadenceSensor(id: 'mock-cad-${DateTime.now().millisecondsSinceEpoch}', name: name);
+    return _MockCadenceSensor(id: 'mock-cad-${clock.now().millisecondsSinceEpoch}', name: name);
   }
 
   /// Creates a heart rate monitor that only provides HR data.
@@ -148,7 +149,7 @@ class DeviceSimulator {
   /// Useful for testing complete multi-device scenarios.
   static FitnessDevice createHeartRateMonitor({String name = 'Virtual HRM', int restingHr = 60, int maxHr = 180}) {
     return _MockHeartRateMonitor(
-      id: 'mock-hrm-${DateTime.now().millisecondsSinceEpoch}',
+      id: 'mock-hrm-${clock.now().millisecondsSinceEpoch}',
       name: name,
       restingHr: restingHr,
       maxHr: maxHr,
@@ -237,12 +238,12 @@ class _MockPowerMeter extends FitnessDevice {
       _dataTimer = Timer.periodic(const Duration(milliseconds: 500), (_) {
         final variance = (_random.nextDouble() * 2 - 1) * _variability * _basePower;
         final power = max(0, (_basePower + variance).round());
-        _powerController.add(PowerData(watts: power, timestamp: DateTime.now()));
+        _powerController.add(PowerData(watts: power, timestamp: clock.now()));
       });
     } catch (e, stackTrace) {
       _lastConnectionError = ConnectionError(
         message: 'Failed to connect: $e',
-        timestamp: DateTime.now(),
+        timestamp: clock.now(),
         error: e,
         stackTrace: stackTrace,
       );
@@ -345,12 +346,12 @@ class _MockCadenceSensor extends FitnessDevice {
       // Start emitting cadence data
       _dataTimer = Timer.periodic(const Duration(milliseconds: 500), (_) {
         final cadence = 80 + _random.nextInt(15); // 80-95 RPM
-        _cadenceController.add(CadenceData(rpm: cadence, timestamp: DateTime.now()));
+        _cadenceController.add(CadenceData(rpm: cadence, timestamp: clock.now()));
       });
     } catch (e, stackTrace) {
       _lastConnectionError = ConnectionError(
         message: 'Failed to connect: $e',
-        timestamp: DateTime.now(),
+        timestamp: clock.now(),
         error: e,
         stackTrace: stackTrace,
       );
@@ -462,12 +463,12 @@ class _MockHeartRateMonitor extends FitnessDevice {
         final baseHr = _restingHr + (_maxHr - _restingHr) * 0.4; // ~40% effort
         final variance = _random.nextInt(6) - 3; // ±3 BPM
         final hr = (baseHr + variance).round().clamp(_restingHr, _maxHr);
-        _hrController.add(HeartRateData(bpm: hr, timestamp: DateTime.now()));
+        _hrController.add(HeartRateData(bpm: hr, timestamp: clock.now()));
       });
     } catch (e, stackTrace) {
       _lastConnectionError = ConnectionError(
         message: 'Failed to connect: $e',
-        timestamp: DateTime.now(),
+        timestamp: clock.now(),
         error: e,
         stackTrace: stackTrace,
       );

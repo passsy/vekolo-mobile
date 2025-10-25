@@ -1,13 +1,14 @@
 import 'dart:async';
+import 'package:clock/clock.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:state_beacon/state_beacon.dart';
 import 'package:vekolo/ble/ble_platform.dart';
 
 /// Fake implementation of [BlePlatform] for testing.
 ///
-/// Provides complete control over BLE adapter state and device simulation
-/// without requiring real Bluetooth hardware. Devices continue advertising
-/// until explicitly turned off, matching real BLE behavior.
+/// Uses the override pattern for methods while providing complete control
+/// over BLE adapter state and device simulation without requiring real
+/// Bluetooth hardware.
 ///
 /// Example usage:
 /// ```dart
@@ -21,31 +22,20 @@ import 'package:vekolo/ble/ble_platform.dart';
 /// final device = platform.addDevice('D1', 'Heart Monitor', rssi: -60);
 /// device.turnOn();
 ///
-/// // Start scanning to see the device
-/// await platform.startScan();
-///
-/// // Device appears in scan results
-/// final devices = platform.scanResults.value; // Contains device
-///
-/// // Update signal strength
-/// device.updateRssi(-70);
-///
-/// // Stop device advertising
-/// device.turnOff();
+/// // Customize scan behavior for a specific test
+/// platform.overrideStartScan = () async {
+///   throw Exception('Scan failed');
+/// };
 /// ```
 class FakeBlePlatform implements BlePlatform {
-  late final WritableBeacon<BluetoothAdapterState> _adapterStateBeacon;
-  late final WritableBeacon<List<ScanResult>> _scanResultsBeacon;
+  final WritableBeacon<BluetoothAdapterState> _adapterStateBeacon = Beacon.writable(BluetoothAdapterState.off);
+  final WritableBeacon<List<ScanResult>> _scanResultsBeacon = Beacon.writable(<ScanResult>[]);
 
   final Map<String, FakeDevice> _devices = {};
   bool _isScanning = false;
   Timer? _advertisingTimer;
 
   FakeBlePlatform() {
-    // Initialize beacons with default values
-    _adapterStateBeacon = Beacon.writable(BluetoothAdapterState.off);
-    _scanResultsBeacon = Beacon.writable(<ScanResult>[]);
-
     // Start advertising loop that continuously emits active devices
     _startAdvertisingLoop();
   }
@@ -56,8 +46,14 @@ class FakeBlePlatform implements BlePlatform {
   @override
   ReadableBeacon<List<ScanResult>> get scanResults => _scanResultsBeacon;
 
+  Future<void> Function()? overrideStartScan;
+
   @override
   Future<void> startScan() async {
+    if (overrideStartScan != null) {
+      return overrideStartScan!();
+    }
+    // Default implementation
     if (_adapterStateBeacon.value != BluetoothAdapterState.on) {
       throw Exception('Bluetooth is not on');
     }
@@ -65,8 +61,14 @@ class FakeBlePlatform implements BlePlatform {
     _emitScanResults();
   }
 
+  Future<void> Function()? overrideStopScan;
+
   @override
   Future<void> stopScan() async {
+    if (overrideStopScan != null) {
+      return overrideStopScan!();
+    }
+    // Default implementation
     _isScanning = false;
   }
 
@@ -157,7 +159,7 @@ class FakeDevice {
 
   int _rssi;
   bool _isAdvertising = false;
-  DateTime _lastUpdate = DateTime.now();
+  DateTime _lastUpdate = clock.now();
 
   FakeDevice._({
     required this.id,
@@ -174,7 +176,7 @@ class FakeDevice {
   /// [turnOff] is called.
   void turnOn() {
     _isAdvertising = true;
-    _lastUpdate = DateTime.now();
+    _lastUpdate = clock.now();
     platform._emitScanResults();
   }
 
@@ -192,7 +194,7 @@ class FakeDevice {
   /// More negative values = weaker signal (e.g., -90 is very weak, -30 is strong).
   void updateRssi(int rssi) {
     _rssi = rssi;
-    _lastUpdate = DateTime.now();
+    _lastUpdate = clock.now();
   }
 
   /// Convert this fake device to a FlutterBluePlus ScanResult.

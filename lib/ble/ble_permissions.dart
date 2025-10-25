@@ -72,14 +72,16 @@ class BlePermissionsImpl implements BlePermissions {
       return true;
     }
 
-    if (await _isAndroid12OrHigher()) {
-      final scanStatus = await Permission.bluetoothScan.status;
-      final connectStatus = await Permission.bluetoothConnect.status;
-      return scanStatus.isGranted && connectStatus.isGranted;
-    } else {
+    // Early return for Android 11 and below
+    if (!await _isAndroid12OrHigher()) {
       final locationStatus = await Permission.locationWhenInUse.status;
       return locationStatus.isGranted;
     }
+
+    // Android 12+
+    final scanStatus = await Permission.bluetoothScan.status;
+    final connectStatus = await Permission.bluetoothConnect.status;
+    return scanStatus.isGranted && connectStatus.isGranted;
   }
 
   @override
@@ -93,12 +95,17 @@ class BlePermissionsImpl implements BlePermissions {
 
     final List<Permission> permissionsToRequest = [];
 
-    // Android 12+ (API 31+) uses new Bluetooth permissions
-    if (await _isAndroid12OrHigher()) {
+    // Determine permissions based on Android version with early return pattern
+    final isAndroid12Plus = await _isAndroid12OrHigher();
+
+    if (isAndroid12Plus) {
+      // Android 12+ (API 31+) uses new Bluetooth permissions
       developer.log('[BlePermissions] Android 12+, requesting BLUETOOTH_SCAN and BLUETOOTH_CONNECT');
       permissionsToRequest.add(Permission.bluetoothScan);
       permissionsToRequest.add(Permission.bluetoothConnect);
-    } else {
+    }
+
+    if (!isAndroid12Plus) {
       // Android 11 and below requires location permission for BLE scanning
       developer.log('[BlePermissions] Android 11 or below, requesting LOCATION permissions');
       permissionsToRequest.add(Permission.locationWhenInUse);
@@ -137,14 +144,16 @@ class BlePermissionsImpl implements BlePermissions {
       return false;
     }
 
-    if (await _isAndroid12OrHigher()) {
-      final scanStatus = await Permission.bluetoothScan.status;
-      final connectStatus = await Permission.bluetoothConnect.status;
-      return scanStatus.isPermanentlyDenied || connectStatus.isPermanentlyDenied;
-    } else {
+    // Early return for Android 11 and below
+    if (!await _isAndroid12OrHigher()) {
       final locationStatus = await Permission.locationWhenInUse.status;
       return locationStatus.isPermanentlyDenied;
     }
+
+    // Android 12+
+    final scanStatus = await Permission.bluetoothScan.status;
+    final connectStatus = await Permission.bluetoothConnect.status;
+    return scanStatus.isPermanentlyDenied || connectStatus.isPermanentlyDenied;
   }
 
   @override

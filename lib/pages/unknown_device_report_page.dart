@@ -3,6 +3,7 @@ import 'package:reactive_forms/reactive_forms.dart';
 import 'dart:developer' as developer;
 import 'dart:io' show Platform;
 import 'dart:async';
+import 'package:clock/clock.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:context_plus/context_plus.dart';
 import 'package:vekolo/config/api_config.dart';
@@ -280,7 +281,7 @@ class _UnknownDeviceReportPageState extends State<UnknownDeviceReportPage> {
     User? userInfo,
     void Function(int currentService)? onProgress,
   }) async {
-    final now = DateTime.now();
+    final now = clock.now();
     final buffer = StringBuffer();
 
     buffer.writeln('=== Vekolo Unknown Device Report ===');
@@ -459,32 +460,14 @@ class _UnknownDeviceReportPageState extends State<UnknownDeviceReportPage> {
 
   /// Builds RSSI indicator widget with icon and color
   Widget _buildRssiIndicator(int rssi) {
-    // Convert RSSI to signal strength level and color
-    IconData icon;
-    Color color;
-    String strength;
-
-    if (rssi >= -50) {
-      icon = Icons.signal_cellular_4_bar;
-      color = Colors.green;
-      strength = 'Excellent';
-    } else if (rssi >= -60) {
-      icon = Icons.signal_cellular_alt;
-      color = Colors.lightGreen;
-      strength = 'Good';
-    } else if (rssi >= -70) {
-      icon = Icons.signal_cellular_alt_2_bar;
-      color = Colors.orange;
-      strength = 'Fair';
-    } else if (rssi >= -80) {
-      icon = Icons.signal_cellular_alt_1_bar;
-      color = Colors.deepOrange;
-      strength = 'Weak';
-    } else {
-      icon = Icons.signal_cellular_0_bar;
-      color = Colors.red;
-      strength = 'Poor';
-    }
+    // Convert RSSI to signal strength level and color using switch expression
+    final (IconData icon, Color color, String strength) = switch (rssi) {
+      >= -50 => (Icons.signal_cellular_4_bar, Colors.green, 'Excellent'),
+      >= -60 => (Icons.signal_cellular_alt, Colors.lightGreen, 'Good'),
+      >= -70 => (Icons.signal_cellular_alt_2_bar, Colors.orange, 'Fair'),
+      >= -80 => (Icons.signal_cellular_alt_1_bar, Colors.deepOrange, 'Weak'),
+      _ => (Icons.signal_cellular_0_bar, Colors.red, 'Poor'),
+    };
 
     return Row(
       mainAxisSize: MainAxisSize.min,

@@ -1,5 +1,6 @@
 import 'dart:developer' as developer;
 
+import 'package:clock/clock.dart';
 import 'package:context_plus/context_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -225,7 +226,7 @@ class _DevicesPageState extends State<DevicesPage> {
                                 syncService.startSync();
                                 syncService.currentTarget.value = ErgCommand(
                                   targetWatts: _targetPower.toInt(),
-                                  timestamp: DateTime.now(),
+                                  timestamp: clock.now(),
                                 );
                                 ScaffoldMessenger.of(
                                   context,
@@ -240,7 +241,7 @@ class _DevicesPageState extends State<DevicesPage> {
                             ? () {
                                 syncService.currentTarget.value = ErgCommand(
                                   targetWatts: _targetPower.toInt(),
-                                  timestamp: DateTime.now(),
+                                  timestamp: clock.now(),
                                 );
                                 ScaffoldMessenger.of(
                                   context,
@@ -331,7 +332,7 @@ class _DevicesPageState extends State<DevicesPage> {
   }
 
   String _formatTime(DateTime time) {
-    final now = DateTime.now();
+    final now = clock.now();
     final diff = now.difference(time);
     if (diff.inSeconds < 60) {
       return '${diff.inSeconds}s ago';
@@ -782,7 +783,7 @@ class _DevicesPageState extends State<DevicesPage> {
 
     showDialog<void>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
+      builder: (ctx) => AlertDialog(
         title: Text('Assign $dataTypeName Source'),
         content: SizedBox(
           width: double.maxFinite,
@@ -813,14 +814,14 @@ class _DevicesPageState extends State<DevicesPage> {
                       subtitle: Text(_formatCapabilities(device.capabilities)),
                       trailing: const Icon(Icons.arrow_forward),
                       onTap: () {
-                        Navigator.of(dialogContext).pop();
+                        Navigator.of(ctx).pop();
                         _assignDeviceToDataType(device, dataType);
                       },
                     );
                   },
                 ),
         ),
-        actions: [TextButton(onPressed: () => Navigator.of(dialogContext).pop(), child: const Text('Cancel'))],
+        actions: [TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Cancel'))],
       ),
     );
   }
@@ -855,9 +856,9 @@ class _DevicesPageState extends State<DevicesPage> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (dialogContext) => _BleScanDialog(
+      builder: (ctx) => _BleScanDialog(
         onDeviceSelected: (device) async {
-          Navigator.of(dialogContext).pop();
+          Navigator.of(ctx).pop();
           await _handleDeviceSelected(device);
         },
       ),

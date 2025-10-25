@@ -93,22 +93,18 @@ abstract class BlePlatform {
 /// In tests, inject a FakeBlePlatform instead to simulate BLE behavior
 /// without requiring real hardware.
 class BlePlatformImpl implements BlePlatform {
-  late final ReadableBeacon<BluetoothAdapterState> _adapterStateBeacon;
-  late final ReadableBeacon<List<ScanResult>> _scanResultsBeacon;
+  final ReadableBeacon<BluetoothAdapterState> _adapterStateBeacon;
+  final ReadableBeacon<List<ScanResult>> _scanResultsBeacon;
 
-  BlePlatformImpl() {
-    // Create beacons from FlutterBluePlus streams
-    // Beacon.streamRaw automatically subscribes when consumed and unsubscribes when unused
-    _adapterStateBeacon = Beacon.streamRaw(
-      () => FlutterBluePlus.adapterState,
-      initialValue: BluetoothAdapterState.unknown,
-    );
-
-    _scanResultsBeacon = Beacon.streamRaw(
-      () => FlutterBluePlus.scanResults,
-      initialValue: <ScanResult>[],
-    );
-  }
+  BlePlatformImpl()
+      : _adapterStateBeacon = Beacon.streamRaw(
+          () => FlutterBluePlus.adapterState,
+          initialValue: BluetoothAdapterState.unknown,
+        ),
+        _scanResultsBeacon = Beacon.streamRaw(
+          () => FlutterBluePlus.scanResults,
+          initialValue: <ScanResult>[],
+        );
 
   @override
   ReadableBeacon<BluetoothAdapterState> get adapterState => _adapterStateBeacon;

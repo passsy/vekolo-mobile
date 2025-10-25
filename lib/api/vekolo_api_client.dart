@@ -42,7 +42,7 @@ class VekoloApiClient {
     publicDio.options.baseUrl = baseUrl;
     publicDio.options.validateStatus = (status) => status != null && status < 500;
     // Add all interceptors except auth-related ones
-    publicDio.interceptors.addAll(interceptors.where((interceptor) => interceptor is! Fresh));
+    publicDio.interceptors.addAll(interceptors.where((it) => it is! Fresh));
 
     context = ApiContext(authDio: authenticatedDio, publicDio: publicDio);
   }

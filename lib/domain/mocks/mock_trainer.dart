@@ -23,6 +23,7 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:async/async.dart';
+import 'package:clock/clock.dart';
 import 'package:vekolo/domain/devices/fitness_device.dart';
 import 'package:vekolo/domain/models/device_info.dart';
 import 'package:vekolo/domain/models/fitness_data.dart';
@@ -133,7 +134,7 @@ class MockTrainer extends FitnessDevice {
     } catch (e, stackTrace) {
       _lastConnectionError = ConnectionError(
         message: 'Failed to connect: $e',
-        timestamp: DateTime.now(),
+        timestamp: clock.now(),
         error: e,
         stackTrace: stackTrace,
       );
@@ -223,7 +224,7 @@ class MockTrainer extends FitnessDevice {
       final variance = _random.nextDouble() * 2 - 1; // -1 to +1
       final actualPower = max(0, (_currentPower + variance).round());
 
-      _powerController.add(PowerData(watts: actualPower, timestamp: DateTime.now()));
+      _powerController.add(PowerData(watts: actualPower, timestamp: clock.now()));
 
       // Cancel timer if we've been at target for a while and target hasn't changed
       if (_currentPower == target && _targetPower == target) {
@@ -275,7 +276,7 @@ class MockTrainer extends FitnessDevice {
         _currentCadence = 0;
       }
 
-      _cadenceController.add(CadenceData(rpm: _currentCadence, timestamp: DateTime.now()));
+      _cadenceController.add(CadenceData(rpm: _currentCadence, timestamp: clock.now()));
     });
   }
 

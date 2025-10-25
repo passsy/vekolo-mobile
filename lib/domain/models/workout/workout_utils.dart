@@ -51,17 +51,14 @@ List<dynamic> flattenWorkoutPlan(
         ),
       );
     } else if (item is WorkoutInterval) {
-      for (var i = 0; i < item.repeat; i++) {
-        for (final part in item.parts) {
-          processItem(part);
-        }
-      }
+      List.generate(item.repeat, (_) {
+        item.parts.forEach(processItem);
+        return null;
+      });
     }
   }
 
-  for (final item in plan) {
-    processItem(item);
-  }
+  plan.forEach(processItem);
 
   return flattened;
 }
@@ -141,7 +138,7 @@ List<dynamic> flattenWorkoutEvents(
   final blockStartTimes = <String, int>{};
   var cumulativeTime = 0;
 
-  for (final planItem in plan) {
+  plan.forEach((planItem) {
     if (planItem is PowerBlock) {
       blockStartTimes[planItem.id] = cumulativeTime;
       cumulativeTime += planItem.duration;
@@ -153,46 +150,36 @@ List<dynamic> flattenWorkoutEvents(
       final intervalDuration = calculateBlockDuration(planItem);
       cumulativeTime += intervalDuration;
     }
-  }
+  });
 
   // Flatten events by adding block start time to relative offset
-  final flattenedEvents = <dynamic>[];
-
-  for (final event in events) {
-    if (event is MessageEvent) {
-      final startTime = blockStartTimes[event.parentBlockId];
-      if (startTime == null) {
-        developer.log(
-          'Event ${event.id} references unknown block ${event.parentBlockId}',
-          name: 'WorkoutUtils',
-        );
-        continue;
-      }
-
-      flattenedEvents.add(
-        FlattenedMessageEvent.fromMessageEvent(
-          event,
-          startTime + event.relativeTimeOffset,
-        ),
+  final flattenedEvents = events.where((event) {
+    final parentBlockId = event is MessageEvent ? event.parentBlockId : (event as EffectEvent).parentBlockId;
+    final startTime = blockStartTimes[parentBlockId];
+    if (startTime == null) {
+      developer.log(
+        'Event ${event.id} references unknown block $parentBlockId',
+        name: 'WorkoutUtils',
       );
-    } else if (event is EffectEvent) {
-      final startTime = blockStartTimes[event.parentBlockId];
-      if (startTime == null) {
-        developer.log(
-          'Event ${event.id} references unknown block ${event.parentBlockId}',
-          name: 'WorkoutUtils',
-        );
-        continue;
-      }
+      return false;
+    }
+    return true;
+  }).map((event) {
+    final parentBlockId = event is MessageEvent ? event.parentBlockId : (event as EffectEvent).parentBlockId;
+    final startTime = blockStartTimes[parentBlockId]!;
 
-      flattenedEvents.add(
-        FlattenedEffectEvent.fromEffectEvent(
-          event,
-          startTime + event.relativeTimeOffset,
-        ),
+    if (event is MessageEvent) {
+      return FlattenedMessageEvent.fromMessageEvent(
+        event,
+        startTime + event.relativeTimeOffset,
+      );
+    } else {
+      return FlattenedEffectEvent.fromEffectEvent(
+        event as EffectEvent,
+        startTime + (event).relativeTimeOffset,
       );
     }
-  }
+  }).toList();
 
   // Sort by absolute time offset
   flattenedEvents.sort((a, b) {
@@ -233,14 +220,16 @@ List<dynamic> flattenWorkoutEvents(
     if (absoluteTime >= cumulativeTime && absoluteTime <= cumulativeTime + duration) {
       final relativeTime = absoluteTime - cumulativeTime;
 
-      String blockId;
-      if (planItem is PowerBlock) {
-        blockId = planItem.id;
-      } else if (planItem is RampBlock) {
-        blockId = planItem.id;
-      } else if (planItem is WorkoutInterval) {
-        blockId = planItem.id;
-      } else {
+      final blockId = planItem is PowerBlock
+          ? planItem.id
+          : planItem is RampBlock
+              ? planItem.id
+              : planItem is WorkoutInterval
+                  ? planItem.id
+                  : null;
+
+      if (blockId == null) {
+        cumulativeTime += duration;
         continue;
       }
 
@@ -266,14 +255,13 @@ int? mapBlockRelativeToAbsoluteTime(
   var cumulativeTime = 0;
 
   for (final planItem in plan) {
-    String? blockId;
-    if (planItem is PowerBlock) {
-      blockId = planItem.id;
-    } else if (planItem is RampBlock) {
-      blockId = planItem.id;
-    } else if (planItem is WorkoutInterval) {
-      blockId = planItem.id;
-    }
+    final blockId = planItem is PowerBlock
+        ? planItem.id
+        : planItem is RampBlock
+            ? planItem.id
+            : planItem is WorkoutInterval
+                ? planItem.id
+                : null;
 
     if (blockId == parentBlockId) {
       return cumulativeTime + relativeTimeOffset;
@@ -360,15 +348,11 @@ int? calculateCadenceAtTime(dynamic block, int elapsedTime) {
       maxPower = maxPower > item.powerStart ? maxPower : item.powerStart;
       maxPower = maxPower > item.powerEnd ? maxPower : item.powerEnd;
     } else if (item is WorkoutInterval) {
-      for (final part in item.parts) {
-        processItem(part);
-      }
+      item.parts.forEach(processItem);
     }
   }
 
-  for (final item in plan) {
-    processItem(item);
-  }
+  plan.forEach(processItem);
 
   return (
     minPower: minPower.isInfinite ? 0.0 : minPower,
@@ -412,15 +396,11 @@ int? calculateCadenceAtTime(dynamic block, int elapsedTime) {
         maxCadence = maxCadence > item.cadenceHigh! ? maxCadence : item.cadenceHigh!.toDouble();
       }
     } else if (item is WorkoutInterval) {
-      for (final part in item.parts) {
-        processItem(part);
-      }
+      item.parts.forEach(processItem);
     }
   }
 
-  for (final item in plan) {
-    processItem(item);
-  }
+  plan.forEach(processItem);
 
   return (
     minCadence: minCadence.isInfinite ? 0 : minCadence.round(),
@@ -452,12 +432,12 @@ dynamic findBlockById(List<dynamic> plan, String blockId) {
         return item;
       }
       // Check inside interval parts
-      for (final part in item.parts) {
-        if (part is PowerBlock && part.id == blockId) {
-          return part;
-        } else if (part is RampBlock && part.id == blockId) {
-          return part;
-        }
+      final foundPart = item.parts.firstWhere(
+        (part) => (part is PowerBlock && part.id == blockId) || (part is RampBlock && part.id == blockId),
+        orElse: () => null,
+      );
+      if (foundPart != null) {
+        return foundPart;
       }
     }
   }

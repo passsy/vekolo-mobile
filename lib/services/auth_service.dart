@@ -44,7 +44,10 @@ class SecureTokenStorage extends TokenStorage<VekoloToken> {
 
 /// Service for managing authentication state and secure token storage
 class AuthService {
-  AuthService({required this.fresh, required VekoloApiClient Function() this.apiClient});
+  AuthService({required this.fresh, required VekoloApiClient Function() this.apiClient})
+      : authenticationStatus = Beacon.streamRaw(
+          () => fresh.authenticationStatus,
+        );
 
   final Fresh<VekoloToken> fresh;
 
@@ -56,9 +59,7 @@ class AuthService {
   /// Signal for the current authenticated user (null if not authenticated)
   final currentUser = Beacon.writable<User?>(null);
 
-  late final ReadableBeacon<AuthenticationStatus> authenticationStatus = Beacon.streamRaw(
-    () => fresh.authenticationStatus,
-  );
+  final ReadableBeacon<AuthenticationStatus> authenticationStatus;
 
   /// Loads the user state which was persisted to storage
   Future<void> initialize() async {

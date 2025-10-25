@@ -3,6 +3,7 @@ import 'dart:developer' as developer;
 import 'dart:typed_data';
 
 import 'package:async/async.dart';
+import 'package:clock/clock.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart' as fbp;
 import 'package:vekolo/domain/models/fitness_data.dart';
 
@@ -219,7 +220,7 @@ class FtmsBleTransport {
   bool _hasControl = false; // Whether we have control of the device
   bool _isSyncing = false; // Whether a sync operation is in progress
   Timer? _syncDebounceTimer; // Debounce timer for sync requests
-  DateTime _lastSyncTime = DateTime.now();
+  DateTime _lastSyncTime = clock.now();
 
   // Data stream controllers
   final _powerController = StreamController<PowerData>.broadcast();
@@ -435,7 +436,7 @@ class FtmsBleTransport {
     final powerPresent = (flags & 0x40) != 0;
 
     try {
-      final timestamp = DateTime.now();
+      final timestamp = clock.now();
       int? power;
       int? cadence;
       double? speed;
@@ -563,13 +564,13 @@ class FtmsBleTransport {
     if (!isConnected || _isSyncing) return;
 
     // Rate limit sync operations
-    final timeSinceLastSync = DateTime.now().difference(_lastSyncTime);
+    final timeSinceLastSync = clock.now().difference(_lastSyncTime);
     if (timeSinceLastSync < _bluetoothDebounce) {
       return;
     }
 
     _isSyncing = true;
-    _lastSyncTime = DateTime.now();
+    _lastSyncTime = clock.now();
 
     try {
       // Step 1: Request control if we don't have it and need it

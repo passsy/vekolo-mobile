@@ -380,23 +380,26 @@ class BleScanner with WidgetsBindingObserver {
       final newRssi = hasRecentSignal ? device.scanResult.rssi : null;
 
       // Only update if RSSI changed
-      if (device.rssi != newRssi) {
-        if (newRssi == null) {
-          signalLostCount++;
-          developer.log(
-            '[BleScanner] Device lost signal: ${device.name ?? device.deviceId} '
-            '(last seen ${timeSinceLastSeen.inSeconds}s ago, was ${device.rssi} dBm)',
-          );
-        } else {
-          signalRestoredCount++;
-          developer.log(
-            '[BleScanner] Device signal restored: ${device.name ?? device.deviceId} '
-            '(RSSI: $newRssi dBm)',
-          );
-        }
-        _discoveredDevices[entry.key] = device.copyWithRssi(newRssi);
-        updated = true;
+      if (device.rssi == newRssi) continue;
+
+      if (newRssi == null) {
+        signalLostCount++;
+        developer.log(
+          '[BleScanner] Device lost signal: ${device.name ?? device.deviceId} '
+          '(last seen ${timeSinceLastSeen.inSeconds}s ago, was ${device.rssi} dBm)',
+        );
       }
+
+      if (newRssi != null) {
+        signalRestoredCount++;
+        developer.log(
+          '[BleScanner] Device signal restored: ${device.name ?? device.deviceId} '
+          '(RSSI: $newRssi dBm)',
+        );
+      }
+
+      _discoveredDevices[entry.key] = device.copyWithRssi(newRssi);
+      updated = true;
     }
 
     if (updated) {
@@ -446,8 +449,8 @@ class BleScanner with WidgetsBindingObserver {
       final deviceId = result.device.remoteId.str;
       final existing = _discoveredDevices[deviceId];
 
+      // Early return pattern for new device
       if (existing == null) {
-        // New device discovered
         _discoveredDevices[deviceId] = DiscoveredDevice(
           scanResult: result,
           firstSeen: now,
@@ -456,11 +459,12 @@ class BleScanner with WidgetsBindingObserver {
         );
         updated = true;
         developer.log('[BleScanner] New device discovered: $deviceId (${result.advertisementData.advName})');
-      } else {
-        // Update existing device with new scan result and last seen time
-        _discoveredDevices[deviceId] = existing.copyWithScanResult(result, now);
-        updated = true;
+        continue;
       }
+
+      // Update existing device with new scan result and last seen time
+      _discoveredDevices[deviceId] = existing.copyWithScanResult(result, now);
+      updated = true;
     }
 
     if (updated) {

@@ -11,6 +11,7 @@
 /// - Workout sync with target power updates
 /// - State management and beacon updates
 /// - Error handling and recovery
+import 'package:clock/clock.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vekolo/domain/devices/device_manager.dart';
 import 'package:vekolo/domain/mocks/device_simulator.dart';
@@ -135,7 +136,7 @@ void main() {
       expect(syncService.isSyncing.value, isTrue);
 
       // Set first workout target
-      final firstTarget = ErgCommand(targetWatts: 200, timestamp: DateTime.now());
+      final firstTarget = ErgCommand(targetWatts: 200, timestamp: clock.now());
       syncService.currentTarget.value = firstTarget;
 
       // Wait for sync to complete
@@ -150,7 +151,7 @@ void main() {
       // =====================================================================
 
       // Update target during workout (interval change)
-      final secondTarget = ErgCommand(targetWatts: 300, timestamp: DateTime.now());
+      final secondTarget = ErgCommand(targetWatts: 300, timestamp: clock.now());
       syncService.currentTarget.value = secondTarget;
 
       // Wait for sync and power ramp
@@ -162,7 +163,7 @@ void main() {
       expect(syncService.lastSyncTime.value, isNotNull);
 
       // Lower target (recovery interval)
-      final thirdTarget = ErgCommand(targetWatts: 120, timestamp: DateTime.now());
+      final thirdTarget = ErgCommand(targetWatts: 120, timestamp: clock.now());
       syncService.currentTarget.value = thirdTarget;
 
       await Future<void>.delayed(const Duration(milliseconds: 800));
@@ -215,7 +216,7 @@ void main() {
       syncService.startSync();
 
       // Set a target
-      syncService.currentTarget.value = ErgCommand(targetWatts: 200, timestamp: DateTime.now());
+      syncService.currentTarget.value = ErgCommand(targetWatts: 200, timestamp: clock.now());
 
       await Future<void>.delayed(const Duration(milliseconds: 300));
       expect(syncService.syncError.value, isNull);
@@ -224,7 +225,7 @@ void main() {
       await deviceManager.removeDevice(trainer.id);
 
       // Try to sync new target
-      syncService.currentTarget.value = ErgCommand(targetWatts: 250, timestamp: DateTime.now());
+      syncService.currentTarget.value = ErgCommand(targetWatts: 250, timestamp: clock.now());
 
       await Future<void>.delayed(const Duration(milliseconds: 100));
 
@@ -331,7 +332,7 @@ void main() {
       syncService.startSync();
 
       // Set target
-      syncService.currentTarget.value = ErgCommand(targetWatts: 200, timestamp: DateTime.now());
+      syncService.currentTarget.value = ErgCommand(targetWatts: 200, timestamp: clock.now());
 
       await Future<void>.delayed(const Duration(milliseconds: 300));
 

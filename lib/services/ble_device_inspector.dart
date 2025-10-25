@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:developer' as developer;
 
+import 'package:clock/clock.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart' as fbp;
 
 /// Service for inspecting unknown BLE devices and collecting comprehensive GATT data.
@@ -57,7 +58,7 @@ class BleDeviceInspector {
     Map<fbp.Guid, List<int>>? advertisementData,
     int? rssi,
   }) async {
-    _inspectionStartTime = DateTime.now();
+    _inspectionStartTime = clock.now();
     _deviceId = deviceId;
     _deviceName = deviceName;
     _advertisementData = advertisementData;
@@ -76,14 +77,14 @@ class BleDeviceInspector {
       // Step 3: Disconnect
       await _disconnect();
 
-      _inspectionEndTime = DateTime.now();
+      _inspectionEndTime = clock.now();
 
       // Step 4: Generate report
       return _generateReport();
     } catch (e, stackTrace) {
       developer.log('[BleDeviceInspector] Inspection failed: $e', error: e, stackTrace: stackTrace);
       await _disconnect();
-      _inspectionEndTime = DateTime.now();
+      _inspectionEndTime = clock.now();
       return _generateReport(error: e.toString());
     }
   }
@@ -146,35 +147,30 @@ class BleDeviceInspector {
       for (final service in services) {
         developer.log('[BleDeviceInspector] Processing service: ${service.uuid}');
 
-        final serviceInfo = _ServiceInfo(
-          uuid: service.uuid,
-          isPrimary: service.isPrimary,
-        );
+        final characteristics = <_CharacteristicInfo>[];
 
         // Process each characteristic
         for (final characteristic in service.characteristics) {
           developer.log('[BleDeviceInspector] Processing characteristic: ${characteristic.uuid}');
 
-          final charInfo = _CharacteristicInfo(
-            uuid: characteristic.uuid,
-            isReadable: characteristic.properties.read,
-            isWritableWithResponse: characteristic.properties.write,
-            isWritableWithoutResponse: characteristic.properties.writeWithoutResponse,
-            isNotifiable: characteristic.properties.notify,
-            isIndicatable: characteristic.properties.indicate,
-          );
-
           // Try to read characteristic value if readable
+          List<int>? charValue;
+          String? charReadError;
           if (characteristic.properties.read) {
-            await _readCharacteristic(characteristic, charInfo);
+            final readResult = await _readCharacteristic(characteristic);
+            charValue = readResult.value;
+            charReadError = readResult.error;
           } else {
             developer.log('[BleDeviceInspector] Characteristic ${characteristic.uuid} is not readable');
           }
 
           // Process descriptors
+          final descriptors = <_DescriptorInfo>[];
           for (final descriptor in characteristic.descriptors) {
             developer.log('[BleDeviceInspector] Processing descriptor: ${descriptor.uuid}');
-            final descriptorInfo = _DescriptorInfo(uuid: descriptor.uuid);
+
+            List<int>? descriptorValue;
+            String? descriptorReadError;
 
             try {
               final value = await descriptor.read().timeout(
@@ -186,7 +182,7 @@ class BleDeviceInspector {
               );
 
               if (value.isNotEmpty) {
-                descriptorInfo.value = value;
+                descriptorValue = value;
                 developer.log('[BleDeviceInspector] Read ${value.length} byte(s) from descriptor ${descriptor.uuid}');
               }
             } catch (e, stackTrace) {
@@ -195,16 +191,34 @@ class BleDeviceInspector {
                 error: e,
                 stackTrace: stackTrace,
               );
-              descriptorInfo.readError = e.toString();
+              descriptorReadError = e.toString();
             }
 
-            charInfo.descriptors.add(descriptorInfo);
+            descriptors.add(_DescriptorInfo(
+              uuid: descriptor.uuid,
+              value: descriptorValue,
+              readError: descriptorReadError,
+            ));
           }
 
-          serviceInfo.characteristics.add(charInfo);
+          characteristics.add(_CharacteristicInfo(
+            uuid: characteristic.uuid,
+            isReadable: characteristic.properties.read,
+            isWritableWithResponse: characteristic.properties.write,
+            isWritableWithoutResponse: characteristic.properties.writeWithoutResponse,
+            isNotifiable: characteristic.properties.notify,
+            isIndicatable: characteristic.properties.indicate,
+            value: charValue,
+            readError: charReadError,
+            descriptors: descriptors,
+          ));
         }
 
-        _services.add(serviceInfo);
+        _services.add(_ServiceInfo(
+          uuid: service.uuid,
+          isPrimary: service.isPrimary,
+          characteristics: characteristics,
+        ));
       }
 
       developer.log('[BleDeviceInspector] Service discovery completed');
@@ -215,9 +229,8 @@ class BleDeviceInspector {
   }
 
   /// Reads a characteristic value with timeout and error handling.
-  Future<void> _readCharacteristic(
+  Future<({List<int>? value, String? error})> _readCharacteristic(
     fbp.BluetoothCharacteristic characteristic,
-    _CharacteristicInfo charInfo,
   ) async {
     try {
       final value = await characteristic.read().timeout(
@@ -229,16 +242,17 @@ class BleDeviceInspector {
       );
 
       if (value.isNotEmpty) {
-        charInfo.value = value;
         developer.log('[BleDeviceInspector] Read ${value.length} byte(s) from ${characteristic.uuid}');
+        return (value: value, error: null);
       }
+      return (value: null, error: null);
     } catch (e, stackTrace) {
       developer.log(
         '[BleDeviceInspector] Failed to read characteristic ${characteristic.uuid}: $e',
         error: e,
         stackTrace: stackTrace,
       );
-      charInfo.readError = e.toString();
+      return (value: null, error: e.toString());
     }
   }
 
@@ -429,11 +443,15 @@ class BleDeviceInspector {
 
 /// Internal class to store service information.
 class _ServiceInfo {
-  _ServiceInfo({required this.uuid, required this.isPrimary});
+  _ServiceInfo({
+    required this.uuid,
+    required this.isPrimary,
+    required this.characteristics,
+  });
 
   final fbp.Guid uuid;
   final bool isPrimary;
-  final List<_CharacteristicInfo> characteristics = [];
+  final List<_CharacteristicInfo> characteristics;
 }
 
 /// Internal class to store characteristic information.
@@ -445,6 +463,9 @@ class _CharacteristicInfo {
     required this.isWritableWithoutResponse,
     required this.isNotifiable,
     required this.isIndicatable,
+    required this.value,
+    required this.readError,
+    required this.descriptors,
   });
 
   final fbp.Guid uuid;
@@ -453,16 +474,20 @@ class _CharacteristicInfo {
   final bool isWritableWithoutResponse;
   final bool isNotifiable;
   final bool isIndicatable;
-  List<int>? value;
-  String? readError;
-  final List<_DescriptorInfo> descriptors = [];
+  final List<int>? value;
+  final String? readError;
+  final List<_DescriptorInfo> descriptors;
 }
 
 /// Internal class to store descriptor information.
 class _DescriptorInfo {
-  _DescriptorInfo({required this.uuid});
+  _DescriptorInfo({
+    required this.uuid,
+    required this.value,
+    required this.readError,
+  });
 
   final fbp.Guid uuid;
-  List<int>? value;
-  String? readError;
+  final List<int>? value;
+  final String? readError;
 }

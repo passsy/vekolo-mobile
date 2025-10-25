@@ -47,6 +47,7 @@ library;
 import 'dart:async';
 import 'dart:developer' as developer;
 
+import 'package:clock/clock.dart';
 import 'package:state_beacon/state_beacon.dart';
 import 'package:vekolo/domain/devices/device_manager.dart';
 import 'package:vekolo/domain/models/erg_command.dart';
@@ -73,22 +74,17 @@ class WorkoutPlayerService {
     required int ftp,
     double powerScaleFactor = 1.0,
   })  : _workoutPlan = workoutPlan,
-        _ftp = ftp {
-    // Initialize workout sync service
-    _syncService = WorkoutSyncService(deviceManager);
-
-    // Flatten the workout plan and events
-    _flattenedPlan = flattenWorkoutPlan(
-      workoutPlan.plan,
-      powerScaleFactor: powerScaleFactor,
-    );
-    _flattenedEvents = flattenWorkoutEvents(
-      workoutPlan.plan,
-      workoutPlan.events,
-    );
-
-    // Calculate total duration
-    _totalDuration = calculateTotalDuration(workoutPlan.plan);
+        _ftp = ftp,
+        _syncService = WorkoutSyncService(deviceManager),
+        _flattenedPlan = flattenWorkoutPlan(
+          workoutPlan.plan,
+          powerScaleFactor: powerScaleFactor,
+        ),
+        _flattenedEvents = flattenWorkoutEvents(
+          workoutPlan.plan,
+          workoutPlan.events,
+        ),
+        _totalDuration = calculateTotalDuration(workoutPlan.plan) {
 
     // Set initial scale factor
     this.powerScaleFactor.value = powerScaleFactor;
@@ -111,15 +107,15 @@ class WorkoutPlayerService {
 
   final WorkoutPlan _workoutPlan;
   final int _ftp;
-  late final WorkoutSyncService _syncService;
+  final WorkoutSyncService _syncService;
 
   // ==========================================================================
   // Flattened Workout Data
   // ==========================================================================
 
-  late final List<dynamic> _flattenedPlan; // List of PowerBlock or RampBlock
-  late final List<dynamic> _flattenedEvents; // List of FlattenedMessageEvent or FlattenedEffectEvent
-  late final int _totalDuration;
+  List<dynamic> _flattenedPlan; // List of PowerBlock or RampBlock
+  final List<dynamic> _flattenedEvents; // List of FlattenedMessageEvent or FlattenedEffectEvent
+  final int _totalDuration;
 
   // ==========================================================================
   // Playback State
@@ -277,7 +273,7 @@ class WorkoutPlayerService {
     developer.log('Starting workout', name: 'WorkoutPlayerService');
 
     // Mark as resumed
-    _lastResumeTime = DateTime.now();
+    _lastResumeTime = clock.now();
     isPaused.value = false;
 
     // Start syncing to trainer
@@ -527,7 +523,7 @@ class WorkoutPlayerService {
     // Update sync service with new target
     _syncService.currentTarget.value = ErgCommand(
       targetWatts: powerWatts,
-      timestamp: DateTime.now(),
+      timestamp: clock.now(),
     );
   }
 
@@ -559,7 +555,7 @@ class WorkoutPlayerService {
     // Update sync service with new target
     _syncService.currentTarget.value = ErgCommand(
       targetWatts: powerWatts,
-      timestamp: DateTime.now(),
+      timestamp: clock.now(),
     );
   }
 
@@ -654,7 +650,7 @@ class WorkoutPlayerService {
   /// Only updates if not paused and a resume time is set.
   void _updateGlobalElapsedTime() {
     if (!isPaused.value && _lastResumeTime != null) {
-      final now = DateTime.now();
+      final now = clock.now();
       final delta = now.difference(_lastResumeTime!).inMilliseconds;
       _workoutElapsedTime += delta;
       _lastResumeTime = now;

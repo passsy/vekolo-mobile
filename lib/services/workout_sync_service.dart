@@ -21,7 +21,7 @@
 /// // Update target from workout
 /// syncService.currentTarget.value = ErgCommand(
 ///   targetWatts: 200,
-///   timestamp: DateTime.now(),
+///   timestamp: clock.now(),
 /// );
 ///
 /// // Monitor sync status
@@ -37,6 +37,7 @@ library;
 
 import 'dart:async';
 
+import 'package:clock/clock.dart';
 import 'package:state_beacon/state_beacon.dart';
 import 'package:vekolo/domain/devices/device_manager.dart';
 import 'package:vekolo/domain/models/erg_command.dart';
@@ -246,7 +247,7 @@ class WorkoutSyncService {
 
       // Success - update state
       _lastSentCommand = command;
-      lastSyncTime.value = DateTime.now();
+      lastSyncTime.value = clock.now();
       syncError.value = null;
       _retryCount = 0;
     } catch (e, stackTrace) {

@@ -26,7 +26,7 @@ void main() {
             serviceUuids: [],
           ),
           rssi: -50,
-          timeStamp: DateTime.now(),
+          timeStamp: clock.now(),
         ),
         firstSeen: DateTime(2025, 1, 1, 12, 0, 0),
         lastSeen: DateTime(2025, 1, 1, 12, 0, 3),
@@ -50,7 +50,7 @@ void main() {
             serviceUuids: [],
           ),
           rssi: -50,
-          timeStamp: DateTime.now(),
+          timeStamp: clock.now(),
         ),
         firstSeen: DateTime(2025, 1, 1, 12, 0, 0),
         lastSeen: DateTime(2025, 1, 1, 12, 0, 0),
@@ -74,7 +74,7 @@ void main() {
             serviceUuids: [],
           ),
           rssi: -50,
-          timeStamp: DateTime.now(),
+          timeStamp: clock.now(),
         ),
         firstSeen: DateTime(2025, 1, 1, 12, 0, 0),
         lastSeen: DateTime(2025, 1, 1, 12, 0, 3),
@@ -1448,7 +1448,7 @@ void main() {
           serviceUuids: [],
         ),
         rssi: -60,
-        timeStamp: DateTime.now(),
+        timeStamp: clock.now(),
       );
 
       final scanResult2 = ScanResult(
@@ -1463,20 +1463,20 @@ void main() {
           serviceUuids: [],
         ),
         rssi: -50,
-        timeStamp: DateTime.now(),
+        timeStamp: clock.now(),
       );
 
       final device1 = DiscoveredDevice(
         scanResult: scanResult1,
-        firstSeen: DateTime.now(),
-        lastSeen: DateTime.now(),
+        firstSeen: clock.now(),
+        lastSeen: clock.now(),
         rssi: -50,
       );
 
       final device2 = DiscoveredDevice(
         scanResult: scanResult2,
-        firstSeen: DateTime.now(),
-        lastSeen: DateTime.now(),
+        firstSeen: clock.now(),
+        lastSeen: clock.now(),
         rssi: -50,
       );
 
