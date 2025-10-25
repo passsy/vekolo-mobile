@@ -29,5 +29,4 @@ linter:
     # prefer_single_quotes: true
 
     # Prevent reassignment
-    prefer_final_locals: true
-    
+    # prefer_final_locals: true
