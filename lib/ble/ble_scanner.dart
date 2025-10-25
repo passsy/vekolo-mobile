@@ -32,10 +32,17 @@ class DiscoveredDevice {
   /// When this device was last seen advertising (most recent advertisement).
   final DateTime lastSeen;
 
+  /// Current RSSI value (signal strength).
+  ///
+  /// Null if device hasn't been seen recently (>5 seconds).
+  /// Updated periodically by the scanner to reflect current signal status.
+  final int? rssi;
+
   DiscoveredDevice({
     required this.scanResult,
     required this.firstSeen,
     required this.lastSeen,
+    required this.rssi,
   });
 
   /// The device's Bluetooth identifier.
@@ -44,45 +51,28 @@ class DiscoveredDevice {
   /// The device's advertised name, if available.
   String? get name => scanResult.advertisementData.advName;
 
-  /// Signal strength indicator (more negative = weaker signal).
-  ///
-  /// Returns null if device hasn't been seen recently (>5 seconds),
-  /// indicating the RSSI value is stale and shouldn't be used.
-  int? get rssi {
-    if (hasRecentSignal()) {
-      return scanResult.rssi;
-    }
-    return null;
-  }
-
   /// List of service UUIDs advertised by this device.
   List<Guid> get serviceUuids => scanResult.advertisementData.serviceUuids;
 
-  /// Check if device has recent signal (seen within the last few seconds).
+  /// Create a copy with updated scanResult and timestamps.
   ///
-  /// Devices without recent signal are shown as "No signal" in the UI
-  /// but remain in the list until completely expired (30s).
-  bool hasRecentSignal([DateTime? now]) {
-    final currentTime = now ?? clock.now();
-    final timeSinceLastSeen = currentTime.difference(lastSeen);
-    return timeSinceLastSeen < const Duration(seconds: 5);
-  }
-
-  /// Create a copy with updated lastSeen timestamp.
-  DiscoveredDevice copyWithLastSeen(DateTime newLastSeen) {
-    return DiscoveredDevice(
-      scanResult: scanResult,
-      firstSeen: firstSeen,
-      lastSeen: newLastSeen,
-    );
-  }
-
-  /// Create a copy with updated scanResult (preserving discovery times).
+  /// Sets RSSI to the new scan result's value since device just advertised.
   DiscoveredDevice copyWithScanResult(ScanResult newScanResult, DateTime newLastSeen) {
     return DiscoveredDevice(
       scanResult: newScanResult,
       firstSeen: firstSeen,
       lastSeen: newLastSeen,
+      rssi: newScanResult.rssi,
+    );
+  }
+
+  /// Create a copy with updated RSSI value.
+  DiscoveredDevice copyWithRssi(int? newRssi) {
+    return DiscoveredDevice(
+      scanResult: scanResult,
+      firstSeen: firstSeen,
+      lastSeen: lastSeen,
+      rssi: newRssi,
     );
   }
 
@@ -362,11 +352,41 @@ class BleScanner with WidgetsBindingObserver {
   Future<void> _performPeriodicChecks() async {
     if (_disposed) return;
 
+    // Update signal status for all devices
+    _updateDeviceSignalStatus();
+
     // Remove expired devices
     _removeExpiredDevices();
 
     // Update permissions state (might have changed in system settings)
     await _updateBluetoothState();
+  }
+
+  /// Update the RSSI values for all discovered devices.
+  ///
+  /// This is called periodically to ensure devices that lose signal
+  /// have their RSSI set to null, which triggers UI updates to show "No signal".
+  void _updateDeviceSignalStatus() {
+    final now = clock.now();
+    final recentSignalThreshold = const Duration(seconds: 5);
+    bool updated = false;
+
+    for (final entry in _discoveredDevices.entries) {
+      final device = entry.value;
+      final timeSinceLastSeen = now.difference(device.lastSeen);
+      final hasRecentSignal = timeSinceLastSeen < recentSignalThreshold;
+      final newRssi = hasRecentSignal ? device.scanResult.rssi : null;
+
+      // Only update if RSSI changed
+      if (device.rssi != newRssi) {
+        _discoveredDevices[entry.key] = device.copyWithRssi(newRssi);
+        updated = true;
+      }
+    }
+
+    if (updated) {
+      _updateDevicesBeacon();
+    }
   }
 
   /// Remove devices that haven't been seen in 30 seconds.
@@ -413,6 +433,7 @@ class BleScanner with WidgetsBindingObserver {
           scanResult: result,
           firstSeen: now,
           lastSeen: now,
+          rssi: result.rssi,
         );
         updated = true;
         developer.log('[BleScanner] New device discovered: $deviceId (${result.advertisementData.advName})');

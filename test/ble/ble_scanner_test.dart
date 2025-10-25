@@ -12,7 +12,7 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('DiscoveredDevice - Signal Status', () {
-    test('hasRecentSignal returns true for devices seen within 5 seconds', () {
+    test('rssi is stored value when set', () {
       final device = DiscoveredDevice(
         scanResult: ScanResult(
           device: BluetoothDevice(remoteId: const DeviceIdentifier('00:11:22:33:44:55')),
@@ -29,14 +29,14 @@ void main() {
           timeStamp: DateTime.now(),
         ),
         firstSeen: DateTime(2025, 1, 1, 12, 0, 0),
-        lastSeen: DateTime(2025, 1, 1, 12, 0, 3), // 3 seconds ago
+        lastSeen: DateTime(2025, 1, 1, 12, 0, 3),
+        rssi: -50,
       );
 
-      final now = DateTime(2025, 1, 1, 12, 0, 6);
-      expect(device.hasRecentSignal(now), isTrue);
+      expect(device.rssi, equals(-50));
     });
 
-    test('hasRecentSignal returns false for devices not seen for >5 seconds', () {
+    test('rssi can be null', () {
       final device = DiscoveredDevice(
         scanResult: ScanResult(
           device: BluetoothDevice(remoteId: const DeviceIdentifier('00:11:22:33:44:55')),
@@ -53,39 +53,14 @@ void main() {
           timeStamp: DateTime.now(),
         ),
         firstSeen: DateTime(2025, 1, 1, 12, 0, 0),
-        lastSeen: DateTime(2025, 1, 1, 12, 0, 0), // 10 seconds ago
+        lastSeen: DateTime(2025, 1, 1, 12, 0, 0),
+        rssi: null,
       );
 
-      final now = DateTime(2025, 1, 1, 12, 0, 10);
-      expect(device.hasRecentSignal(now), isFalse);
+      expect(device.rssi, isNull);
     });
 
-    test('hasRecentSignal uses clock.now() when now parameter not provided', () {
-      withClock(Clock.fixed(DateTime(2025, 1, 1, 12, 0, 10)), () {
-        final device = DiscoveredDevice(
-          scanResult: ScanResult(
-            device: BluetoothDevice(remoteId: const DeviceIdentifier('00:11:22:33:44:55')),
-            advertisementData: AdvertisementData(
-              advName: 'Test Device',
-              txPowerLevel: null,
-              appearance: null,
-              connectable: true,
-              manufacturerData: {},
-              serviceData: {},
-              serviceUuids: [],
-            ),
-            rssi: -50,
-            timeStamp: DateTime.now(),
-          ),
-          firstSeen: DateTime(2025, 1, 1, 12, 0, 0),
-          lastSeen: DateTime(2025, 1, 1, 12, 0, 8), // 2 seconds ago from fixed clock
-        );
-
-        expect(device.hasRecentSignal(), isTrue);
-      });
-    });
-
-    test('rssi returns value when device has recent signal', () {
+    test('copyWithRssi updates rssi value', () {
       final device = DiscoveredDevice(
         scanResult: ScanResult(
           device: BluetoothDevice(remoteId: const DeviceIdentifier('00:11:22:33:44:55')),
@@ -102,40 +77,13 @@ void main() {
           timeStamp: DateTime.now(),
         ),
         firstSeen: DateTime(2025, 1, 1, 12, 0, 0),
-        lastSeen: DateTime(2025, 1, 1, 12, 0, 3), // 3 seconds ago
+        lastSeen: DateTime(2025, 1, 1, 12, 0, 3),
+        rssi: -50,
       );
 
-      final now = DateTime(2025, 1, 1, 12, 0, 6);
-      // hasRecentSignal needs to be called with the same 'now' that rssi getter will use
-      withClock(Clock.fixed(now), () {
-        expect(device.rssi, equals(-50));
-      });
-    });
-
-    test('rssi returns null when device has no recent signal', () {
-      final device = DiscoveredDevice(
-        scanResult: ScanResult(
-          device: BluetoothDevice(remoteId: const DeviceIdentifier('00:11:22:33:44:55')),
-          advertisementData: AdvertisementData(
-            advName: 'Test Device',
-            txPowerLevel: null,
-            appearance: null,
-            connectable: true,
-            manufacturerData: {},
-            serviceData: {},
-            serviceUuids: [],
-          ),
-          rssi: -50,
-          timeStamp: DateTime.now(),
-        ),
-        firstSeen: DateTime(2025, 1, 1, 12, 0, 0),
-        lastSeen: DateTime(2025, 1, 1, 12, 0, 0), // 10 seconds ago
-      );
-
-      final now = DateTime(2025, 1, 1, 12, 0, 10);
-      withClock(Clock.fixed(now), () {
-        expect(device.rssi, isNull);
-      });
+      final updated = device.copyWithRssi(null);
+      expect(updated.rssi, isNull);
+      expect(updated.lastSeen, equals(device.lastSeen)); // Unchanged
     });
   });
 
@@ -1432,16 +1380,15 @@ void main() {
         scanResult: scanResult,
         firstSeen: DateTime(2024, 1, 1, 12, 0, 0),
         lastSeen: DateTime(2024, 1, 1, 12, 0, 0),
+        rssi: -60,
       );
 
-      final updated = device.copyWithLastSeen(DateTime(2024, 1, 1, 12, 0, 5));
-
-      expect(updated.firstSeen, DateTime(2024, 1, 1, 12, 0, 0));
-      expect(updated.lastSeen, DateTime(2024, 1, 1, 12, 0, 5));
-      expect(updated.scanResult, same(scanResult));
+      expect(device.firstSeen, DateTime(2024, 1, 1, 12, 0, 0));
+      expect(device.lastSeen, DateTime(2024, 1, 1, 12, 0, 0));
+      expect(device.rssi, -60);
     });
 
-    test('copyWithScanResult preserves firstSeen', () {
+    test('copyWithScanResult preserves firstSeen and updates RSSI', () {
       final scanResult1 = ScanResult(
         device: BluetoothDevice(remoteId: DeviceIdentifier('D1')),
         advertisementData: AdvertisementData(
@@ -1476,6 +1423,7 @@ void main() {
         scanResult: scanResult1,
         firstSeen: DateTime(2024, 1, 1, 12, 0, 0),
         lastSeen: DateTime(2024, 1, 1, 12, 0, 0),
+        rssi: -60,
       );
 
       final updated = device.copyWithScanResult(scanResult2, DateTime(2024, 1, 1, 12, 0, 5));
@@ -1483,7 +1431,7 @@ void main() {
       expect(updated.firstSeen, DateTime(2024, 1, 1, 12, 0, 0));
       expect(updated.lastSeen, DateTime(2024, 1, 1, 12, 0, 5));
       expect(updated.scanResult, same(scanResult2));
-      expect(updated.rssi, -50);
+      expect(updated.rssi, -50); // Updates to new scan result's RSSI
       expect(updated.name, 'Test Updated');
     });
 
@@ -1522,12 +1470,14 @@ void main() {
         scanResult: scanResult1,
         firstSeen: DateTime.now(),
         lastSeen: DateTime.now(),
+        rssi: -50,
       );
 
       final device2 = DiscoveredDevice(
         scanResult: scanResult2,
         firstSeen: DateTime.now(),
         lastSeen: DateTime.now(),
+        rssi: -50,
       );
 
       expect(device1, equals(device2));
