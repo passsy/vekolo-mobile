@@ -31,9 +31,9 @@ class PrettyLogInterceptor extends Interceptor {
 
       if (options.headers.isNotEmpty) {
         buffer.writeln('│ Headers:');
-        options.headers.forEach((key, value) {
-          buffer.writeln('│   $key: $value');
-        });
+        for (final entry in options.headers.entries) {
+          buffer.writeln('│   ${entry.key}: ${entry.value}');
+        }
       }
 
       if (options.data != null) {
@@ -67,9 +67,9 @@ class PrettyLogInterceptor extends Interceptor {
 
       if (response.headers.map.isNotEmpty) {
         buffer.writeln('│ Headers:');
-        response.headers.map.forEach((key, value) {
-          buffer.writeln('│   $key: ${value.join(', ')}');
-        });
+        for (final entry in response.headers.map.entries) {
+          buffer.writeln('│   ${entry.key}: ${entry.value.join(', ')}');
+        }
       }
 
       if (response.data != null) {
@@ -111,9 +111,9 @@ class PrettyLogInterceptor extends Interceptor {
       if (logMode == LogMode.unexpectedResponses) {
         if (err.requestOptions.headers.isNotEmpty) {
           buffer.writeln('│ Request Headers:');
-          err.requestOptions.headers.forEach((key, value) {
-            buffer.writeln('│ $key: $value');
-          });
+          for (final entry in err.requestOptions.headers.entries) {
+            buffer.writeln('│ ${entry.key}: ${entry.value}');
+          }
         }
 
         if (err.requestOptions.data != null) {
@@ -135,8 +135,8 @@ class PrettyLogInterceptor extends Interceptor {
       final message = err.message ?? '';
       final messageLines = message.split('\n');
       buffer.writeln('│ ${err.type}: ${messageLines.first}');
-      for (int i = 1; i < messageLines.length; i++) {
-        buffer.writeln('│   ${messageLines[i]}');
+      for (final line in messageLines.skip(1)) {
+        buffer.writeln('│   $line');
       }
 
       if (err.response != null) {
@@ -146,9 +146,9 @@ class PrettyLogInterceptor extends Interceptor {
 
         if (err.response!.headers.map.isNotEmpty) {
           buffer.writeln('│ Response Headers:');
-          err.response!.headers.map.forEach((key, value) {
-            buffer.writeln('│ $key: ${value.join(', ')}');
-          });
+          for (final entry in err.response!.headers.map.entries) {
+            buffer.writeln('│ ${entry.key}: ${entry.value.join(', ')}');
+          }
         }
 
         if (err.response?.data != null) {
