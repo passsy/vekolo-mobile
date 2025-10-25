@@ -301,6 +301,9 @@ class BleScanner with WidgetsBindingObserver {
       final isPermanentlyDenied = await _permissions.isPermanentlyDenied();
       final isLocationEnabled = await _permissions.isLocationServiceEnabled();
 
+      // Check disposed again after async operations
+      if (_disposed) return;
+
       final newState = BluetoothState(
         adapterState: adapterState ?? _bluetoothStateBeacon.value.adapterState,
         hasPermission: hasPermission,
@@ -387,6 +390,7 @@ class BleScanner with WidgetsBindingObserver {
 
   /// Update the devices beacon with current list (maintains discovery order).
   void _updateDevicesBeacon() {
+    if (_disposed) return;
     _devicesBeacon.value = _discoveredDevices.values.toList();
   }
 
@@ -448,8 +452,11 @@ class BleScanner with WidgetsBindingObserver {
 
     try {
       await _platform.startScan();
-      _isScanningBeacon.value = true;
-      developer.log('[BleScanner] Platform scan started successfully');
+      // Check disposed again after async operation
+      if (!_disposed) {
+        _isScanningBeacon.value = true;
+        developer.log('[BleScanner] Platform scan started successfully');
+      }
     } catch (e, stackTrace) {
       developer.log('[BleScanner] Failed to start platform scan: $e');
       developer.log('$stackTrace');
@@ -490,8 +497,11 @@ class BleScanner with WidgetsBindingObserver {
 
     try {
       await _platform.stopScan();
-      _isScanningBeacon.value = false;
-      developer.log('[BleScanner] Platform scan stopped');
+      // Check disposed again after async operation
+      if (!_disposed) {
+        _isScanningBeacon.value = false;
+        developer.log('[BleScanner] Platform scan stopped');
+      }
     } catch (e, stackTrace) {
       developer.log('[BleScanner] Failed to stop platform scan: $e');
       developer.log('$stackTrace');
