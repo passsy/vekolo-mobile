@@ -51,6 +51,10 @@ class _ScannerPageState extends State<ScannerPage> {
     // Listen to discovered devices
     _devicesUnsubscribe = _scanner.devices.subscribe((devices) {
       setState(() {
+        if (devices.isEmpty && !_isScanning) {
+          // Scanner stopped - keep existing devices, we'll show them with unknown RSSI
+          return;
+        }
         _devices.clear();
         _devices.addAll(devices);
       });
@@ -164,10 +168,24 @@ class _ScannerPageState extends State<ScannerPage> {
                       final device = _devices[index];
                       final deviceName = device.name ?? '';
                       final deviceId = device.deviceId;
+                      final rssiText = _isScanning ? '${device.rssi}' : 'Unknown';
                       return ListTile(
-                        leading: const Icon(Icons.bluetooth),
-                        title: Text(deviceName.isEmpty ? 'Unknown Device' : deviceName),
-                        subtitle: Text('$deviceId\nRSSI: ${device.rssi}'),
+                        leading: Icon(
+                          Icons.bluetooth,
+                          color: _isScanning ? null : Colors.grey,
+                        ),
+                        title: Text(
+                          deviceName.isEmpty ? 'Unknown Device' : deviceName,
+                          style: TextStyle(
+                            color: _isScanning ? null : Colors.grey[700],
+                          ),
+                        ),
+                        subtitle: Text(
+                          '$deviceId\nRSSI: $rssiText',
+                          style: TextStyle(
+                            color: _isScanning ? null : Colors.grey[600],
+                          ),
+                        ),
                         trailing: const Icon(Icons.chevron_right),
                         onTap: () {
                           developer.log(
