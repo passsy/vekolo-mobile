@@ -1,6 +1,9 @@
 import 'package:vekolo/api/vekolo_api_client.dart';
 import 'package:vekolo/models/rekord.dart';
 
+/// User account data parsed from API responses.
+///
+/// Created from access tokens via [UserInit.fromAccessToken].
 class User with RekordMixin {
   User.fromData(Map<String, Object?> data) : rekord = Rekord(data);
 

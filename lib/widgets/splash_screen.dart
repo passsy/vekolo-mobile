@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+/// Shown during app initialization while checking auth state.
 class SplashScreen extends StatelessWidget {
   const SplashScreen({super.key});
 
