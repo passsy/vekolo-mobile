@@ -370,6 +370,8 @@ class BleScanner with WidgetsBindingObserver {
     final now = clock.now();
     final recentSignalThreshold = const Duration(seconds: 5);
     bool updated = false;
+    int signalLostCount = 0;
+    int signalRestoredCount = 0;
 
     for (final entry in _discoveredDevices.entries) {
       final device = entry.value;
@@ -379,12 +381,29 @@ class BleScanner with WidgetsBindingObserver {
 
       // Only update if RSSI changed
       if (device.rssi != newRssi) {
+        if (newRssi == null) {
+          signalLostCount++;
+          developer.log(
+            '[BleScanner] Device lost signal: ${device.name ?? device.deviceId} '
+            '(last seen ${timeSinceLastSeen.inSeconds}s ago, was ${device.rssi} dBm)',
+          );
+        } else {
+          signalRestoredCount++;
+          developer.log(
+            '[BleScanner] Device signal restored: ${device.name ?? device.deviceId} '
+            '(RSSI: $newRssi dBm)',
+          );
+        }
         _discoveredDevices[entry.key] = device.copyWithRssi(newRssi);
         updated = true;
       }
     }
 
     if (updated) {
+      developer.log(
+        '[BleScanner] Signal status updated: $signalLostCount lost, $signalRestoredCount restored '
+        '(${_discoveredDevices.length} total devices)',
+      );
       _updateDevicesBeacon();
     }
   }
