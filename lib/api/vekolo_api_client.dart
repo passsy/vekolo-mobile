@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:fresh_dio/fresh_dio.dart' show Fresh;
 import 'package:vekolo/api/api_context.dart';
 import 'package:vekolo/api/auth/redeem_code.dart';
@@ -44,10 +45,14 @@ class VekoloApiClient {
     // Add all interceptors except auth-related ones
     publicDio.interceptors.addAll(interceptors.where((it) => it is! Fresh));
 
-    context = ApiContext(authDio: authenticatedDio, publicDio: publicDio);
+    _context = ApiContext(authDio: authenticatedDio, publicDio: publicDio);
   }
 
-  late final ApiContext context;
+  late final ApiContext _context;
+
+  /// Internal context for API requests - not part of the public API
+  @visibleForTesting
+  ApiContext get context => _context;
 
   // Auth endpoints
 
@@ -61,35 +66,35 @@ class VekoloApiClient {
     int? weight,
     int? ftp,
   }) {
-    return postRequestSignupCode(context, email: email, name: name, sex: sex, weight: weight, ftp: ftp);
+    return postRequestSignupCode(_context, email: email, name: name, sex: sex, weight: weight, ftp: ftp);
   }
 
   /// Request a magic code for login
   ///
   /// `POST /auth/code/request`
   Future<CodeRequestResponse> requestLoginCode({required String email}) {
-    return postRequestLoginCode(context, email: email);
+    return postRequestLoginCode(_context, email: email);
   }
 
   /// Redeem a magic code for JWT tokens
   ///
   /// `POST /auth/token/redeem`
   Future<TokenResponse> redeemCode({required String email, required String code, String? deviceInfo}) {
-    return postRedeemCode(context, email: email, code: code, deviceInfo: deviceInfo);
+    return postRedeemCode(_context, email: email, code: code, deviceInfo: deviceInfo);
   }
 
   /// Refresh an access token
   ///
   /// `POST /auth/token/refresh`
   Future<RefreshTokenResponse> refreshToken({required RefreshToken refreshToken}) {
-    return postRefreshToken(context, refreshToken: refreshToken);
+    return postRefreshToken(_context, refreshToken: refreshToken);
   }
 
   /// Revoke a refresh token (logout)
   ///
   /// `POST /auth/token/revoke`
   Future<RevokeTokenResponse> revokeToken({required RefreshToken refreshToken}) {
-    return postRevokeToken(context, refreshToken: refreshToken);
+    return postRevokeToken(_context, refreshToken: refreshToken);
   }
 
   // User endpoints
@@ -98,6 +103,6 @@ class VekoloApiClient {
   ///
   /// `POST /api/user/update`
   Future<UpdateProfileResponse> updateProfile({int? ftp, int? weight, String? name, String? email}) {
-    return postUpdateProfile(context, ftp: ftp, weight: weight, name: name, email: email);
+    return postUpdateProfile(_context, ftp: ftp, weight: weight, name: name, email: email);
   }
 }

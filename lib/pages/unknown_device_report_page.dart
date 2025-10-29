@@ -6,6 +6,7 @@ import 'dart:async';
 import 'package:clock/clock.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:context_plus/context_plus.dart';
+import 'package:vekolo/app/refs.dart';
 import 'package:vekolo/config/api_config.dart';
 import 'package:vekolo/models/user.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart' as fbp;
@@ -20,12 +21,7 @@ class _SimpleDevice {
   final int rssi;
   final List<fbp.Guid> serviceUuids;
 
-  _SimpleDevice({
-    required this.id,
-    required this.name,
-    required this.rssi,
-    required this.serviceUuids,
-  });
+  _SimpleDevice({required this.id, required this.name, required this.rssi, required this.serviceUuids});
 }
 
 /// Collects device BLE data and generates email report for support.
@@ -185,7 +181,7 @@ class _UnknownDeviceReportPageState extends State<UnknownDeviceReportPage> {
     developer.log('[UnknownDeviceReportPage] Device selected: ${device.id}');
 
     // Get current user from AuthService before async operations
-    final authService = authServiceRef.of(context);
+    final authService = Refs.authService.of(context);
     final user = authService.currentUser.value;
 
     // Stop scanning when device is selected
@@ -382,7 +378,7 @@ class _UnknownDeviceReportPageState extends State<UnknownDeviceReportPage> {
 
     try {
       // Get current user
-      final authService = authServiceRef.of(context);
+      final authService = Refs.authService.of(context);
       final user = authService.currentUser.value;
 
       // Regenerate report with user information

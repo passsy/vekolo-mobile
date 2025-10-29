@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:reactive_forms/reactive_forms.dart';
 import 'package:state_beacon/state_beacon.dart';
+import 'package:vekolo/app/refs.dart';
 import 'package:vekolo/config/api_config.dart';
 import 'package:vekolo/utils/dio_error_handler.dart';
 import 'package:vekolo/widgets/user_avatar.dart';
@@ -35,7 +36,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
     // Initialize form only once
     if (_form == null) {
-      final authService = authServiceRef.of(context);
+      final authService = Refs.authService.of(context);
       final user = authService.currentUser.value;
 
       _originalFtp = user?.ftp;
@@ -66,8 +67,8 @@ class _ProfilePageState extends State<ProfilePage> {
     });
 
     try {
-      final authService = authServiceRef.of(context);
-      final apiClient = apiClientRef.of(context);
+      final authService = Refs.authService.of(context);
+      final apiClient = Refs.apiClient.of(context);
       final messenger = ScaffoldMessenger.of(context);
       final refreshToken = await authService.getRefreshToken();
       final accessToken = await authService.getAccessToken();
@@ -127,7 +128,7 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Future<void> _logout() async {
-    final authService = authServiceRef.of(context);
+    final authService = Refs.authService.of(context);
     final messenger = ScaffoldMessenger.of(context);
     final router = GoRouter.of(context);
 
@@ -141,7 +142,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
   @override
   Widget build(BuildContext context) {
-    final authService = authServiceRef.of(context);
+    final authService = Refs.authService.of(context);
     final user = authService.currentUser.watch(context);
 
     if (user == null) {

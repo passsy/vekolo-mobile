@@ -2,6 +2,7 @@ import 'package:context_plus/context_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:reactive_forms/reactive_forms.dart';
+import 'package:vekolo/app/refs.dart';
 import 'package:vekolo/config/api_config.dart';
 import 'package:vekolo/utils/device_info.dart';
 import 'package:vekolo/utils/dio_error_handler.dart';
@@ -42,7 +43,7 @@ class _SignupPageState extends State<SignupPage> {
     });
 
     try {
-      final client = apiClientRef.of(context);
+      final client = Refs.apiClient.of(context);
       final response = await client.requestSignupCode(
         email: form.control('email').value as String,
         name: form.control('name').value as String?,
@@ -101,7 +102,7 @@ class _SignupPageState extends State<SignupPage> {
     });
 
     try {
-      final client = apiClientRef.of(context);
+      final client = Refs.apiClient.of(context);
       final deviceName = await DeviceInfoUtil.getDeviceName();
       final response = await client.redeemCode(
         email: form.control('email').value as String,
@@ -112,7 +113,7 @@ class _SignupPageState extends State<SignupPage> {
       if (!mounted) return;
 
       // Store tokens
-      final authService = authServiceRef.of(context);
+      final authService = Refs.authService.of(context);
       await authService.saveTokens(accessToken: response.accessToken, refreshToken: response.refreshToken);
 
       if (!mounted) return;

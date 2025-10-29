@@ -2,6 +2,7 @@ import 'package:context_plus/context_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:state_beacon/state_beacon.dart';
+import 'package:vekolo/app/refs.dart';
 import 'package:vekolo/config/api_config.dart';
 import 'package:vekolo/widgets/user_avatar.dart';
 
@@ -13,7 +14,7 @@ class HomePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final authService = authServiceRef.of(context);
+    final authService = Refs.authService.of(context);
     final user = authService.currentUser.watch(context);
 
     return Scaffold(

@@ -25,11 +25,13 @@ dependencies:
   url_launcher: ^6.3.2
   device_info_plus: ^12.2.0
   visibility_detector: ^0.4.0+2
+  shared_preferences: ^2.5.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   lint: ^2.8.0
+  spot: ^0.18.0
 
 dependency_overrides:
   fresh_dio:

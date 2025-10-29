@@ -10,9 +10,3 @@ class ApiConfig {
   /// For now, always returns dev URL. Can be extended with flavor support.
   static String get baseUrl => devBaseUrl;
 }
-
-/// Ref for dependency injection of VekoloApiClient
-final apiClientRef = Ref<VekoloApiClient>();
-
-/// Ref for dependency injection of AuthService
-final authServiceRef = Ref<AuthService>();

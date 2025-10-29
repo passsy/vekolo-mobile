@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:vekolo/api/pretty_log_interceptor.dart';
 import 'package:vekolo/api/vekolo_api_client.dart';
+import 'package:vekolo/app/refs.dart';
 import 'package:vekolo/ble/ble_scanner.dart';
 import 'package:vekolo/config/api_config.dart';
 import 'package:vekolo/config/ble_config.dart';
@@ -39,7 +40,7 @@ class _VekoloAppState extends State<VekoloApp> {
     devloper.log('[VekoloApp] DeviceStateManager initialized');
 
     // Run async initialization (load user from secure storage)
-    final authService = authServiceRef.of(context);
+    final authService = Refs.authService.of(context);
     await authService.initialize();
     try {
       await authService.refreshAccessToken();
@@ -63,9 +64,12 @@ class _VekoloAppState extends State<VekoloApp> {
 
           // Create Fresh with lazy apiClient access
           final fresh = createFreshAuth(apiClient: () => apiClient);
-          final authService = authServiceRef.bind(context, () => AuthService(fresh: fresh, apiClient: () => apiClient));
+          final authService = Refs.authService.bind(
+            context,
+            () => AuthService(fresh: fresh, apiClient: () => apiClient),
+          );
 
-          apiClient = apiClientRef.bind(
+          apiClient = Refs.apiClient.bind(
             context,
             () => VekoloApiClient(
               baseUrl: ApiConfig.baseUrl,
