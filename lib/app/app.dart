@@ -64,12 +64,12 @@ class _VekoloAppState extends State<VekoloApp> {
 
           // Create Fresh with lazy apiClient access
           final fresh = createFreshAuth(apiClient: () => apiClient);
-          final authService = Refs.authService.bind(
+          final authService = Refs.authService.bindWhenUnbound(
             context,
             () => AuthService(fresh: fresh, apiClient: () => apiClient),
           );
 
-          apiClient = Refs.apiClient.bind(
+          apiClient = Refs.apiClient.bindWhenUnbound(
             context,
             () => VekoloApiClient(
               baseUrl: ApiConfig.baseUrl,
@@ -81,21 +81,21 @@ class _VekoloAppState extends State<VekoloApp> {
           );
 
           // Initialize BLE services
-          bleScannerRef.bindLazy(context, () {
+          bleScannerRef.bindWhenUnbound(context, () {
             final scanner = BleScanner();
             scanner.initialize();
             return scanner;
           });
-          bleManagerRef.bindLazy(context, () => BleManager());
+          bleManagerRef.bindWhenUnbound(context, () => BleManager());
 
           // Initialize DeviceManager
-          deviceManagerRef.bindLazy(context, () => DeviceManager());
+          deviceManagerRef.bindWhenUnbound(context, () => DeviceManager());
 
           // Initialize WorkoutSyncService with DeviceManager dependency
-          workoutSyncServiceRef.bindLazy(context, () => WorkoutSyncService(deviceManagerRef.of(context)));
+          workoutSyncServiceRef.bindWhenUnbound(context, () => WorkoutSyncService(deviceManagerRef.of(context)));
 
           // Initialize DeviceStateManager to bridge DeviceManager with UI state
-          deviceStateManagerRef.bindLazy(context, () => DeviceStateManager(deviceManagerRef.of(context)));
+          deviceStateManagerRef.bindWhenUnbound(context, () => DeviceStateManager(deviceManagerRef.of(context)));
 
           // Show splash screen during initialization
           if (!_initialized) {

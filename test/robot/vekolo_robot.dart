@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:context_plus/context_plus.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -8,6 +6,7 @@ import 'package:spot/spot.dart';
 import 'package:vekolo/app/app.dart';
 import 'package:vekolo/app/refs.dart';
 
+import '../ble/fake_ble_platform.dart';
 import '../fake/fake_auth_service.dart';
 import '../fake/fake_vekolo_api_client.dart';
 
@@ -24,6 +23,10 @@ class VekoloRobot {
   VekoloRobot({required this.tester});
 
   final WidgetTester tester;
+
+  late final Aether aether = Aether(fakeBlePlatform: _blePlatform);
+
+  final _blePlatform = FakeBlePlatform();
 
   Future<void> launchApp({bool loggedIn = false}) async {
     TestWidgetsFlutterBinding.ensureInitialized();
@@ -45,6 +48,7 @@ class VekoloRobot {
           // Bind controllers to context
           Refs.authService.bind(context, () => fakeAuthService);
           Refs.apiClient.bind(context, () => fakeApiClient);
+          Refs.blePlatform.bindValue(context, _blePlatform);
 
           return VekoloApp();
         },
@@ -76,5 +80,36 @@ class VekoloRobot {
       }
       rethrow;
     }
+  }
+
+  Future<void> closeApp() async {
+    await tester.pumpWidget(const SizedBox.shrink());
+    await fastIdle(1000);
+  }
+}
+
+class Aether {
+  Aether({required this.fakeBlePlatform});
+
+  final FakeBlePlatform fakeBlePlatform;
+
+  int _deviceCounter = 0;
+
+  /// Create a simulated BLE device.
+  ///
+  /// Parameters:
+  /// - [name]: The device name (e.g., 'Kickr Core')
+  /// - [protocols]: List of supported protocols (e.g., ['ftms', 'bluetooth_power'])
+  ///   These will be converted to appropriate service UUIDs
+  /// - [rssi]: Signal strength, defaults to -50
+  FakeDevice createDevice({required String name, List<String> protocols = const [], int rssi = -50}) {
+    // Generate a unique device ID
+    final deviceId = 'DEVICE_${_deviceCounter++}';
+
+    // TODO: Convert protocols to actual service UUIDs when implementing auto-connect
+    // For now, just create the device with empty services to make the test compile
+    final device = fakeBlePlatform.addDevice(deviceId, name, rssi: rssi);
+
+    return device;
   }
 }

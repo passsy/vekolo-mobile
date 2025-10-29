@@ -70,6 +70,27 @@ abstract class BlePlatform {
   /// is called again.
   Future<void> stopScan();
 
+  /// Connect to a BLE device.
+  ///
+  /// Establishes a connection to the device with the given [deviceId].
+  /// The device must have been discovered via scanning before connecting.
+  ///
+  /// Parameters:
+  /// - [deviceId]: The unique identifier for the device (remoteId)
+  /// - [timeout]: Optional connection timeout (defaults to 35 seconds)
+  ///
+  /// Throws if the device cannot be found or connection fails.
+  Future<void> connect(String deviceId, {Duration timeout = const Duration(seconds: 35)});
+
+  /// Disconnect from a BLE device.
+  ///
+  /// Closes the connection to the device with the given [deviceId].
+  /// Safe to call even if not currently connected.
+  ///
+  /// Parameters:
+  /// - [deviceId]: The unique identifier for the device (remoteId)
+  Future<void> disconnect(String deviceId);
+
   /// Clean up resources.
   ///
   /// Call this when done with the platform to prevent memory leaks.
@@ -97,14 +118,11 @@ class BlePlatformImpl implements BlePlatform {
   final ReadableBeacon<List<ScanResult>> _scanResultsBeacon;
 
   BlePlatformImpl()
-      : _adapterStateBeacon = Beacon.streamRaw(
-          () => FlutterBluePlus.adapterState,
-          initialValue: BluetoothAdapterState.unknown,
-        ),
-        _scanResultsBeacon = Beacon.streamRaw(
-          () => FlutterBluePlus.scanResults,
-          initialValue: <ScanResult>[],
-        );
+    : _adapterStateBeacon = Beacon.streamRaw(
+        () => FlutterBluePlus.adapterState,
+        initialValue: BluetoothAdapterState.unknown,
+      ),
+      _scanResultsBeacon = Beacon.streamRaw(() => FlutterBluePlus.scanResults, initialValue: <ScanResult>[]);
 
   @override
   ReadableBeacon<BluetoothAdapterState> get adapterState => _adapterStateBeacon;
@@ -125,6 +143,18 @@ class BlePlatformImpl implements BlePlatform {
   @override
   Future<void> stopScan() async {
     await FlutterBluePlus.stopScan();
+  }
+
+  @override
+  Future<void> connect(String deviceId, {Duration timeout = const Duration(seconds: 35)}) async {
+    final device = BluetoothDevice(remoteId: DeviceIdentifier(deviceId));
+    await device.connect(timeout: timeout);
+  }
+
+  @override
+  Future<void> disconnect(String deviceId) async {
+    final device = BluetoothDevice(remoteId: DeviceIdentifier(deviceId));
+    await device.disconnect();
   }
 
   @override

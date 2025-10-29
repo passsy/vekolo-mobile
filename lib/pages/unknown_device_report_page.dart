@@ -7,7 +7,6 @@ import 'package:clock/clock.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:context_plus/context_plus.dart';
 import 'package:vekolo/app/refs.dart';
-import 'package:vekolo/config/api_config.dart';
 import 'package:vekolo/models/user.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart' as fbp;
 

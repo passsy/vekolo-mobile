@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:state_beacon/state_beacon.dart';
 import 'package:vekolo/app/refs.dart';
-import 'package:vekolo/config/api_config.dart';
 import 'package:vekolo/widgets/user_avatar.dart';
 
 /// Entry point after app startup.

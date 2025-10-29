@@ -72,6 +72,37 @@ class FakeBlePlatform implements BlePlatform {
     _isScanning = false;
   }
 
+  Future<void> Function(String deviceId, {Duration timeout})? overrideConnect;
+
+  @override
+  Future<void> connect(String deviceId, {Duration timeout = const Duration(seconds: 35)}) async {
+    if (overrideConnect != null) {
+      return overrideConnect!(deviceId, timeout: timeout);
+    }
+    // Default implementation
+    final device = _devices[deviceId];
+    if (device == null) {
+      throw Exception('Device not found: $deviceId');
+    }
+    device._isConnected = true;
+  }
+
+  Future<void> Function(String deviceId)? overrideDisconnect;
+
+  @override
+  Future<void> disconnect(String deviceId) async {
+    if (overrideDisconnect != null) {
+      return overrideDisconnect!(deviceId);
+    }
+    // Default implementation
+    final device = _devices[deviceId];
+    if (device == null) {
+      // Safe to call even if device doesn't exist
+      return;
+    }
+    device._isConnected = false;
+  }
+
   /// Change the Bluetooth adapter state.
   ///
   /// Updates the [adapterState] beacon. If the adapter is turned off
@@ -159,6 +190,7 @@ class FakeDevice {
 
   int _rssi;
   bool _isAdvertising = false;
+  bool _isConnected = false;
   DateTime _lastUpdate = clock.now();
 
   FakeDevice._({
@@ -168,6 +200,12 @@ class FakeDevice {
     required this.services,
     required this.platform,
   }) : _rssi = rssi;
+
+  /// Whether this device is currently connected.
+  ///
+  /// This simulates the connection state. Use [connect] and [disconnect]
+  /// to change the state (to be implemented when auto-connect is added).
+  bool get isConnected => _isConnected;
 
   /// Start advertising this device.
   ///
@@ -195,6 +233,26 @@ class FakeDevice {
   void updateRssi(int rssi) {
     _rssi = rssi;
     _lastUpdate = clock.now();
+  }
+
+  /// Connect to this device.
+  ///
+  /// Sets [isConnected] to true. The device must be turned on (advertising)
+  /// before it can be connected to.
+  ///
+  /// Throws if the device is not advertising.
+  Future<void> connect({Duration timeout = const Duration(seconds: 35)}) async {
+    if (!_isAdvertising) {
+      throw Exception('Cannot connect to device that is not advertising: $name');
+    }
+    await platform.connect(id, timeout: timeout);
+  }
+
+  /// Disconnect from this device.
+  ///
+  /// Sets [isConnected] to false. Safe to call even if not currently connected.
+  Future<void> disconnect() async {
+    await platform.disconnect(id);
   }
 
   /// Convert this fake device to a FlutterBluePlus ScanResult.
