@@ -250,16 +250,11 @@ class FtmsBleTransport
 
   Future<void> _setupCharacteristics({required List<fbp.BluetoothService> services}) async {
     try {
-      developer.log('[FtmsBleTransport] Setting up characteristics');
-      developer.log('[FtmsBleTransport] Using ${services.length} services');
-
       // Find FTMS service
       final ftmsService = services.firstWhere(
         (s) => s.uuid == _ftmsServiceUuid,
         orElse: () => throw Exception('FTMS service not found'),
       );
-
-      developer.log('[FtmsBleTransport] Found FTMS service with ${ftmsService.characteristics.length} characteristics');
 
       // Find indoor bike data characteristic
       _indoorBikeDataChar = ftmsService.characteristics.firstWhere(
@@ -272,8 +267,6 @@ class FtmsBleTransport
         (c) => c.uuid == _controlPointUuid,
         orElse: () => throw Exception('Control point characteristic not found'),
       );
-
-      developer.log('[FtmsBleTransport] Found required characteristics');
 
       // Subscribe to indoor bike data
       await _indoorBikeDataChar!.setNotifyValue(true);
@@ -299,7 +292,6 @@ class FtmsBleTransport
         },
       );
 
-      developer.log('[FtmsBleTransport] Characteristics setup complete');
     } catch (e, stackTrace) {
       print('[FtmsBleTransport] Failed to setup characteristics: $e');
       print(stackTrace);
@@ -309,10 +301,6 @@ class FtmsBleTransport
 
   void _parseIndoorBikeData(Uint8List data) {
     if (data.length < 2) return;
-
-    // Log raw data for debugging
-    final hexData = data.map((b) => b.toRadixString(16).padLeft(2, '0')).join(' ');
-    developer.log('[FtmsBleTransport] 📥 Raw Indoor Bike Data: $hexData');
 
     final buffer = data.buffer.asByteData();
     int offset = 0;
@@ -340,10 +328,6 @@ class FtmsBleTransport
     final cadencePresent = (flags & 0x04) != 0;
     final powerPresent = (flags & 0x40) != 0;
 
-    developer.log(
-      '[FtmsBleTransport] Indoor Bike Data - Flags: 0x${flags.toRadixString(16).padLeft(4, '0')} (speed:$speedPresent, cadence:$cadencePresent, power:$powerPresent), Length: ${data.length}',
-    );
-
     try {
       final timestamp = clock.now();
       int? power;
@@ -354,14 +338,7 @@ class FtmsBleTransport
       if (speedPresent && offset + 2 <= data.length) {
         final rawSpeed = buffer.getUint16(offset, Endian.little);
         speed = rawSpeed * 0.01; // Resolution: 0.01 km/h
-        developer.log('[FtmsBleTransport] 📊 Speed parsed - Raw: $rawSpeed, Calculated: ${speed}km/h');
         offset += 2;
-      } else if (speedPresent) {
-        developer.log(
-          '[FtmsBleTransport] ⚠️ Speed flag present but not enough data (offset: $offset, length: ${data.length})',
-        );
-      } else {
-        developer.log('[FtmsBleTransport] ℹ️ Speed not present in data (flags indicate no speed)');
       }
 
       // Skip average speed if present
@@ -438,23 +415,18 @@ class FtmsBleTransport
       // 0x05 - CONTROL_NOT_PERMITTED
 
       if (resultCode == 0x01) {
-        developer.log('[FtmsBleTransport] Command 0x${requestOpCode.toRadixString(16)} succeeded');
-
         // Track actual device state based on successful commands
         if (requestOpCode == 0x00) {
           _hasControl = true;
         } else if (requestOpCode == 0x05) {
           // Set Target Power success - update actual state
           _actualState = FtmsDeviceState(targetPower: _desiredState.targetPower);
-          developer.log('[FtmsBleTransport] Power target ${_actualState.targetPower}W applied successfully');
         } else if (requestOpCode == 0x04) {
           // Set Target Resistance Level success
           _actualState = FtmsDeviceState(targetResistanceLevel: _desiredState.targetResistanceLevel);
-          developer.log('[FtmsBleTransport] Resistance level ${_actualState.targetResistanceLevel} applied');
         } else if (requestOpCode == 0x11) {
           // Indoor Bike Simulation success
           _actualState = FtmsDeviceState(simulationParams: _desiredState.simulationParams);
-          developer.log('[FtmsBleTransport] Simulation parameters applied: ${_actualState.simulationParams}');
         }
         // Add more op codes as needed
       } else {
@@ -492,7 +464,6 @@ class FtmsBleTransport
       // Step 1: Request control if we don't have it and need it
       final needsControl = _desiredState.hasActiveControl;
       if (needsControl && !_hasControl) {
-        developer.log('[FtmsBleTransport] 📤 Sending: Request Control (0x00)');
         await _controlPointChar!.write(Uint8List.fromList([0x00]));
         await Future.delayed(const Duration(milliseconds: 100)); // Wait for response
       }
@@ -508,7 +479,6 @@ class FtmsBleTransport
         // Target Power mode (Op Code 0x05) - ERG mode
         if (_desiredState.targetPower != null) {
           final power = _desiredState.targetPower!;
-          developer.log('[FtmsBleTransport] 📤 Sending: Set Target Power ${power}W (0x05)');
           await _controlPointChar!.write(
             Uint8List.fromList([
               0x05,
@@ -520,7 +490,6 @@ class FtmsBleTransport
         // Target Resistance Level (Op Code 0x04)
         else if (_desiredState.targetResistanceLevel != null) {
           final level = _desiredState.targetResistanceLevel!;
-          developer.log('[FtmsBleTransport] 📤 Sending: Set Target Resistance Level $level (0x04)');
           await _controlPointChar!.write(
             Uint8List.fromList([
               0x04,
@@ -532,9 +501,6 @@ class FtmsBleTransport
         // Indoor Bike Simulation (Op Code 0x11)
         else if (_desiredState.simulationParams != null) {
           final sim = _desiredState.simulationParams!;
-          developer.log(
-            '[FtmsBleTransport] 📤 Sending: Set Indoor Bike Simulation (0x11) - Grade: ${sim.grade}%, Wind: ${sim.windSpeed}m/s',
-          );
 
           // FTMS spec: wind speed (sint16, 0.001 m/s), grade (sint16, 0.01%), crr (uint8, 0.0001), cw (uint8, 0.01)
           final windSpeedRaw = (sim.windSpeed * 1000).round().clamp(-32768, 32767);
@@ -555,10 +521,6 @@ class FtmsBleTransport
           );
         }
         // Add more modes here as needed (speed, inclination, HR, cadence, etc.)
-        else {
-          // Idle state - no command needed (or could send Reset if desired)
-          developer.log('[FtmsBleTransport] Desired state is idle, no sync needed');
-        }
       }
     } catch (e, stackTrace) {
       print('[FtmsBleTransport] Error during state sync: $e');
@@ -601,12 +563,7 @@ class FtmsBleTransport
     }
 
     // Update desired state
-    final stateChanged = _desiredState != clampedState;
     _desiredState = clampedState;
-
-    if (stateChanged) {
-      developer.log('[FtmsBleTransport] Desired state updated: $clampedState');
-    }
 
     // Cancel any pending sync and schedule a new one (debouncing)
     _syncDebounceTimer?.cancel();

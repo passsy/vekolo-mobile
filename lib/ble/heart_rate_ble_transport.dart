@@ -36,8 +36,7 @@ class HeartRateBleTransport implements BleTransport, HeartRateSource {
 
   // Data beacons
   late final WritableBeacon<HeartRateData?> _heartRateBeacon = Beacon.writable(null);
-  late final WritableBeacon<TransportState> _stateBeacon =
-      Beacon.writable(TransportState.detached);
+  late final WritableBeacon<TransportState> _stateBeacon = Beacon.writable(TransportState.detached);
 
   // ============================================================================
   // BleTransport Interface Implementation
@@ -76,14 +75,14 @@ class HeartRateBleTransport implements BleTransport, HeartRateSource {
   /// The [device] must already be connected and [services] must be discovered
   /// by BleDevice before calling this method.
   @override
-  Future<void> attach({
-    required fbp.BluetoothDevice device,
-    required List<fbp.BluetoothService> services,
-  }) async {
+  Future<void> attach({required fbp.BluetoothDevice device, required List<fbp.BluetoothService> services}) async {
     try {
       _stateBeacon.value = TransportState.attaching;
       _lastAttachError = null; // Clear any previous error
-      developer.log('[HeartRateBleTransport] Attaching to Heart Rate service on $deviceId', name: 'HeartRateBleTransport');
+      developer.log(
+        '[HeartRateBleTransport] Attaching to Heart Rate service on $deviceId',
+        name: 'HeartRateBleTransport',
+      );
 
       // Find Heart Rate Service
       final hrService = services.firstWhere(
@@ -133,7 +132,10 @@ class HeartRateBleTransport implements BleTransport, HeartRateSource {
   @override
   Future<void> detach() async {
     try {
-      developer.log('[HeartRateBleTransport] Detaching from Heart Rate service on $deviceId', name: 'HeartRateBleTransport');
+      developer.log(
+        '[HeartRateBleTransport] Detaching from Heart Rate service on $deviceId',
+        name: 'HeartRateBleTransport',
+      );
 
       // Cancel subscriptions
       await _heartRateSubscription?.cancel();
@@ -182,7 +184,6 @@ class HeartRateBleTransport implements BleTransport, HeartRateSource {
 
       final data = HeartRateData(bpm: bpm, timestamp: clock.now());
       _heartRateBeacon.value = data;
-      developer.log('[HeartRateBleTransport] Heart rate: $bpm BPM', name: 'HeartRateBleTransport');
     } catch (e, stackTrace) {
       developer.log(
         '[HeartRateBleTransport] Failed to parse heart rate: $e',
