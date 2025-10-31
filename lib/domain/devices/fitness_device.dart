@@ -17,6 +17,7 @@
 library;
 
 import 'package:async/async.dart';
+import 'package:state_beacon/state_beacon.dart';
 import 'package:vekolo/domain/models/device_info.dart';
 import 'package:vekolo/domain/models/fitness_data.dart';
 
@@ -63,13 +64,13 @@ abstract class FitnessDevice {
   // Connection Management
   // ============================================================================
 
-  /// Stream of connection state changes.
+  /// Reactive beacon of connection state.
   ///
-  /// Emits [ConnectionState] updates as the device connects, disconnects,
-  /// or encounters errors. UI can subscribe to show real-time connection status.
+  /// Provides [ConnectionState] updates as the device connects, disconnects,
+  /// or encounters errors. UI can watch this to show real-time connection status.
   ///
-  /// The stream must emit the current state immediately upon subscription.
-  Stream<ConnectionState> get connectionState;
+  /// The beacon always reflects the current state and notifies listeners of changes.
+  ReadableBeacon<ConnectionState> get connectionState;
 
   /// The last connection error that occurred, if any.
   ///
@@ -105,45 +106,45 @@ abstract class FitnessDevice {
   // Data Streams
   // ============================================================================
 
-  /// Stream of power measurements if this device provides power data.
+  /// Reactive beacon of power measurements if this device provides power data.
   ///
   /// Returns `null` if [capabilities] does not include [DeviceDataType.power].
-  /// When non-null, emits [PowerData] updates at device-specific intervals
+  /// When non-null, provides [PowerData] updates at device-specific intervals
   /// (typically 1-4 Hz).
   ///
-  /// The stream should emit data only while connected. It may complete or
-  /// emit errors if the connection is lost.
-  Stream<PowerData>? get powerStream;
+  /// The beacon updates only while connected. It may stop updating if the
+  /// connection is lost.
+  ReadableBeacon<PowerData?>? get powerStream;
 
-  /// Stream of cadence measurements if this device provides cadence data.
+  /// Reactive beacon of cadence measurements if this device provides cadence data.
   ///
   /// Returns `null` if [capabilities] does not include [DeviceDataType.cadence].
-  /// When non-null, emits [CadenceData] updates at device-specific intervals
+  /// When non-null, provides [CadenceData] updates at device-specific intervals
   /// (typically 1-4 Hz).
   ///
-  /// The stream should emit data only while connected. It may complete or
-  /// emit errors if the connection is lost.
-  Stream<CadenceData>? get cadenceStream;
+  /// The beacon updates only while connected. It may stop updating if the
+  /// connection is lost.
+  ReadableBeacon<CadenceData?>? get cadenceStream;
 
-  /// Stream of speed measurements if this device provides speed data.
+  /// Reactive beacon of speed measurements if this device provides speed data.
   ///
   /// Returns `null` if [capabilities] does not include [DeviceDataType.speed].
-  /// When non-null, emits [SpeedData] updates at device-specific intervals
+  /// When non-null, provides [SpeedData] updates at device-specific intervals
   /// (typically 1-4 Hz).
   ///
-  /// The stream should emit data only while connected. It may complete or
-  /// emit errors if the connection is lost.
-  Stream<SpeedData>? get speedStream;
+  /// The beacon updates only while connected. It may stop updating if the
+  /// connection is lost.
+  ReadableBeacon<SpeedData?>? get speedStream;
 
-  /// Stream of heart rate measurements if this device provides HR data.
+  /// Reactive beacon of heart rate measurements if this device provides HR data.
   ///
   /// Returns `null` if [capabilities] does not include [DeviceDataType.heartRate].
-  /// When non-null, emits [HeartRateData] updates at device-specific intervals
+  /// When non-null, provides [HeartRateData] updates at device-specific intervals
   /// (typically 1 Hz for most HR monitors).
   ///
-  /// The stream should emit data only while connected. It may complete or
-  /// emit errors if the connection is lost.
-  Stream<HeartRateData>? get heartRateStream;
+  /// The beacon updates only while connected. It may stop updating if the
+  /// connection is lost.
+  ReadableBeacon<HeartRateData?>? get heartRateStream;
 
   // ============================================================================
   // Control Capabilities (Trainers Only)

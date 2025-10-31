@@ -9,6 +9,9 @@ void main() {
     await robot.launchApp(loggedIn: true);
 
     // TODO Pair kickr and bind it as Wattage device
+    await robot.openManageDevicesPage();
+    await robot.openScanner();
+    await robot.selectDeviceInScanner('Kickr Core');
 
     expect(kickrCore.isConnected, isTrue);
     await robot.closeApp();

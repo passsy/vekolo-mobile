@@ -406,9 +406,8 @@ class WorkoutSyncService {
 ### 7. State Management (`lib/state/device_state.dart`)
 
 ```dart
-// Service references
-final deviceManagerRef = Ref<DeviceManager>();
-final workoutSyncServiceRef = Ref<WorkoutSyncService>();
+// Service references are in lib/app/refs.dart:
+// Refs.deviceManager, Refs.workoutSyncService, Refs.deviceStateManager
 
 // UI state beacons
 final connectedDevicesBeacon = Beacon.writable<List<FitnessDevice>>([]);

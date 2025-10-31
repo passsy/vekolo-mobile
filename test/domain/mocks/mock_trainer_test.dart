@@ -16,7 +16,7 @@ void main() {
       expect(trainer.id, 'test-001');
       expect(trainer.name, 'Test Trainer');
       expect(trainer.type, DeviceType.trainer);
-      expect(trainer.capabilities, {DeviceDataType.power, DeviceDataType.cadence});
+      expect(trainer.capabilities, {DeviceDataType.power, DeviceDataType.cadence, DeviceDataType.speed});
     });
 
     test('supports ERG mode', () {
@@ -29,19 +29,20 @@ void main() {
       final trainer = createTrainer();
 
       final states = <ConnectionState>[];
-      final subscription = trainer.connectionState.listen(states.add);
+      final unsubscribe = trainer.connectionState.subscribe(states.add);
 
+      // Beacons emit their initial value immediately upon subscription
       await Future.delayed(const Duration(milliseconds: 50));
-      expect(states, isEmpty);
+      expect(states, [ConnectionState.disconnected]);
 
-      await subscription.cancel();
+      unsubscribe();
     });
 
     test('connects successfully', () async {
       final trainer = createTrainer();
 
       final states = <ConnectionState>[];
-      final subscription = trainer.connectionState.listen(states.add);
+      final unsubscribe = trainer.connectionState.subscribe(states.add);
 
       await trainer.connect().value;
 
@@ -50,7 +51,7 @@ void main() {
 
       expect(states, [ConnectionState.connecting, ConnectionState.connected]);
 
-      await subscription.cancel();
+      unsubscribe();
     });
 
     test('disconnects successfully', () async {
@@ -59,13 +60,13 @@ void main() {
       await trainer.connect().value;
 
       final states = <ConnectionState>[];
-      final subscription = trainer.connectionState.listen(states.add);
+      final unsubscribe = trainer.connectionState.subscribe(states.add);
 
       await trainer.disconnect();
 
       expect(states, [ConnectionState.disconnected]);
 
-      await subscription.cancel();
+      unsubscribe();
     });
 
     test('setTargetPower fails when disconnected', () {
@@ -96,7 +97,9 @@ void main() {
       await trainer.connect().value;
 
       final powerData = <PowerData>[];
-      final subscription = trainer.powerStream!.listen(powerData.add);
+      final unsubscribe = trainer.powerStream!.subscribe((data) {
+        if (data != null) powerData.add(data);
+      });
 
       await trainer.setTargetPower(100);
 
@@ -106,7 +109,7 @@ void main() {
       expect(powerData, isNotEmpty);
       expect(powerData.last.watts, greaterThan(0));
 
-      await subscription.cancel();
+      unsubscribe();
     });
 
     test('power ramps gradually to target', () async {
@@ -115,7 +118,9 @@ void main() {
       await trainer.connect().value;
 
       final powerData = <PowerData>[];
-      final subscription = trainer.powerStream!.listen(powerData.add);
+      final unsubscribe = trainer.powerStream!.subscribe((data) {
+        if (data != null) powerData.add(data);
+      });
 
       await trainer.setTargetPower(200);
 
@@ -131,7 +136,7 @@ void main() {
       expect(firstPower, lessThan(avgRecentPower));
       expect(avgRecentPower, closeTo(200, 15)); // Within 15W of target (with fluctuations)
 
-      await subscription.cancel();
+      unsubscribe();
     });
 
     test('emits cadence data when connected', () async {
@@ -140,7 +145,9 @@ void main() {
       await trainer.connect().value;
 
       final cadenceData = <CadenceData>[];
-      final subscription = trainer.cadenceStream!.listen(cadenceData.add);
+      final unsubscribe = trainer.cadenceStream!.subscribe((data) {
+        if (data != null) cadenceData.add(data);
+      });
 
       await trainer.setTargetPower(100);
 
@@ -150,7 +157,7 @@ void main() {
       expect(cadenceData, isNotEmpty);
       expect(cadenceData.last.rpm, greaterThanOrEqualTo(0));
 
-      await subscription.cancel();
+      unsubscribe();
     });
 
     test('cadence correlates with power', () async {
@@ -159,7 +166,9 @@ void main() {
       await trainer.connect().value;
 
       final cadenceData = <CadenceData>[];
-      final subscription = trainer.cadenceStream!.listen(cadenceData.add);
+      final unsubscribe = trainer.cadenceStream!.subscribe((data) {
+        if (data != null) cadenceData.add(data);
+      });
 
       // Set low power
       await trainer.setTargetPower(50);
@@ -174,7 +183,7 @@ void main() {
       // Higher power should generally have higher cadence
       expect(highPowerCadence, greaterThanOrEqualTo(lowPowerCadence - 5));
 
-      await subscription.cancel();
+      unsubscribe();
     });
 
     test('power stops when disconnected', () async {
@@ -183,7 +192,9 @@ void main() {
       await trainer.connect().value;
 
       final powerData = <PowerData>[];
-      final subscription = trainer.powerStream!.listen(powerData.add);
+      final unsubscribe = trainer.powerStream!.subscribe((data) {
+        if (data != null) powerData.add(data);
+      });
 
       await trainer.setTargetPower(100);
       await Future.delayed(const Duration(milliseconds: 500));
@@ -196,7 +207,7 @@ void main() {
       // No new data should be emitted after disconnect
       expect(powerData.length, countBeforeDisconnect);
 
-      await subscription.cancel();
+      unsubscribe();
     });
 
     test('can reconnect after disconnect', () async {
@@ -206,7 +217,7 @@ void main() {
       await trainer.disconnect();
 
       final states = <ConnectionState>[];
-      final subscription = trainer.connectionState.listen(states.add);
+      final unsubscribe = trainer.connectionState.subscribe(states.add);
 
       await trainer.connect().value;
 
@@ -215,7 +226,7 @@ void main() {
 
       expect(states, [ConnectionState.connecting, ConnectionState.connected]);
 
-      await subscription.cancel();
+      unsubscribe();
     });
 
     test('configurable continuous refresh requirement', () {

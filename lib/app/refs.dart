@@ -4,7 +4,11 @@ import 'package:vekolo/api/vekolo_api_client.dart';
 import 'package:vekolo/ble/ble_permissions.dart';
 import 'package:vekolo/ble/ble_platform.dart';
 import 'package:vekolo/ble/ble_scanner.dart';
+import 'package:vekolo/domain/devices/device_manager.dart';
 import 'package:vekolo/services/auth_service.dart';
+import 'package:vekolo/services/workout_sync_service.dart';
+import 'package:vekolo/state/device_state.dart';
+import 'package:vekolo/state/device_state_manager.dart';
 
 abstract final class Refs {
   Refs._();
@@ -14,6 +18,12 @@ abstract final class Refs {
   static final blePlatform = Ref<BlePlatform>();
   static final blePermissions = Ref<BlePermissions>();
   static final bleScanner = Ref<BleScanner>();
+  static final deviceManager = Ref<DeviceManager>();
+  static final workoutSyncService = Ref<WorkoutSyncService>();
+  static final connectedDevices = Ref<ConnectedDevices>();
+  static final liveTelemetry = Ref<LiveTelemetry>();
+  static final workoutSyncState = Ref<WorkoutSyncState>();
+  static final deviceStateManager = Ref<DeviceStateManager>();
 }
 
 extension BindUnboundRef<T> on Ref<T> {

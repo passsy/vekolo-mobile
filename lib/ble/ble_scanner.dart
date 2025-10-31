@@ -38,12 +38,7 @@ class DiscoveredDevice {
   /// Updated periodically by the scanner to reflect current signal status.
   final int? rssi;
 
-  DiscoveredDevice({
-    required this.scanResult,
-    required this.firstSeen,
-    required this.lastSeen,
-    required this.rssi,
-  });
+  DiscoveredDevice({required this.scanResult, required this.firstSeen, required this.lastSeen, required this.rssi});
 
   /// The device's Bluetooth identifier.
   String get deviceId => scanResult.device.remoteId.str;
@@ -68,20 +63,13 @@ class DiscoveredDevice {
 
   /// Create a copy with updated RSSI value.
   DiscoveredDevice copyWithRssi(int? newRssi) {
-    return DiscoveredDevice(
-      scanResult: scanResult,
-      firstSeen: firstSeen,
-      lastSeen: lastSeen,
-      rssi: newRssi,
-    );
+    return DiscoveredDevice(scanResult: scanResult, firstSeen: firstSeen, lastSeen: lastSeen, rssi: newRssi);
   }
 
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is DiscoveredDevice &&
-          runtimeType == other.runtimeType &&
-          deviceId == other.deviceId;
+      other is DiscoveredDevice && runtimeType == other.runtimeType && deviceId == other.deviceId;
 
   @override
   int get hashCode => deviceId.hashCode;
@@ -119,14 +107,12 @@ class BluetoothState {
   bool get isBluetoothOn => adapterState == BluetoothAdapterState.on;
 
   /// Whether Bluetooth adapter is unavailable (device doesn't support it).
-  bool get isBluetoothUnavailable =>
-      adapterState == BluetoothAdapterState.unavailable;
+  bool get isBluetoothUnavailable => adapterState == BluetoothAdapterState.unavailable;
 
   /// Whether the app can currently scan for BLE devices.
   ///
   /// Requires Bluetooth on + permissions granted + location services enabled.
-  bool get canScan =>
-      isBluetoothOn && hasPermission && isLocationServiceEnabled;
+  bool get canScan => isBluetoothOn && hasPermission && isLocationServiceEnabled;
 
   /// Whether the app needs to request permissions.
   bool get needsPermission => !hasPermission && !isPermissionPermanentlyDenied;
@@ -156,7 +142,7 @@ class BluetoothState {
 
   @override
   String toString() =>
-      'BluetoothState(adapter: $adapterState, hasPermission: $hasPermission, '
+      'BluetoothState(adapter: ${adapterState.name}, hasPermission: $hasPermission, '
       'isPermanentlyDenied: $isPermissionPermanentlyDenied, '
       'isLocationServiceEnabled: $isLocationServiceEnabled, canScan: $canScan)';
 }
@@ -241,11 +227,9 @@ class BleScanner with WidgetsBindingObserver {
   ///
   /// IMPORTANT: You must call [initialize] after construction to start monitoring
   /// Bluetooth state and app lifecycle.
-  BleScanner({
-    BlePlatform? platform,
-    BlePermissions? permissions,
-  })  : _platform = platform ?? BlePlatformImpl(),
-        _permissions = permissions ?? BlePermissionsImpl() {
+  BleScanner({required BlePlatform platform, required BlePermissions permissions})
+    : _platform = platform,
+      _permissions = permissions {
     // Initialize beacons with default values
     _devicesBeacon = Beacon.writable(<DiscoveredDevice>[]);
     _isScanningBeacon = Beacon.writable(false);
@@ -282,7 +266,7 @@ class BleScanner with WidgetsBindingObserver {
     // Subscribe to adapter state changes
     _adapterStateUnsubscribe = _platform.adapterState.subscribe((state) {
       developer.log('[BleScanner] Adapter state changed to: $state');
-      _updateBluetoothState(adapterState: state);
+      _updateBluetoothState();
     });
 
     // Subscribe to scan results
@@ -291,20 +275,18 @@ class BleScanner with WidgetsBindingObserver {
     });
 
     // Start periodic checks for device expiry and permissions
-    _periodicCheckTimer = Timer.periodic(
-      const Duration(seconds: 1),
-      (_) => _performPeriodicChecks(),
-    );
+    _periodicCheckTimer = Timer.periodic(const Duration(seconds: 1), (_) => _performPeriodicChecks());
 
     // Initial state update
     _updateBluetoothState();
   }
 
   /// Update Bluetooth state by checking all required conditions.
-  Future<void> _updateBluetoothState({BluetoothAdapterState? adapterState}) async {
+  Future<void> _updateBluetoothState() async {
     if (_disposed) return;
 
     try {
+      final adapterState = _platform.adapterState.value;
       final hasPermission = await _permissions.check();
       final isPermanentlyDenied = await _permissions.isPermanentlyDenied();
       final isLocationEnabled = await _permissions.isLocationServiceEnabled();
@@ -313,7 +295,7 @@ class BleScanner with WidgetsBindingObserver {
       if (_disposed) return;
 
       final newState = BluetoothState(
-        adapterState: adapterState ?? _bluetoothStateBeacon.value.adapterState,
+        adapterState: adapterState,
         hasPermission: hasPermission,
         isPermissionPermanentlyDenied: isPermanentlyDenied,
         isLocationServiceEnabled: isLocationEnabled,

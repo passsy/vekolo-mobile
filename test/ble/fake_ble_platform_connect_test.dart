@@ -30,7 +30,7 @@ void main() {
       expect(device.isConnected, isTrue);
     });
 
-    test('cannot connect to non-advertising device', () async {
+    test('cannot connect to non-advertising device', () {
       final device = platform.addDevice('D1', 'Test Device');
       // Device is not turned on (not advertising)
 
@@ -91,7 +91,7 @@ void main() {
       expect(device.isConnected, isFalse);
     });
 
-    test('connect throws if device not found', () async {
+    test('connect throws if device not found', () {
       expect(
         () => platform.connect('NONEXISTENT'),
         throwsA(isA<Exception>().having((e) => e.toString(), 'message', contains('Device not found'))),
@@ -103,11 +103,11 @@ void main() {
       await platform.disconnect('NONEXISTENT');
     });
 
-    test('can override connect behavior', () async {
+    test('can override connect behavior', () {
       final device = platform.addDevice('D1', 'Test Device');
       device.turnOn();
 
-      platform.overrideConnect = (deviceId, {timeout = const Duration(seconds: 35)}) async {
+      platform.overrideConnect = (deviceId, {timeout = const Duration(seconds: 35)}) {
         throw Exception('Connection failed');
       };
 

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:async/async.dart';
 import 'package:clock/clock.dart';
+import 'package:state_beacon/state_beacon.dart';
 import 'package:vekolo/domain/devices/fitness_device.dart';
 import 'package:vekolo/domain/models/device_info.dart';
 import 'package:vekolo/domain/models/fitness_data.dart';
@@ -49,10 +50,18 @@ class FtmsDevice extends FitnessDevice {
   final String _name;
   final transport.FtmsBleTransport _transport;
 
-  // Connection state stream controller for mapping transport states to domain states
-  StreamController<ConnectionState>? _connectionStateController;
+  // Connection state beacon for mapping transport states to domain states
+  late final WritableBeacon<ConnectionState> _connectionStateBeacon = Beacon.writable(ConnectionState.disconnected);
   StreamSubscription<transport.ConnectionState>? _connectionStateSubscription;
   ConnectionError? _lastConnectionError;
+
+  // Data stream beacons
+  late final WritableBeacon<PowerData?> _powerBeacon = Beacon.writable(null);
+  late final WritableBeacon<CadenceData?> _cadenceBeacon = Beacon.writable(null);
+  late final WritableBeacon<SpeedData?> _speedBeacon = Beacon.writable(null);
+  StreamSubscription<PowerData>? _powerSubscription;
+  StreamSubscription<CadenceData>? _cadenceSubscription;
+  StreamSubscription<SpeedData>? _speedSubscription;
 
   // ============================================================================
   // Identity Properties
@@ -75,26 +84,37 @@ class FtmsDevice extends FitnessDevice {
   // ============================================================================
 
   @override
-  Stream<ConnectionState> get connectionState {
-    // Lazy initialization of connection state stream
-    _connectionStateController ??= StreamController<ConnectionState>.broadcast(
-      onListen: _setupConnectionStateMapping,
-      onCancel: () {
-        _connectionStateSubscription?.cancel();
-        _connectionStateSubscription = null;
-      },
-    );
-    return _connectionStateController!.stream;
+  ReadableBeacon<ConnectionState> get connectionState {
+    // Set up connection state subscription on first access
+    if (_connectionStateSubscription == null) {
+      _setupConnectionStateMapping();
+    }
+    return _connectionStateBeacon;
   }
 
   @override
   ConnectionError? get lastConnectionError => _lastConnectionError;
 
   void _setupConnectionStateMapping() {
-    _connectionStateSubscription?.cancel();
+    // Update current state from transport's actual state
+    _connectionStateBeacon.value = _transport.isConnected ? ConnectionState.connected : ConnectionState.disconnected;
+
     _connectionStateSubscription = _transport.connectionStateStream.listen((state) {
       final domainState = _mapConnectionState(state);
-      _connectionStateController?.add(domainState);
+      _connectionStateBeacon.value = domainState;
+    });
+
+    // Set up data stream subscriptions
+    _powerSubscription = _transport.powerStream.listen((data) {
+      _powerBeacon.value = data;
+    });
+
+    _cadenceSubscription = _transport.cadenceStream.listen((data) {
+      _cadenceBeacon.value = data;
+    });
+
+    _speedSubscription = _transport.speedStream.listen((data) {
+      _speedBeacon.value = data;
     });
   }
 
@@ -145,16 +165,34 @@ class FtmsDevice extends FitnessDevice {
   // ============================================================================
 
   @override
-  Stream<PowerData> get powerStream => _transport.powerStream;
+  ReadableBeacon<PowerData?>? get powerStream {
+    // Set up subscriptions on first access
+    if (_powerSubscription == null && _connectionStateSubscription == null) {
+      _setupConnectionStateMapping();
+    }
+    return _powerBeacon;
+  }
 
   @override
-  Stream<CadenceData> get cadenceStream => _transport.cadenceStream;
+  ReadableBeacon<CadenceData?>? get cadenceStream {
+    // Set up subscriptions on first access
+    if (_cadenceSubscription == null && _connectionStateSubscription == null) {
+      _setupConnectionStateMapping();
+    }
+    return _cadenceBeacon;
+  }
 
   @override
-  Stream<SpeedData> get speedStream => _transport.speedStream;
+  ReadableBeacon<SpeedData?>? get speedStream {
+    // Set up subscriptions on first access
+    if (_speedSubscription == null && _connectionStateSubscription == null) {
+      _setupConnectionStateMapping();
+    }
+    return _speedBeacon;
+  }
 
   @override
-  Stream<HeartRateData>? get heartRateStream => null;
+  ReadableBeacon<HeartRateData?>? get heartRateStream => null;
 
   // ============================================================================
   // Control Capabilities (Trainers Only)
@@ -185,13 +223,19 @@ class FtmsDevice extends FitnessDevice {
   // Resource Management
   // ============================================================================
 
-  /// Disposes of all resources including the transport and stream controllers.
+  /// Disposes of all resources including the transport and beacons.
   ///
   /// Must be called when this device is no longer needed to prevent memory leaks.
   /// After calling dispose, this device instance should not be used anymore.
   void dispose() {
     _connectionStateSubscription?.cancel();
-    _connectionStateController?.close();
+    _powerSubscription?.cancel();
+    _cadenceSubscription?.cancel();
+    _speedSubscription?.cancel();
+    _connectionStateBeacon.dispose();
+    _powerBeacon.dispose();
+    _cadenceBeacon.dispose();
+    _speedBeacon.dispose();
     _transport.dispose();
   }
 }

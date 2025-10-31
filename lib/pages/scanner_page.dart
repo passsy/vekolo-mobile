@@ -1,8 +1,8 @@
 import 'package:context_plus/context_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:vekolo/app/refs.dart';
 import 'package:vekolo/ble/ble_scanner.dart';
-import 'package:vekolo/config/ble_config.dart';
 import 'package:visibility_detector/visibility_detector.dart';
 import 'dart:developer' as developer;
 
@@ -31,7 +31,8 @@ class _ScannerPageState extends State<ScannerPage> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     // Get scanner from dependency injection
-    _scanner = bleScannerRef.of(context);
+    _scanner = Refs.bleScanner.of(context);
+    // TODO unsubscribe like in devices_page.dart
   }
 
   @override
@@ -126,10 +127,7 @@ class _ScannerPageState extends State<ScannerPage> {
     } else if (info.visibleFraction > 0) {
       // Page became visible again
       final bluetoothState = _bluetoothState;
-      if (bluetoothState != null &&
-          bluetoothState.canScan &&
-          !_isScanning &&
-          _scanToken == null) {
+      if (bluetoothState != null && bluetoothState.canScan && !_isScanning && _scanToken == null) {
         developer.log('[ScannerPage] Page visible again, restarting scan');
         _startScan();
       }
@@ -156,126 +154,114 @@ class _ScannerPageState extends State<ScannerPage> {
       key: const Key('scanner-page-visibility'),
       onVisibilityChanged: _onVisibilityChanged,
       child: Scaffold(
-      appBar: AppBar(
-        title: const Text('Scan for Trainers'),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-      ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  isScanning ? 'Scanning...' : (canScan ? 'Ready to scan' : 'BLE not ready'),
-                  style: const TextStyle(fontSize: 16),
-                ),
-                ElevatedButton(
-                  onPressed: isScanning ? _stopScan : (canScan ? _startScan : null),
-                  child: Text(isScanning ? 'Stop' : 'Scan'),
-                ),
-              ],
-            ),
-          ),
-          Expanded(
-            child: _devices.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          canScan ? Icons.bluetooth_searching : Icons.bluetooth_disabled,
-                          size: 64,
-                          color: canScan ? Colors.grey[400] : Colors.red[300],
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          statusMessage,
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: canScan ? Colors.grey[600] : Colors.red[400],
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                        if (!canScan && bluetoothState?.needsPermission == true) ...[
-                          const SizedBox(height: 24),
-                          ElevatedButton.icon(
-                            onPressed: () {
-                              // Permissions are checked automatically by the scanner
-                              // Just trigger a state update
-                              setState(() {});
-                            },
-                            icon: const Icon(Icons.security),
-                            label: const Text('Grant Permissions'),
-                            style: ElevatedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  )
-                : ListView.builder(
-                    itemCount: _devices.length,
-                    itemBuilder: (context, index) {
-                      final device = _devices[index];
-                      final deviceName = device.name ?? '';
-                      final deviceId = device.deviceId;
-                      final rssi = device.rssi;
-                      final rssiText = _isScanning
-                          ? (rssi != null ? '$rssi' : 'No signal')
-                          : 'Unknown';
-                      final isActive = _isScanning && rssi != null;
-
-                      return ListTile(
-                        leading: Icon(
-                          Icons.bluetooth,
-                          color: isActive ? null : Colors.grey,
-                        ),
-                        title: Text(
-                          deviceName.isEmpty ? 'Unknown Device' : deviceName,
-                          style: TextStyle(
-                            color: isActive ? null : Colors.grey[700],
-                          ),
-                        ),
-                        subtitle: Text(
-                          '$deviceId\nRSSI: $rssiText',
-                          style: TextStyle(
-                            color: isActive ? null : Colors.grey[600],
-                          ),
-                        ),
-                        trailing: const Icon(Icons.chevron_right),
-                        onTap: () {
-                          developer.log(
-                            '[ScannerPage] ✅ Selected device: ${deviceName.isEmpty ? "Unknown" : deviceName} '
-                            '(ID: $deviceId, RSSI: ${rssi ?? "unknown"})',
-                          );
-                          _stopScan();
-                          context.push('/trainer?deviceId=$deviceId&deviceName=$deviceName');
-                        },
-                      );
-                    },
+        appBar: AppBar(
+          title: const Text('Scan for Trainers'),
+          backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        ),
+        body: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    isScanning ? 'Scanning...' : (canScan ? 'Ready to scan' : 'BLE not ready'),
+                    style: const TextStyle(fontSize: 16),
                   ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: OutlinedButton.icon(
-              onPressed: () {
-                developer.log('[ScannerPage] Navigating to unknown device report page');
-                context.push('/unknown-device');
-              },
-              icon: const Icon(Icons.help_outline),
-              label: const Text('My device is not listed'),
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                minimumSize: const Size(double.infinity, 48),
+                  ElevatedButton(
+                    onPressed: isScanning ? _stopScan : (canScan ? _startScan : null),
+                    child: Text(isScanning ? 'Stop' : 'Scan'),
+                  ),
+                ],
               ),
             ),
-          ),
-        ],
+            Expanded(
+              child: _devices.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            canScan ? Icons.bluetooth_searching : Icons.bluetooth_disabled,
+                            size: 64,
+                            color: canScan ? Colors.grey[400] : Colors.red[300],
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            statusMessage,
+                            style: TextStyle(fontSize: 16, color: canScan ? Colors.grey[600] : Colors.red[400]),
+                            textAlign: TextAlign.center,
+                          ),
+                          if (!canScan && bluetoothState?.needsPermission == true) ...[
+                            const SizedBox(height: 24),
+                            ElevatedButton.icon(
+                              onPressed: () {
+                                // Permissions are checked automatically by the scanner
+                                // Just trigger a state update
+                                setState(() {});
+                              },
+                              icon: const Icon(Icons.security),
+                              label: const Text('Grant Permissions'),
+                              style: ElevatedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    )
+                  : ListView.builder(
+                      itemCount: _devices.length,
+                      itemBuilder: (context, index) {
+                        final device = _devices[index];
+                        final deviceName = device.name ?? '';
+                        final deviceId = device.deviceId;
+                        final rssi = device.rssi;
+                        final rssiText = _isScanning ? (rssi != null ? '$rssi' : 'No signal') : 'Unknown';
+                        final isActive = _isScanning && rssi != null;
+
+                        return ListTile(
+                          leading: Icon(Icons.bluetooth, color: isActive ? null : Colors.grey),
+                          title: Text(
+                            deviceName.isEmpty ? 'Unknown Device' : deviceName,
+                            style: TextStyle(color: isActive ? null : Colors.grey[700]),
+                          ),
+                          subtitle: Text(
+                            '$deviceId\nRSSI: $rssiText',
+                            style: TextStyle(color: isActive ? null : Colors.grey[600]),
+                          ),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: () {
+                            developer.log(
+                              '[ScannerPage] ✅ Selected device: ${deviceName.isEmpty ? "Unknown" : deviceName} '
+                              '(ID: $deviceId, RSSI: ${rssi ?? "unknown"})',
+                            );
+                            _stopScan();
+                            context.push('/trainer?deviceId=$deviceId&deviceName=$deviceName');
+                          },
+                        );
+                      },
+                    ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: OutlinedButton.icon(
+                onPressed: () {
+                  developer.log('[ScannerPage] Navigating to unknown device report page');
+                  context.push('/unknown-device');
+                },
+                icon: const Icon(Icons.help_outline),
+                label: const Text('My device is not listed'),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  minimumSize: const Size(double.infinity, 48),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
-    ),
     );
   }
 }

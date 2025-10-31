@@ -24,6 +24,7 @@ import 'dart:math';
 
 import 'package:async/async.dart';
 import 'package:clock/clock.dart';
+import 'package:state_beacon/state_beacon.dart';
 import 'package:vekolo/domain/devices/fitness_device.dart';
 import 'package:vekolo/domain/models/device_info.dart';
 import 'package:vekolo/domain/models/fitness_data.dart';
@@ -67,11 +68,11 @@ class MockTrainer extends FitnessDevice {
   final int _rampStepWatts;
   final int _rampStepIntervalMs;
 
-  // Controllers for data streams
-  final _powerController = StreamController<PowerData>.broadcast();
-  final _cadenceController = StreamController<CadenceData>.broadcast();
-  final _speedController = StreamController<SpeedData>.broadcast();
-  final _connectionController = StreamController<ConnectionState>.broadcast();
+  // Beacons for data streams
+  final _powerBeacon = Beacon.writable<PowerData?>(null);
+  final _cadenceBeacon = Beacon.writable<CadenceData?>(null);
+  final _speedBeacon = Beacon.writable<SpeedData?>(null);
+  final _connectionBeacon = Beacon.writable(ConnectionState.disconnected);
 
   // Current state
   int _currentPower = 0;
@@ -101,7 +102,7 @@ class MockTrainer extends FitnessDevice {
   Set<DeviceDataType> get capabilities => {DeviceDataType.power, DeviceDataType.cadence, DeviceDataType.speed};
 
   @override
-  Stream<ConnectionState> get connectionState => _connectionController.stream;
+  ReadableBeacon<ConnectionState> get connectionState => _connectionBeacon;
 
   @override
   ConnectionError? get lastConnectionError => _lastConnectionError;
@@ -155,16 +156,16 @@ class MockTrainer extends FitnessDevice {
   }
 
   @override
-  Stream<PowerData>? get powerStream => _powerController.stream;
+  ReadableBeacon<PowerData?>? get powerStream => _powerBeacon;
 
   @override
-  Stream<CadenceData>? get cadenceStream => _cadenceController.stream;
+  ReadableBeacon<CadenceData?>? get cadenceStream => _cadenceBeacon;
 
   @override
-  Stream<SpeedData>? get speedStream => _speedController.stream;
+  ReadableBeacon<SpeedData?>? get speedStream => _speedBeacon;
 
   @override
-  Stream<HeartRateData>? get heartRateStream => null;
+  ReadableBeacon<HeartRateData?>? get heartRateStream => null;
 
   @override
   bool get supportsErgMode => true;
@@ -224,7 +225,7 @@ class MockTrainer extends FitnessDevice {
       final variance = _random.nextDouble() * 2 - 1; // -1 to +1
       final actualPower = max(0, (_currentPower + variance).round());
 
-      _powerController.add(PowerData(watts: actualPower, timestamp: clock.now()));
+      _powerBeacon.value = PowerData(watts: actualPower, timestamp: clock.now());
 
       // Cancel timer if we've been at target for a while and target hasn't changed
       if (_currentPower == target && _targetPower == target) {
@@ -276,14 +277,14 @@ class MockTrainer extends FitnessDevice {
         _currentCadence = 0;
       }
 
-      _cadenceController.add(CadenceData(rpm: _currentCadence, timestamp: clock.now()));
+      _cadenceBeacon.value = CadenceData(rpm: _currentCadence, timestamp: clock.now());
     });
   }
 
   /// Updates connection state and notifies listeners.
   void _updateConnectionState(ConnectionState newState) {
     _state = newState;
-    _connectionController.add(newState);
+    _connectionBeacon.value = newState;
   }
 
   /// Stops all active simulations.
@@ -300,16 +301,16 @@ class MockTrainer extends FitnessDevice {
 
   /// Disposes of all resources.
   ///
-  /// Cancels all timers and closes all stream controllers. After calling dispose,
+  /// Cancels all timers and disposes all beacons. After calling dispose,
   /// this device cannot be used anymore.
   void dispose() {
     if (_disposed) return;
     _disposed = true;
 
     _stopAllSimulations();
-    _powerController.close();
-    _cadenceController.close();
-    _speedController.close();
-    _connectionController.close();
+    _powerBeacon.dispose();
+    _cadenceBeacon.dispose();
+    _speedBeacon.dispose();
+    _connectionBeacon.dispose();
   }
 }

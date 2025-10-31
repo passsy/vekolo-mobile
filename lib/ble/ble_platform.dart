@@ -1,6 +1,8 @@
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:state_beacon/state_beacon.dart';
 
+export 'package:flutter_blue_plus/flutter_blue_plus.dart' show LogLevel;
+
 /// Platform abstraction for BLE operations.
 ///
 /// This abstraction wraps the flutter_blue_plus package to make the BLE
@@ -91,6 +93,9 @@ abstract class BlePlatform {
   /// - [deviceId]: The unique identifier for the device (remoteId)
   Future<void> disconnect(String deviceId);
 
+  /// Set the logging level for BLE operations.
+  Future<void> setLogLevel(LogLevel level, {bool color = true});
+
   /// Clean up resources.
   ///
   /// Call this when done with the platform to prevent memory leaks.
@@ -161,5 +166,10 @@ class BlePlatformImpl implements BlePlatform {
   void dispose() {
     _adapterStateBeacon.dispose();
     _scanResultsBeacon.dispose();
+  }
+
+  @override
+  Future<void> setLogLevel(LogLevel level, {bool color = true}) async {
+    await FlutterBluePlus.setLogLevel(LogLevel.warning);
   }
 }

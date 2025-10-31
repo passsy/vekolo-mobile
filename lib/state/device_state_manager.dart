@@ -1,29 +1,32 @@
-import 'dart:async';
-
+import 'package:flutter/foundation.dart';
 import 'package:vekolo/domain/devices/device_manager.dart';
+import 'package:vekolo/domain/devices/fitness_device.dart';
 import 'package:vekolo/domain/models/fitness_data.dart';
 import 'package:vekolo/state/device_state.dart';
 
 /// Manages the reactive state for device management.
 ///
-/// This class bridges the domain layer ([DeviceManager]) with the UI state layer
-/// by subscribing to [DeviceManager] streams and updating beacons for UI
+/// This class bridges the domain layer ([DeviceManager]) with the state layer
+/// by subscribing to [DeviceManager] beacons and updating state beacons for UI
 /// consumption. It ensures the UI always reflects the current state of devices
 /// and their data.
 ///
 /// The manager handles:
-/// - Device list changes (via polling since DeviceManager doesn't emit events)
+/// - Device list changes (via DeviceManager beacons)
 /// - Device assignment changes (primary trainer, power/cadence/HR sources)
 /// - Real-time sensor data updates (power, cadence, heart rate)
 ///
 /// Example usage:
 /// ```dart
 /// final deviceManager = DeviceManager();
-/// final stateManager = DeviceStateManager(deviceManager);
+/// final devices = ConnectedDevices();
+/// final telemetry = LiveTelemetry();
+/// final syncState = WorkoutSyncState();
+/// final stateManager = DeviceStateManager(deviceManager, devices, telemetry, syncState);
 ///
 /// // Beacons are automatically updated as devices change
 /// // UI widgets can watch beacons for reactive updates:
-/// final power = context.watch(currentPowerBeacon);
+/// final power = context.watch(telemetry.powerBeacon);
 /// ```
 ///
 /// Used by the app initialization to wire up reactive state management.
@@ -32,99 +35,95 @@ class DeviceStateManager {
   /// The underlying device manager providing domain logic.
   final DeviceManager deviceManager;
 
-  /// Active stream subscriptions for cleanup.
-  final List<StreamSubscription<dynamic>> _subscriptions = [];
+  /// Connected devices roster and role assignments.
+  final ConnectedDevices devices;
 
-  /// Timer for polling device/assignment changes.
-  Timer? _pollTimer;
+  /// Live aggregated sensor telemetry.
+  final LiveTelemetry telemetry;
+
+  /// Workout synchronization state.
+  final WorkoutSyncState syncState;
+
+  /// Active beacon subscriptions for cleanup.
+  final List<VoidCallback> _subscriptions = [];
 
   /// Creates a new device state manager and initializes stream subscriptions.
   ///
   /// Call [dispose] when done to clean up resources.
-  DeviceStateManager(this.deviceManager) {
+  DeviceStateManager(
+    this.deviceManager,
+    this.devices,
+    this.telemetry,
+    this.syncState,
+  ) {
     _init();
   }
 
-  /// Initializes all stream subscriptions and polling.
+  /// Initializes all beacon subscriptions.
   void _init() {
-    // Subscribe to real-time sensor data streams
+    // Subscribe to real-time sensor data beacons
     _subscriptions.add(
-      deviceManager.powerStream.listen(
-        (PowerData data) {
-          currentPowerBeacon.value = data;
-        },
-        onError: (Object e, StackTrace stackTrace) {
-          // On error, clear the current value
-          currentPowerBeacon.value = null;
-        },
-      ),
+      deviceManager.powerStream.subscribe((PowerData? data) {
+        telemetry.power.value = data;
+      }),
     );
 
     _subscriptions.add(
-      deviceManager.cadenceStream.listen(
-        (CadenceData data) {
-          currentCadenceBeacon.value = data;
-        },
-        onError: (Object e, StackTrace stackTrace) {
-          // On error, clear the current value
-          currentCadenceBeacon.value = null;
-        },
-      ),
+      deviceManager.cadenceStream.subscribe((CadenceData? data) {
+        telemetry.cadence.value = data;
+      }),
     );
 
     _subscriptions.add(
-      deviceManager.heartRateStream.listen(
-        (HeartRateData data) {
-          currentHeartRateBeacon.value = data;
-        },
-        onError: (Object e, StackTrace stackTrace) {
-          // On error, clear the current value
-          currentHeartRateBeacon.value = null;
-        },
-      ),
+      deviceManager.heartRateStream.subscribe((HeartRateData? data) {
+        telemetry.heartRate.value = data;
+      }),
     );
 
-    // Poll for device list and assignment changes
-    // DeviceManager doesn't emit change events, so we poll periodically
-    _pollTimer = Timer.periodic(const Duration(milliseconds: 500), (_) {
-      _updateDeviceState();
-    });
+    // Subscribe to device list and assignment beacons
+    _subscriptions.add(
+      deviceManager.devicesBeacon.subscribe((List<FitnessDevice> deviceList) {
+        devices.devices.value = deviceList;
+      }),
+    );
 
-    // Initial update
-    _updateDeviceState();
-  }
+    _subscriptions.add(
+      deviceManager.primaryTrainerBeacon.subscribe((FitnessDevice? device) {
+        devices.primaryTrainer.value = device;
+      }),
+    );
 
-  /// Updates all device-related beacons from current DeviceManager state.
-  void _updateDeviceState() {
-    // Update device list
-    connectedDevicesBeacon.value = deviceManager.devices;
+    _subscriptions.add(
+      deviceManager.powerSourceBeacon.subscribe((FitnessDevice? device) {
+        devices.powerSource.value = device;
+      }),
+    );
 
-    // Update device assignments
-    primaryTrainerBeacon.value = deviceManager.primaryTrainer;
-    powerSourceBeacon.value = deviceManager.powerSource;
-    cadenceSourceBeacon.value = deviceManager.cadenceSource;
-    heartRateSourceBeacon.value = deviceManager.heartRateSource;
+    _subscriptions.add(
+      deviceManager.cadenceSourceBeacon.subscribe((FitnessDevice? device) {
+        devices.cadenceSource.value = device;
+      }),
+    );
+
+    _subscriptions.add(
+      deviceManager.heartRateSourceBeacon.subscribe((FitnessDevice? device) {
+        devices.heartRateSource.value = device;
+      }),
+    );
   }
 
   /// Disposes of all resources used by this manager.
   ///
-  /// Cancels all stream subscriptions and stops polling.
-  /// Note: Does not dispose beacons as they are global singletons that may be
-  /// used by other parts of the app. Beacons should only be disposed when the
-  /// entire app is shutting down.
+  /// Cancels all beacon subscriptions.
+  /// Note: Does not dispose state beacons - that's the responsibility
+  /// of whoever owns the state instances (typically via Ref disposal).
   ///
   /// Call this when the manager is no longer needed to prevent memory leaks.
   void dispose() {
-    // Cancel all stream subscriptions
-    for (final subscription in _subscriptions) {
-      subscription.cancel();
+    // Cancel all beacon subscriptions
+    for (final unsubscribe in _subscriptions) {
+      unsubscribe();
     }
     _subscriptions.clear();
-
-    // Stop polling
-    _pollTimer?.cancel();
-    _pollTimer = null;
-
-    // Do NOT dispose global beacons - they are singletons used across the app
   }
 }

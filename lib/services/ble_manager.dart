@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:developer' as developer;
 import 'package:async/async.dart';
 import 'package:context_plus/context_plus.dart';
-import 'package:vekolo/domain/models/fitness_data.dart';
+import 'package:flutter/foundation.dart';
 import 'package:vekolo/domain/protocols/ftms_device.dart';
 
 /// Service layer wrapper for FtmsDevice.
@@ -19,8 +19,8 @@ import 'package:vekolo/domain/protocols/ftms_device.dart';
 /// management, use DeviceManager instead.
 class BleManager {
   FtmsDevice? _device;
-  StreamSubscription<PowerData>? _powerSubscription;
-  StreamSubscription<CadenceData>? _cadenceSubscription;
+  VoidCallback? _powerSubscription;
+  VoidCallback? _cadenceSubscription;
 
   // Cached trainer data (for backward compatibility with old API)
   int? currentPower;
@@ -78,29 +78,23 @@ class BleManager {
 
   /// Subscribe to FtmsDevice data streams and convert to callbacks.
   void _setupDataStreamSubscriptions() {
-    // Subscribe to power stream
-    _powerSubscription = _device?.powerStream.listen(
+    // Subscribe to power beacon
+    _powerSubscription = _device?.powerStream?.subscribe(
       (data) {
-        currentPower = data.watts;
-        _notifyDataUpdate();
-      },
-      onError: (e, stackTrace) {
-        print('[BleManager] Power stream error: $e');
-        print(stackTrace);
-        onError?.call('Power stream error: $e');
+        if (data != null) {
+          currentPower = data.watts;
+          _notifyDataUpdate();
+        }
       },
     );
 
-    // Subscribe to cadence stream
-    _cadenceSubscription = _device?.cadenceStream.listen(
+    // Subscribe to cadence beacon
+    _cadenceSubscription = _device?.cadenceStream?.subscribe(
       (data) {
-        currentCadence = data.rpm;
-        _notifyDataUpdate();
-      },
-      onError: (e, stackTrace) {
-        print('[BleManager] Cadence stream error: $e');
-        print(stackTrace);
-        onError?.call('Cadence stream error: $e');
+        if (data != null) {
+          currentCadence = data.rpm;
+          _notifyDataUpdate();
+        }
       },
     );
 
@@ -146,8 +140,8 @@ class BleManager {
   }
 
   void _cleanup() {
-    _powerSubscription?.cancel();
-    _cadenceSubscription?.cancel();
+    _powerSubscription?.call();
+    _cadenceSubscription?.call();
     _powerSubscription = null;
     _cadenceSubscription = null;
 

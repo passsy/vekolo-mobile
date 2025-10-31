@@ -2,8 +2,8 @@ import 'package:context_plus/context_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart' as fbp;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:vekolo/app/refs.dart';
 import 'package:vekolo/ble/ble_scanner.dart';
-import 'package:vekolo/config/ble_config.dart';
 import 'package:vekolo/pages/scanner_page.dart';
 import 'package:visibility_detector/visibility_detector.dart';
 
@@ -34,10 +34,8 @@ void main() {
         ContextRef.root(
           child: Builder(
             builder: (context) {
-              bleScannerRef.bind(context, () => scanner);
-              return const MaterialApp(
-                home: ScannerPage(),
-              );
+              Refs.bleScanner.bind(context, () => scanner);
+              return const MaterialApp(home: ScannerPage());
             },
           ),
         ),
@@ -99,10 +97,8 @@ void main() {
         ContextRef.root(
           child: Builder(
             builder: (context) {
-              bleScannerRef.bind(context, () => scanner);
-              return const MaterialApp(
-                home: ScannerPage(),
-              );
+              Refs.bleScanner.bind(context, () => scanner);
+              return const MaterialApp(home: ScannerPage());
             },
           ),
         ),
@@ -156,10 +152,8 @@ void main() {
         ContextRef.root(
           child: Builder(
             builder: (context) {
-              bleScannerRef.bind(context, () => scanner);
-              return const MaterialApp(
-                home: ScannerPage(),
-              );
+              Refs.bleScanner.bind(context, () => scanner);
+              return const MaterialApp(home: ScannerPage());
             },
           ),
         ),
@@ -207,10 +201,8 @@ void main() {
         ContextRef.root(
           child: Builder(
             builder: (context) {
-              bleScannerRef.bind(context, () => scanner);
-              return const MaterialApp(
-                home: ScannerPage(),
-              );
+              Refs.bleScanner.bind(context, () => scanner);
+              return const MaterialApp(home: ScannerPage());
             },
           ),
         ),
@@ -251,6 +243,5 @@ void main() {
       scanner.dispose();
       platform.dispose();
     });
-
   });
 }

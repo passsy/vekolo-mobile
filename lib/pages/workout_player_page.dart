@@ -5,9 +5,9 @@ import 'package:context_plus/context_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:state_beacon/state_beacon.dart';
+import 'package:vekolo/app/refs.dart';
 import 'package:vekolo/domain/models/workout/workout_models.dart';
 import 'package:vekolo/services/workout_player_service.dart';
-import 'package:vekolo/state/device_state.dart';
 
 /// Page for executing structured workouts with real-time power control.
 ///
@@ -64,7 +64,7 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
 
       // Initialize player service
       if (!mounted) return;
-      final deviceManager = deviceManagerRef.of(context);
+      final deviceManager = Refs.deviceManager.of(context);
       final playerService = WorkoutPlayerService(
         workoutPlan: workoutPlan,
         deviceManager: deviceManager,
@@ -219,10 +219,11 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
         final currentBlockRemainingTime = player.currentBlockRemainingTime$.watch(context);
         final powerScaleFactor = player.powerScaleFactor.watch(context);
 
-        // Watch real-time metrics
-        final currentPower = currentPowerBeacon.watch(context);
-        final currentCadence = currentCadenceBeacon.watch(context);
-        final currentHeartRate = currentHeartRateBeacon.watch(context);
+        // Watch real-time metrics from LiveTelemetry
+        final telemetry = Refs.liveTelemetry.of(context);
+        final currentPower = telemetry.power.watch(context);
+        final currentCadence = telemetry.cadence.watch(context);
+        final currentHeartRate = telemetry.heartRate.watch(context);
 
         return ListView(
           padding: const EdgeInsets.all(16),

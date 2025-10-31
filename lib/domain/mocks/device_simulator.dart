@@ -24,6 +24,7 @@ import 'dart:math';
 
 import 'package:async/async.dart';
 import 'package:clock/clock.dart';
+import 'package:state_beacon/state_beacon.dart';
 import 'package:vekolo/domain/devices/fitness_device.dart';
 import 'package:vekolo/domain/mocks/mock_trainer.dart';
 import 'package:vekolo/domain/models/device_info.dart';
@@ -184,8 +185,8 @@ class _MockPowerMeter extends FitnessDevice {
   final String _name;
   final double _variability;
 
-  final _powerController = StreamController<PowerData>.broadcast();
-  final _connectionController = StreamController<ConnectionState>.broadcast();
+  final _powerBeacon = Beacon.writable<PowerData?>(null);
+  final _connectionBeacon = Beacon.writable(ConnectionState.disconnected);
 
   ConnectionState _state = ConnectionState.disconnected;
   ConnectionError? _lastConnectionError;
@@ -206,7 +207,7 @@ class _MockPowerMeter extends FitnessDevice {
   Set<DeviceDataType> get capabilities => {DeviceDataType.power};
 
   @override
-  Stream<ConnectionState> get connectionState => _connectionController.stream;
+  ReadableBeacon<ConnectionState> get connectionState => _connectionBeacon;
 
   @override
   ConnectionError? get lastConnectionError => _lastConnectionError;
@@ -217,7 +218,7 @@ class _MockPowerMeter extends FitnessDevice {
       _connectImpl(),
       onCancel: () {
         _state = ConnectionState.disconnected;
-        _connectionController.add(_state);
+        _connectionBeacon.value = _state;
       },
     );
   }
@@ -225,20 +226,20 @@ class _MockPowerMeter extends FitnessDevice {
   Future<void> _connectImpl() async {
     if (_state == ConnectionState.connected) return;
     _state = ConnectionState.connecting;
-    _connectionController.add(_state);
+    _connectionBeacon.value = _state;
 
     try {
       await Future.delayed(const Duration(milliseconds: 300));
 
       _state = ConnectionState.connected;
-      _connectionController.add(_state);
+      _connectionBeacon.value = _state;
       _lastConnectionError = null;
 
       // Start emitting power data
       _dataTimer = Timer.periodic(const Duration(milliseconds: 500), (_) {
         final variance = (_random.nextDouble() * 2 - 1) * _variability * _basePower;
         final power = max(0, (_basePower + variance).round());
-        _powerController.add(PowerData(watts: power, timestamp: clock.now()));
+        _powerBeacon.value = PowerData(watts: power, timestamp: clock.now());
       });
     } catch (e, stackTrace) {
       _lastConnectionError = ConnectionError(
@@ -248,7 +249,7 @@ class _MockPowerMeter extends FitnessDevice {
         stackTrace: stackTrace,
       );
       _state = ConnectionState.disconnected;
-      _connectionController.add(_state);
+      _connectionBeacon.value = _state;
       rethrow;
     }
   }
@@ -257,20 +258,20 @@ class _MockPowerMeter extends FitnessDevice {
   Future<void> disconnect() async {
     _dataTimer?.cancel();
     _state = ConnectionState.disconnected;
-    _connectionController.add(_state);
+    _connectionBeacon.value = _state;
   }
 
   @override
-  Stream<PowerData>? get powerStream => _powerController.stream;
+  ReadableBeacon<PowerData?>? get powerStream => _powerBeacon;
 
   @override
-  Stream<CadenceData>? get cadenceStream => null;
+  ReadableBeacon<CadenceData?>? get cadenceStream => null;
 
   @override
-  Stream<SpeedData>? get speedStream => null;
+  ReadableBeacon<SpeedData?>? get speedStream => null;
 
   @override
-  Stream<HeartRateData>? get heartRateStream => null;
+  ReadableBeacon<HeartRateData?>? get heartRateStream => null;
 
   @override
   bool get supportsErgMode => false;
@@ -294,8 +295,8 @@ class _MockCadenceSensor extends FitnessDevice {
   final String _id;
   final String _name;
 
-  final _cadenceController = StreamController<CadenceData>.broadcast();
-  final _connectionController = StreamController<ConnectionState>.broadcast();
+  final _cadenceBeacon = Beacon.writable<CadenceData?>(null);
+  final _connectionBeacon = Beacon.writable(ConnectionState.disconnected);
 
   ConnectionState _state = ConnectionState.disconnected;
   ConnectionError? _lastConnectionError;
@@ -315,7 +316,7 @@ class _MockCadenceSensor extends FitnessDevice {
   Set<DeviceDataType> get capabilities => {DeviceDataType.cadence};
 
   @override
-  Stream<ConnectionState> get connectionState => _connectionController.stream;
+  ReadableBeacon<ConnectionState> get connectionState => _connectionBeacon;
 
   @override
   ConnectionError? get lastConnectionError => _lastConnectionError;
@@ -326,7 +327,7 @@ class _MockCadenceSensor extends FitnessDevice {
       _connectImpl(),
       onCancel: () {
         _state = ConnectionState.disconnected;
-        _connectionController.add(_state);
+        _connectionBeacon.value = _state;
       },
     );
   }
@@ -334,19 +335,19 @@ class _MockCadenceSensor extends FitnessDevice {
   Future<void> _connectImpl() async {
     if (_state == ConnectionState.connected) return;
     _state = ConnectionState.connecting;
-    _connectionController.add(_state);
+    _connectionBeacon.value = _state;
 
     try {
       await Future.delayed(const Duration(milliseconds: 300));
 
       _state = ConnectionState.connected;
-      _connectionController.add(_state);
+      _connectionBeacon.value = _state;
       _lastConnectionError = null;
 
       // Start emitting cadence data
       _dataTimer = Timer.periodic(const Duration(milliseconds: 500), (_) {
         final cadence = 80 + _random.nextInt(15); // 80-95 RPM
-        _cadenceController.add(CadenceData(rpm: cadence, timestamp: clock.now()));
+        _cadenceBeacon.value = CadenceData(rpm: cadence, timestamp: clock.now());
       });
     } catch (e, stackTrace) {
       _lastConnectionError = ConnectionError(
@@ -356,7 +357,7 @@ class _MockCadenceSensor extends FitnessDevice {
         stackTrace: stackTrace,
       );
       _state = ConnectionState.disconnected;
-      _connectionController.add(_state);
+      _connectionBeacon.value = _state;
       rethrow;
     }
   }
@@ -365,20 +366,20 @@ class _MockCadenceSensor extends FitnessDevice {
   Future<void> disconnect() async {
     _dataTimer?.cancel();
     _state = ConnectionState.disconnected;
-    _connectionController.add(_state);
+    _connectionBeacon.value = _state;
   }
 
   @override
-  Stream<PowerData>? get powerStream => null;
+  ReadableBeacon<PowerData?>? get powerStream => null;
 
   @override
-  Stream<CadenceData>? get cadenceStream => _cadenceController.stream;
+  ReadableBeacon<CadenceData?>? get cadenceStream => _cadenceBeacon;
 
   @override
-  Stream<SpeedData>? get speedStream => null;
+  ReadableBeacon<SpeedData?>? get speedStream => null;
 
   @override
-  Stream<HeartRateData>? get heartRateStream => null;
+  ReadableBeacon<HeartRateData?>? get heartRateStream => null;
 
   @override
   bool get supportsErgMode => false;
@@ -408,8 +409,8 @@ class _MockHeartRateMonitor extends FitnessDevice {
   final int _restingHr;
   final int _maxHr;
 
-  final _hrController = StreamController<HeartRateData>.broadcast();
-  final _connectionController = StreamController<ConnectionState>.broadcast();
+  final _hrBeacon = Beacon.writable<HeartRateData?>(null);
+  final _connectionBeacon = Beacon.writable(ConnectionState.disconnected);
 
   ConnectionState _state = ConnectionState.disconnected;
   ConnectionError? _lastConnectionError;
@@ -429,7 +430,7 @@ class _MockHeartRateMonitor extends FitnessDevice {
   Set<DeviceDataType> get capabilities => {DeviceDataType.heartRate};
 
   @override
-  Stream<ConnectionState> get connectionState => _connectionController.stream;
+  ReadableBeacon<ConnectionState> get connectionState => _connectionBeacon;
 
   @override
   ConnectionError? get lastConnectionError => _lastConnectionError;
@@ -440,7 +441,7 @@ class _MockHeartRateMonitor extends FitnessDevice {
       _connectImpl(),
       onCancel: () {
         _state = ConnectionState.disconnected;
-        _connectionController.add(_state);
+        _connectionBeacon.value = _state;
       },
     );
   }
@@ -448,13 +449,13 @@ class _MockHeartRateMonitor extends FitnessDevice {
   Future<void> _connectImpl() async {
     if (_state == ConnectionState.connected) return;
     _state = ConnectionState.connecting;
-    _connectionController.add(_state);
+    _connectionBeacon.value = _state;
 
     try {
       await Future.delayed(const Duration(milliseconds: 300));
 
       _state = ConnectionState.connected;
-      _connectionController.add(_state);
+      _connectionBeacon.value = _state;
       _lastConnectionError = null;
 
       // Start emitting HR data (simulated at resting HR initially)
@@ -463,7 +464,7 @@ class _MockHeartRateMonitor extends FitnessDevice {
         final baseHr = _restingHr + (_maxHr - _restingHr) * 0.4; // ~40% effort
         final variance = _random.nextInt(6) - 3; // ±3 BPM
         final hr = (baseHr + variance).round().clamp(_restingHr, _maxHr);
-        _hrController.add(HeartRateData(bpm: hr, timestamp: clock.now()));
+        _hrBeacon.value = HeartRateData(bpm: hr, timestamp: clock.now());
       });
     } catch (e, stackTrace) {
       _lastConnectionError = ConnectionError(
@@ -473,7 +474,7 @@ class _MockHeartRateMonitor extends FitnessDevice {
         stackTrace: stackTrace,
       );
       _state = ConnectionState.disconnected;
-      _connectionController.add(_state);
+      _connectionBeacon.value = _state;
       rethrow;
     }
   }
@@ -482,20 +483,20 @@ class _MockHeartRateMonitor extends FitnessDevice {
   Future<void> disconnect() async {
     _dataTimer?.cancel();
     _state = ConnectionState.disconnected;
-    _connectionController.add(_state);
+    _connectionBeacon.value = _state;
   }
 
   @override
-  Stream<PowerData>? get powerStream => null;
+  ReadableBeacon<PowerData?>? get powerStream => null;
 
   @override
-  Stream<CadenceData>? get cadenceStream => null;
+  ReadableBeacon<CadenceData?>? get cadenceStream => null;
 
   @override
-  Stream<SpeedData>? get speedStream => null;
+  ReadableBeacon<SpeedData?>? get speedStream => null;
 
   @override
-  Stream<HeartRateData>? get heartRateStream => _hrController.stream;
+  ReadableBeacon<HeartRateData?>? get heartRateStream => _hrBeacon;
 
   @override
   bool get supportsErgMode => false;

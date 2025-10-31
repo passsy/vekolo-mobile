@@ -9,7 +9,7 @@ void main() {
 
       expect(trainer.type, DeviceType.trainer);
       expect(trainer.supportsErgMode, true);
-      expect(trainer.capabilities, {DeviceDataType.power, DeviceDataType.cadence});
+      expect(trainer.capabilities, {DeviceDataType.power, DeviceDataType.cadence, DeviceDataType.speed});
       expect(trainer.requiresContinuousRefresh, false);
     });
 
@@ -77,8 +77,11 @@ void main() {
 
       await powerMeter.connect().value;
 
-      final powerData = await powerMeter.powerStream!.first;
-      expect(powerData.watts, greaterThan(0));
+      // Wait for beacon to emit data
+      await Future.delayed(const Duration(milliseconds: 600));
+      final powerData = powerMeter.powerStream!.value;
+      expect(powerData, isNotNull);
+      expect(powerData!.watts, greaterThan(0));
 
       await powerMeter.disconnect();
     });
@@ -88,8 +91,11 @@ void main() {
 
       await cadenceSensor.connect().value;
 
-      final cadenceData = await cadenceSensor.cadenceStream!.first;
-      expect(cadenceData.rpm, greaterThan(0));
+      // Wait for beacon to emit data
+      await Future.delayed(const Duration(milliseconds: 600));
+      final cadenceData = cadenceSensor.cadenceStream!.value;
+      expect(cadenceData, isNotNull);
+      expect(cadenceData!.rpm, greaterThan(0));
 
       await cadenceSensor.disconnect();
     });
@@ -99,8 +105,11 @@ void main() {
 
       await hrm.connect().value;
 
-      final hrData = await hrm.heartRateStream!.first;
-      expect(hrData.bpm, greaterThanOrEqualTo(60));
+      // Wait for beacon to emit data
+      await Future.delayed(const Duration(seconds: 1, milliseconds: 100));
+      final hrData = hrm.heartRateStream!.value;
+      expect(hrData, isNotNull);
+      expect(hrData!.bpm, greaterThanOrEqualTo(60));
       expect(hrData.bpm, lessThanOrEqualTo(180));
 
       await hrm.disconnect();

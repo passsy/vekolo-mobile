@@ -507,13 +507,16 @@ void main() {
       return (scanner: scanner, platform: p, permissions: perms);
     }
 
-    test('initial state reflects unknown Bluetooth and no permission', () async {
+    test('initial state reflects Bluetooth on and no permission', () async {
       final (:scanner, :platform, :permissions) = createScanner();
+      // Configure permissions to false to test "no permission" state
+      permissions.setHasPermission(false);
+      permissions.setLocationServiceEnabled(false);
       await Future.delayed(const Duration(milliseconds: 100));
 
       final state = scanner.bluetoothState.value;
-      // FakeBlePlatform initializes with BluetoothAdapterState.off
-      expect(state.adapterState, BluetoothAdapterState.off);
+      // FakeBlePlatform initializes with BluetoothAdapterState.on
+      expect(state.adapterState, BluetoothAdapterState.on);
       expect(state.hasPermission, false);
       expect(state.canScan, false);
     });

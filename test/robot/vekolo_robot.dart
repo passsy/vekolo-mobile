@@ -1,5 +1,6 @@
 import 'package:context_plus/context_plus.dart';
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:spot/spot.dart';
@@ -36,8 +37,9 @@ class VekoloRobot {
     addTearDown(tester.view.resetDevicePixelRatio);
     await loadAppFonts();
 
-    // Setup mock SharedPreferences
+    // Setup mock SharedPreferences and SecureStorage
     SharedPreferences.setMockInitialValues({});
+    FlutterSecureStorage.setMockInitialValues({});
 
     final fakeAuthService = FakeAuthService();
     final fakeApiClient = FakeVekoloApiClient();
@@ -56,7 +58,7 @@ class VekoloRobot {
     );
 
     await tester.pumpWidget(app);
-    await fastIdle();
+    await idle();
 
     // If loggedIn is requested, perform the login after the app is built
     if (loggedIn) {
@@ -65,7 +67,7 @@ class VekoloRobot {
   }
 
   /// A faster version of idle waiting less real world time.
-  Future<void> fastIdle([int? durationMs]) async {
+  Future<void> idle([int? durationMs]) async {
     final TestWidgetsFlutterBinding binding = tester.binding;
     try {
       await tester.runAsync(() => Future.delayed(const Duration(milliseconds: 10)));
@@ -84,7 +86,24 @@ class VekoloRobot {
 
   Future<void> closeApp() async {
     await tester.pumpWidget(const SizedBox.shrink());
-    await fastIdle(1000);
+    await idle(1000);
+  }
+
+  Future<void> openManageDevicesPage() async {
+    final button = spot<IconButton>().withChild(spotIcon(Icons.devices));
+    await act.tap(button);
+    await idle(500);
+  }
+
+  Future<void> openScanner() async {
+    await act.tap(spotText('Scan'));
+    await idle(500);
+  }
+
+  Future<void> selectDeviceInScanner(String name) async {
+    final deviceTile = spot<ListTile>().withChild(spotText(name));
+    await act.tap(deviceTile);
+    await idle(500);
   }
 }
 
@@ -109,6 +128,7 @@ class Aether {
     // TODO: Convert protocols to actual service UUIDs when implementing auto-connect
     // For now, just create the device with empty services to make the test compile
     final device = fakeBlePlatform.addDevice(deviceId, name, rssi: rssi);
+    device.turnOn();
 
     return device;
   }

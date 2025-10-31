@@ -40,8 +40,8 @@ void main() {
         expect(response.message, equals('Too many requests'));
       });
 
-      test('can override to throw exception', () async {
-        apiClient.overrideRequestSignupCode = ({required email, name, sex, weight, ftp}) async {
+      test('can override to throw exception', () {
+        apiClient.overrideRequestSignupCode = ({required email, name, sex, weight, ftp}) {
           throw DioException(
             requestOptions: RequestOptions(path: '/auth/code/request'),
             type: DioExceptionType.connectionTimeout,
@@ -111,8 +111,8 @@ void main() {
         expect(apiClient.methodCalls, contains('refreshToken'));
       });
 
-      test('can override to simulate expired token', () async {
-        apiClient.overrideRefreshToken = ({required refreshToken}) async {
+      test('can override to simulate expired token', () {
+        apiClient.overrideRefreshToken = ({required refreshToken}) {
           throw DioException(
             requestOptions: RequestOptions(path: '/auth/token/refresh'),
             response: Response(
@@ -153,8 +153,8 @@ void main() {
         expect(apiClient.methodCalls, contains('updateProfile'));
       });
 
-      test('can override to return validation error', () async {
-        apiClient.overrideUpdateProfile = ({ftp, weight, name, email}) async {
+      test('can override to return validation error', () {
+        apiClient.overrideUpdateProfile = ({ftp, weight, name, email}) {
           throw DioException(
             requestOptions: RequestOptions(path: '/api/user/update'),
             response: Response(
@@ -194,10 +194,11 @@ void main() {
       final accessToken = FakeVekoloApiClient.createFakeAccessToken(user);
 
       // Verify it can be decoded
-      final decoded = accessToken.decode();
-      expect(decoded['user']['id'], equals('user-789'));
-      expect(decoded['user']['name'], equals('JWT Test User'));
-      expect(decoded['user']['email'], equals('jwt@example.com'));
+      final Map<String, dynamic> decoded = accessToken.decode();
+      final Map<String, dynamic> userMap = decoded['user'] as Map<String, dynamic>;
+      expect(userMap['id'], equals('user-789'));
+      expect(userMap['name'], equals('JWT Test User'));
+      expect(userMap['email'], equals('jwt@example.com'));
       expect(decoded['exp'], isA<int>());
 
       // Verify user can be parsed from token

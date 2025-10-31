@@ -5,14 +5,14 @@ import 'package:context_plus/context_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:state_beacon/state_beacon.dart';
+import 'package:vekolo/app/refs.dart';
 import 'package:vekolo/domain/devices/device_manager.dart';
 import 'package:vekolo/domain/devices/fitness_device.dart';
 import 'package:vekolo/domain/models/device_info.dart' as device_info;
 import 'package:vekolo/domain/models/erg_command.dart';
+import 'package:vekolo/domain/models/fitness_data.dart';
 import 'package:vekolo/domain/protocols/ftms_device.dart';
 import 'package:vekolo/ble/ble_scanner.dart';
-import 'package:vekolo/state/device_state.dart';
-import 'package:vekolo/ble/ble_permissions.dart';
 
 /// Page for managing connected fitness devices and assigning them to data sources.
 ///
@@ -44,7 +44,7 @@ class _DevicesPageState extends State<DevicesPage> {
 
   @override
   Widget build(BuildContext context) {
-    final deviceManager = deviceManagerRef.of(context);
+    final deviceManager = Refs.deviceManager.of(context);
 
     return Scaffold(
       appBar: AppBar(
@@ -115,8 +115,8 @@ class _DevicesPageState extends State<DevicesPage> {
   }
 
   Widget _buildErgControlTestSection(BuildContext context) {
-    final syncService = workoutSyncServiceRef.of(context);
-    final deviceManager = deviceManagerRef.of(context);
+    final syncService = Refs.workoutSyncService.of(context);
+    final deviceManager = Refs.deviceManager.of(context);
 
     return Builder(
       builder: (context) {
@@ -430,6 +430,20 @@ class _DevicesPageState extends State<DevicesPage> {
             Icon(icon, size: 20),
             const SizedBox(width: 8),
             Text(title, style: Theme.of(context).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.bold)),
+            if (assignedDevice != null) ...[
+              const Spacer(),
+              Builder(
+                builder: (context) {
+                  final liveData = _getLiveDataForDevice(context, assignedDevice, dataType);
+                  return Text(
+                    liveData,
+                    style: Theme.of(
+                      context,
+                    ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold, color: Colors.blue[700]),
+                  );
+                },
+              ),
+            ],
           ],
         ),
         const SizedBox(height: 12),
@@ -443,6 +457,23 @@ class _DevicesPageState extends State<DevicesPage> {
           ),
       ],
     );
+  }
+
+  String _getLiveDataForDevice(BuildContext context, FitnessDevice device, device_info.DeviceDataType dataType) {
+    switch (dataType) {
+      case device_info.DeviceDataType.power:
+        final powerData = device.powerStream?.watch(context);
+        return powerData != null ? '${powerData.watts}W' : '--W';
+      case device_info.DeviceDataType.cadence:
+        final cadenceData = device.cadenceStream?.watch(context);
+        return cadenceData != null ? '${cadenceData.rpm} RPM' : '-- RPM';
+      case device_info.DeviceDataType.speed:
+        final speedData = device.speedStream?.watch(context);
+        return speedData != null ? '${speedData.kmh.toStringAsFixed(1)} km/h' : '-- km/h';
+      case device_info.DeviceDataType.heartRate:
+        final hrData = device.heartRateStream?.watch(context);
+        return hrData != null ? '${hrData.bpm} BPM' : '-- BPM';
+    }
   }
 
   Widget _buildOtherDevicesSection(BuildContext context, DeviceManager deviceManager) {
@@ -489,11 +520,9 @@ class _DevicesPageState extends State<DevicesPage> {
     VoidCallback? onConnect,
     bool showAssignButtons = false,
   }) {
-    return StreamBuilder<device_info.ConnectionState>(
-      stream: device.connectionState,
-      initialData: device_info.ConnectionState.disconnected,
-      builder: (context, snapshot) {
-        final connectionState = snapshot.data ?? device_info.ConnectionState.disconnected;
+    return Builder(
+      builder: (context) {
+        final connectionState = device.connectionState.watch(context);
         final isConnected = connectionState == device_info.ConnectionState.connected;
         final isConnecting = _isConnecting && _connectingDeviceId == device.id;
 
@@ -560,14 +589,40 @@ class _DevicesPageState extends State<DevicesPage> {
                     ],
                   )
                 else if (onUnassign != null)
-                  OutlinedButton.icon(
-                    onPressed: onUnassign,
-                    icon: const Icon(Icons.link_off),
-                    label: const Text('Unassign'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.orange[900],
-                      side: BorderSide(color: Colors.orange[300]!),
-                    ),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      if (isConnected)
+                        ElevatedButton.icon(
+                          onPressed: () => _handleDisconnect(device),
+                          icon: const Icon(Icons.bluetooth_disabled),
+                          label: const Text('Disconnect'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red[50],
+                            foregroundColor: Colors.red[900],
+                          ),
+                        )
+                      else
+                        ElevatedButton.icon(
+                          onPressed: () => _handleConnect(device),
+                          icon: const Icon(Icons.bluetooth_connected),
+                          label: const Text('Connect'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blue[50],
+                            foregroundColor: Colors.blue[900],
+                          ),
+                        ),
+                      OutlinedButton.icon(
+                        onPressed: onUnassign,
+                        icon: const Icon(Icons.link_off),
+                        label: const Text('Unassign'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.orange[900],
+                          side: BorderSide(color: Colors.orange[300]!),
+                        ),
+                      ),
+                    ],
                   )
                 else if (onDisconnect != null)
                   ElevatedButton(
@@ -644,8 +699,23 @@ class _DevicesPageState extends State<DevicesPage> {
     }
   }
 
+  Future<void> _handleDisconnect(FitnessDevice device) async {
+    try {
+      await device.disconnect();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${device.name} disconnected')));
+      setState(() {}); // Refresh UI
+    } catch (e, stackTrace) {
+      developer.log('Error disconnecting from ${device.name}', name: 'DevicesPage', error: e, stackTrace: stackTrace);
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to disconnect: $e'), backgroundColor: Colors.red));
+    }
+  }
+
   void _handleAssignPrimaryTrainer(FitnessDevice device) {
-    final deviceManager = deviceManagerRef.of(context);
+    final deviceManager = Refs.deviceManager.of(context);
     try {
       deviceManager.assignPrimaryTrainer(device.id);
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${device.name} assigned as primary trainer')));
@@ -659,7 +729,7 @@ class _DevicesPageState extends State<DevicesPage> {
   }
 
   void _handleAssignPower(FitnessDevice device) {
-    final deviceManager = deviceManagerRef.of(context);
+    final deviceManager = Refs.deviceManager.of(context);
     try {
       deviceManager.assignPowerSource(device.id);
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${device.name} assigned as power source')));
@@ -673,7 +743,7 @@ class _DevicesPageState extends State<DevicesPage> {
   }
 
   void _handleAssignCadence(FitnessDevice device) {
-    final deviceManager = deviceManagerRef.of(context);
+    final deviceManager = Refs.deviceManager.of(context);
     try {
       deviceManager.assignCadenceSource(device.id);
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${device.name} assigned as cadence source')));
@@ -687,7 +757,7 @@ class _DevicesPageState extends State<DevicesPage> {
   }
 
   void _handleAssignHeartRate(FitnessDevice device) {
-    final deviceManager = deviceManagerRef.of(context);
+    final deviceManager = Refs.deviceManager.of(context);
     try {
       deviceManager.assignHeartRateSource(device.id);
       ScaffoldMessenger.of(
@@ -703,7 +773,7 @@ class _DevicesPageState extends State<DevicesPage> {
   }
 
   void _handleAssignSpeed(FitnessDevice device) {
-    final deviceManager = deviceManagerRef.of(context);
+    final deviceManager = Refs.deviceManager.of(context);
     try {
       deviceManager.assignSpeedSource(device.id);
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${device.name} assigned as speed source')));
@@ -717,7 +787,7 @@ class _DevicesPageState extends State<DevicesPage> {
   }
 
   void _handleUnassignPrimaryTrainer() {
-    final deviceManager = deviceManagerRef.of(context);
+    final deviceManager = Refs.deviceManager.of(context);
     try {
       deviceManager.assignPrimaryTrainer(null);
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Primary trainer unassigned')));
@@ -731,7 +801,7 @@ class _DevicesPageState extends State<DevicesPage> {
   }
 
   void _handleUnassignDataSource(device_info.DeviceDataType dataType) {
-    final deviceManager = deviceManagerRef.of(context);
+    final deviceManager = Refs.deviceManager.of(context);
     try {
       switch (dataType) {
         case device_info.DeviceDataType.power:
@@ -766,12 +836,12 @@ class _DevicesPageState extends State<DevicesPage> {
     device_info.DeviceDataType dataType,
   ) {
     final allDevices = deviceManager.devices;
-    // Only exclude primary trainer from data source assignments
+    // Allow primary trainer to also be assigned as data source
+    // (e.g., a KICKR CORE can control ERG mode AND provide power/cadence/speed data)
     // Allow same device to be assigned to multiple data sources (power, cadence, HR)
-    final primaryTrainerId = deviceManager.primaryTrainer?.id;
 
     final eligibleDevices = allDevices.where((device) {
-      return device.id != primaryTrainerId && device.capabilities.contains(dataType);
+      return device.capabilities.contains(dataType);
     }).toList();
 
     final dataTypeName = switch (dataType) {
@@ -870,78 +940,28 @@ class _DevicesPageState extends State<DevicesPage> {
     final deviceId = device.deviceId;
     developer.log('[DevicesPage] Device selected: $deviceName ($deviceId)');
 
-    try {
-      final deviceManager = deviceManagerRef.of(context);
+    if (!mounted) return;
 
-      // Create FTMS device from scanned device
-      final newDevice = FtmsDevice(deviceId: deviceId, name: deviceName.isEmpty ? 'Unknown Device' : deviceName);
+    // Show connecting dialog
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => _DeviceConnectingDialog(
+        device: device,
+        onConnect: (ftmsDevice, autoAssignments, isReconnect) {
+          final message = isReconnect
+              ? '${ftmsDevice.name} reconnected'
+              : autoAssignments.isEmpty
+              ? '${ftmsDevice.name} added and connected'
+              : '${ftmsDevice.name} connected and assigned as ${autoAssignments.join(', ')}';
 
-      // Add to device manager (or get existing if already exists)
-      final ftmsDevice = await deviceManager.addOrGetExistingDevice(newDevice) as FtmsDevice;
-      final isReconnect = ftmsDevice != newDevice;
-
-      if (isReconnect) {
-        developer.log('[DevicesPage] Device already exists in manager, reconnecting');
-      }
-
-      if (!mounted) return;
-
-      // Auto-assign device to available data sources based on its capabilities (only for new devices)
-      final autoAssignments = <String>[];
-
-      if (!isReconnect) {
-        // Check if device supports ERG mode and no trainer is assigned
-        if (ftmsDevice.supportsErgMode && deviceManager.primaryTrainer == null) {
-          deviceManager.assignPrimaryTrainer(ftmsDevice.id);
-          autoAssignments.add('primary trainer');
-        }
-
-        // Auto-assign to data sources
-        if (ftmsDevice.capabilities.contains(device_info.DeviceDataType.power) && deviceManager.powerSource == null) {
-          deviceManager.assignPowerSource(ftmsDevice.id);
-          autoAssignments.add('power source');
-        }
-
-        if (ftmsDevice.capabilities.contains(device_info.DeviceDataType.cadence) &&
-            deviceManager.cadenceSource == null) {
-          deviceManager.assignCadenceSource(ftmsDevice.id);
-          autoAssignments.add('cadence source');
-        }
-
-        if (ftmsDevice.capabilities.contains(device_info.DeviceDataType.speed) && deviceManager.speedSource == null) {
-          deviceManager.assignSpeedSource(ftmsDevice.id);
-          autoAssignments.add('speed source');
-        }
-
-        if (ftmsDevice.capabilities.contains(device_info.DeviceDataType.heartRate) &&
-            deviceManager.heartRateSource == null) {
-          deviceManager.assignHeartRateSource(ftmsDevice.id);
-          autoAssignments.add('heart rate source');
-        }
-      }
-
-      // Connect the device automatically
-      developer.log('[DevicesPage] ${isReconnect ? 'Reconnecting' : 'Auto-connecting'} device: ${ftmsDevice.name}');
-      await ftmsDevice.connect().value;
-
-      if (!mounted) return;
-
-      final message = isReconnect
-          ? '${ftmsDevice.name} reconnected'
-          : autoAssignments.isEmpty
-          ? '${ftmsDevice.name} added and connected'
-          : '${ftmsDevice.name} connected and assigned as ${autoAssignments.join(', ')}';
-
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
-
-      setState(() {}); // Refresh UI
-    } catch (e, stackTrace) {
-      developer.log('Error adding/connecting device', name: 'DevicesPage', error: e, stackTrace: stackTrace);
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Failed to add/connect device: $e'), backgroundColor: Colors.red));
-    }
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+            setState(() {}); // Refresh UI
+          }
+        },
+      ),
+    );
   }
 }
 
@@ -956,7 +976,7 @@ class _BleScanDialog extends StatefulWidget {
 }
 
 class _BleScanDialogState extends State<_BleScanDialog> {
-  late final BleScanner _scanner;
+  BleScanner? _scanner;
   List<DiscoveredDevice> _devices = [];
   BluetoothState? _bluetoothState;
   bool _isScanning = false;
@@ -969,14 +989,28 @@ class _BleScanDialogState extends State<_BleScanDialog> {
   @override
   void initState() {
     super.initState();
-    _initializeScanner();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final s = Refs.bleScanner.of(context);
+    if (s != _scanner) {
+      if (_scanner != null) {
+        developer.log('Scanner changed from $s to ${_scanner}');
+      }
+      _devicesUnsubscribe?.call();
+      _bluetoothStateUnsubscribe?.call();
+      _isScanningUnsubscribe?.call();
+      _isInitialized = false;
+      _scanner = s;
+      _initializeScanner();
+    }
   }
 
   void _initializeScanner() {
-    _scanner = BleScanner();
-
     // Listen to discovered devices
-    _devicesUnsubscribe = _scanner.devices.subscribe((devices) {
+    _devicesUnsubscribe = _scanner!.devices.subscribe((devices) {
       if (mounted) {
         setState(() {
           _devices = devices;
@@ -985,7 +1019,7 @@ class _BleScanDialogState extends State<_BleScanDialog> {
     });
 
     // Listen to Bluetooth state
-    _bluetoothStateUnsubscribe = _scanner.bluetoothState.subscribe((state) {
+    _bluetoothStateUnsubscribe = _scanner!.bluetoothState.subscribe((state) {
       if (mounted) {
         setState(() {
           _bluetoothState = state;
@@ -999,7 +1033,7 @@ class _BleScanDialogState extends State<_BleScanDialog> {
     });
 
     // Listen to scanning state
-    _isScanningUnsubscribe = _scanner.isScanning.subscribe((scanning) {
+    _isScanningUnsubscribe = _scanner!.isScanning.subscribe((scanning) {
       if (mounted) {
         setState(() {
           _isScanning = scanning;
@@ -1007,8 +1041,6 @@ class _BleScanDialogState extends State<_BleScanDialog> {
       }
     });
 
-    // Initialize scanner
-    _scanner.initialize();
     setState(() {
       _isInitialized = true;
     });
@@ -1017,23 +1049,22 @@ class _BleScanDialogState extends State<_BleScanDialog> {
   @override
   void dispose() {
     if (_scanToken != null) {
-      _scanner.stopScan(_scanToken!);
+      _scanner?.stopScan(_scanToken!);
     }
     _devicesUnsubscribe?.call();
     _bluetoothStateUnsubscribe?.call();
     _isScanningUnsubscribe?.call();
-    _scanner.dispose();
     super.dispose();
   }
 
   void _handleScanButtonPressed() {
     if (_isScanning) {
       if (_scanToken != null) {
-        _scanner.stopScan(_scanToken!);
+        _scanner!.stopScan(_scanToken!);
         _scanToken = null;
       }
     } else {
-      _scanToken = _scanner.startScan();
+      _scanToken = _scanner!.startScan();
     }
   }
 
@@ -1085,7 +1116,7 @@ class _BleScanDialogState extends State<_BleScanDialog> {
                               ElevatedButton.icon(
                                 onPressed: () async {
                                   final messenger = ScaffoldMessenger.of(context);
-                                  final permissions = BlePermissionsImpl();
+                                  final permissions = Refs.blePermissions.of(context);
                                   final granted = await permissions.request();
                                   if (granted && mounted) {
                                     _handleScanButtonPressed();
@@ -1144,3 +1175,223 @@ class _BleScanDialogState extends State<_BleScanDialog> {
     return 'Ready to scan';
   }
 }
+
+/// Dialog shown while connecting to a selected device.
+class _DeviceConnectingDialog extends StatefulWidget {
+  const _DeviceConnectingDialog({required this.device, required this.onConnect});
+
+  final DiscoveredDevice device;
+  final void Function(FtmsDevice ftmsDevice, List<String> autoAssignments, bool isReconnect) onConnect;
+
+  @override
+  State<_DeviceConnectingDialog> createState() => _DeviceConnectingDialogState();
+}
+
+class _DeviceConnectingDialogState extends State<_DeviceConnectingDialog> {
+  _DialogConnectionState _state = _DialogConnectionState.connecting;
+  String? _errorMessage;
+  String _statusMessage = 'Initializing...';
+
+  @override
+  void initState() {
+    super.initState();
+    // Defer connection until after the first frame to ensure context is available
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _connectToDevice();
+    });
+  }
+
+  Future<void> _connectToDevice() async {
+    if (!mounted) return;
+
+    setState(() {
+      _state = _DialogConnectionState.connecting;
+      _errorMessage = null;
+      _statusMessage = 'Initializing device...';
+    });
+
+    final deviceName = widget.device.name ?? '';
+    final deviceId = widget.device.deviceId;
+
+    try {
+      final deviceManager = Refs.deviceManager.of(context);
+
+      // Create FTMS device from scanned device
+      setState(() => _statusMessage = 'Creating device profile...');
+      final newDevice = FtmsDevice(deviceId: deviceId, name: deviceName.isEmpty ? 'Unknown Device' : deviceName);
+
+      // Add to device manager (or get existing if already exists)
+      setState(() => _statusMessage = 'Registering device...');
+      final ftmsDevice = await deviceManager.addOrGetExistingDevice(newDevice) as FtmsDevice;
+      final isReconnect = ftmsDevice != newDevice;
+
+      if (isReconnect) {
+        developer.log('[DeviceConnectingDialog] Device already exists in manager, reconnecting');
+      }
+
+      if (!mounted) return;
+
+      // Auto-assign device to available data sources based on its capabilities (only for new devices)
+      final autoAssignments = <String>[];
+
+      if (!isReconnect) {
+        setState(() => _statusMessage = 'Configuring device assignments...');
+
+        // Check if device supports ERG mode and no trainer is assigned
+        if (ftmsDevice.supportsErgMode && deviceManager.primaryTrainer == null) {
+          deviceManager.assignPrimaryTrainer(ftmsDevice.id);
+          autoAssignments.add('primary trainer');
+        }
+
+        // Auto-assign to data sources
+        if (ftmsDevice.capabilities.contains(device_info.DeviceDataType.power) && deviceManager.powerSource == null) {
+          deviceManager.assignPowerSource(ftmsDevice.id);
+          autoAssignments.add('power source');
+        }
+
+        if (ftmsDevice.capabilities.contains(device_info.DeviceDataType.cadence) &&
+            deviceManager.cadenceSource == null) {
+          deviceManager.assignCadenceSource(ftmsDevice.id);
+          autoAssignments.add('cadence source');
+        }
+
+        if (ftmsDevice.capabilities.contains(device_info.DeviceDataType.speed) && deviceManager.speedSource == null) {
+          deviceManager.assignSpeedSource(ftmsDevice.id);
+          autoAssignments.add('speed source');
+        }
+
+        if (ftmsDevice.capabilities.contains(device_info.DeviceDataType.heartRate) &&
+            deviceManager.heartRateSource == null) {
+          deviceManager.assignHeartRateSource(ftmsDevice.id);
+          autoAssignments.add('heart rate source');
+        }
+      }
+
+      // Connect the device
+      setState(() => _statusMessage = 'Establishing Bluetooth connection...');
+      developer.log(
+        '[DeviceConnectingDialog] ${isReconnect ? 'Reconnecting' : 'Auto-connecting'} device: ${ftmsDevice.name}',
+      );
+      await ftmsDevice.connect().value;
+
+      if (!mounted) return;
+
+      setState(() {
+        _statusMessage = 'Connection established!';
+        _state = _DialogConnectionState.connected;
+      });
+
+      // Auto-close after brief success message
+      await Future.delayed(const Duration(milliseconds: 500));
+      if (!mounted) return;
+
+      widget.onConnect(ftmsDevice, autoAssignments, isReconnect);
+      Navigator.of(context).pop();
+    } catch (e, stackTrace) {
+      developer.log('Error connecting to device', name: 'DeviceConnectingDialog', error: e, stackTrace: stackTrace);
+
+      if (!mounted) return;
+
+      setState(() {
+        _state = _DialogConnectionState.error;
+        _errorMessage = e.toString();
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final deviceName = widget.device.name ?? 'Unknown Device';
+
+    return AlertDialog(
+      title: Row(
+        children: [
+          Icon(
+            _state == _DialogConnectionState.connecting
+                ? Icons.bluetooth_searching
+                : _state == _DialogConnectionState.connected
+                ? Icons.check_circle
+                : Icons.error,
+            color: _state == _DialogConnectionState.connecting
+                ? Colors.blue
+                : _state == _DialogConnectionState.connected
+                ? Colors.green
+                : Colors.red,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              _state == _DialogConnectionState.connecting
+                  ? 'Connecting...'
+                  : _state == _DialogConnectionState.connected
+                  ? 'Connected!'
+                  : 'Connection Failed',
+              style: TextStyle(color: _state == _DialogConnectionState.error ? Colors.red : null),
+            ),
+          ),
+        ],
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Device: $deviceName', style: const TextStyle(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 16),
+          if (_state == _DialogConnectionState.connecting) ...[
+            Center(
+              child: Column(
+                children: [const CircularProgressIndicator(), const SizedBox(height: 16), Text(_statusMessage)],
+              ),
+            ),
+          ] else if (_state == _DialogConnectionState.connected) ...[
+            const Row(
+              children: [
+                Icon(Icons.check, color: Colors.green),
+                SizedBox(width: 8),
+                Text('Successfully connected!'),
+              ],
+            ),
+          ] else if (_state == _DialogConnectionState.error) ...[
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.red[50],
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.red[200]!),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(Icons.error, color: Colors.red, size: 20),
+                      SizedBox(width: 8),
+                      Text(
+                        'Error',
+                        style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    _errorMessage ?? 'Unknown error occurred',
+                    style: TextStyle(color: Colors.red[900], fontSize: 13),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+      actions: [
+        if (_state == _DialogConnectionState.error) ...[
+          TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
+          ElevatedButton.icon(onPressed: _connectToDevice, icon: const Icon(Icons.refresh), label: const Text('Retry')),
+        ] else if (_state == _DialogConnectionState.connecting)
+          TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
+      ],
+    );
+  }
+}
+
+enum _DialogConnectionState { connecting, connected, error }

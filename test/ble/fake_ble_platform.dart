@@ -28,7 +28,7 @@ import 'package:vekolo/ble/ble_platform.dart';
 /// };
 /// ```
 class FakeBlePlatform implements BlePlatform {
-  final WritableBeacon<BluetoothAdapterState> _adapterStateBeacon = Beacon.writable(BluetoothAdapterState.off);
+  final WritableBeacon<BluetoothAdapterState> _adapterStateBeacon = Beacon.writable(BluetoothAdapterState.on);
   final WritableBeacon<List<ScanResult>> _scanResultsBeacon = Beacon.writable(<ScanResult>[]);
 
   final Map<String, FakeDevice> _devices = {};
@@ -174,6 +174,11 @@ class FakeBlePlatform implements BlePlatform {
         .toList();
 
     _scanResultsBeacon.value = activeDevices;
+  }
+
+  @override
+  Future<void> setLogLevel(LogLevel level, {bool color = true}) async {
+    //noop
   }
 }
 

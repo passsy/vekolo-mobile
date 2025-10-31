@@ -2,13 +2,13 @@ import 'dart:developer' as devloper;
 
 import 'package:context_plus/context_plus.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:vekolo/api/pretty_log_interceptor.dart';
 import 'package:vekolo/api/vekolo_api_client.dart';
 import 'package:vekolo/app/refs.dart';
+import 'package:vekolo/ble/ble_permissions.dart';
+import 'package:vekolo/ble/ble_platform.dart';
 import 'package:vekolo/ble/ble_scanner.dart';
 import 'package:vekolo/config/api_config.dart';
-import 'package:vekolo/config/ble_config.dart';
 import 'package:vekolo/domain/devices/device_manager.dart';
 import 'package:vekolo/app/router.dart';
 import 'package:vekolo/services/auth_service.dart';
@@ -32,11 +32,11 @@ class _VekoloAppState extends State<VekoloApp> {
   /// Perform async initialization of services before mounting the main app / drawing the first frame
   Future<void> _initialize(BuildContext context) async {
     // Disable verbose flutter_blue_plus logging
-    FlutterBluePlus.setLogLevel(LogLevel.warning);
+    Refs.blePlatform.of(context).setLogLevel(LogLevel.none);
 
     // Initialize DeviceStateManager to start streaming device data to UI beacons
     // Must be done before any async operations to avoid BuildContext issues
-    deviceStateManagerRef.of(context);
+    Refs.deviceStateManager.of(context);
     devloper.log('[VekoloApp] DeviceStateManager initialized');
 
     // Run async initialization (load user from secure storage)
@@ -80,22 +80,50 @@ class _VekoloAppState extends State<VekoloApp> {
             ),
           );
 
+          final blePlatform = Refs.blePlatform.bindWhenUnbound(context, () => BlePlatformImpl());
+          final blePermissions = Refs.blePermissions.bindWhenUnbound(context, () => BlePermissionsImpl());
+
           // Initialize BLE services
-          bleScannerRef.bindWhenUnbound(context, () {
-            final scanner = BleScanner();
+          Refs.bleScanner.bindWhenUnbound(context, () {
+            final scanner = BleScanner(platform: blePlatform, permissions: blePermissions);
             scanner.initialize();
             return scanner;
           });
           bleManagerRef.bindWhenUnbound(context, () => BleManager());
 
           // Initialize DeviceManager
-          deviceManagerRef.bindWhenUnbound(context, () => DeviceManager());
+          Refs.deviceManager.bindWhenUnbound(context, () => DeviceManager());
 
           // Initialize WorkoutSyncService with DeviceManager dependency
-          workoutSyncServiceRef.bindWhenUnbound(context, () => WorkoutSyncService(deviceManagerRef.of(context)));
+          Refs.workoutSyncService.bindWhenUnbound(context, () => WorkoutSyncService(Refs.deviceManager.of(context)));
 
-          // Initialize DeviceStateManager to bridge DeviceManager with UI state
-          deviceStateManagerRef.bindWhenUnbound(context, () => DeviceStateManager(deviceManagerRef.of(context)));
+          // Initialize state holders - each holds beacons for their domain
+          Refs.connectedDevices.bindWhenUnbound(
+            context,
+            () => ConnectedDevices(),
+            dispose: (devices) => devices.dispose(),
+          );
+          Refs.liveTelemetry.bindWhenUnbound(
+            context,
+            () => LiveTelemetry(),
+            dispose: (telemetry) => telemetry.dispose(),
+          );
+          Refs.workoutSyncState.bindWhenUnbound(
+            context,
+            () => WorkoutSyncState(),
+            dispose: (syncState) => syncState.dispose(),
+          );
+
+          // Initialize DeviceStateManager to bridge DeviceManager with state
+          Refs.deviceStateManager.bindWhenUnbound(
+            context,
+            () => DeviceStateManager(
+              Refs.deviceManager.of(context),
+              Refs.connectedDevices.of(context),
+              Refs.liveTelemetry.of(context),
+              Refs.workoutSyncState.of(context),
+            ),
+          );
 
           // Show splash screen during initialization
           if (!_initialized) {
