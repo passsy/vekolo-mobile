@@ -8,8 +8,6 @@ import 'package:vekolo/ble/transport_registry.dart';
 import 'package:vekolo/domain/devices/device_manager.dart';
 import 'package:vekolo/services/auth_service.dart';
 import 'package:vekolo/services/workout_sync_service.dart';
-import 'package:vekolo/state/device_state.dart';
-import 'package:vekolo/state/device_state_manager.dart';
 
 abstract final class Refs {
   Refs._();
@@ -22,10 +20,6 @@ abstract final class Refs {
   static final transportRegistry = Ref<TransportRegistry>();
   static final deviceManager = Ref<DeviceManager>();
   static final workoutSyncService = Ref<WorkoutSyncService>();
-  static final connectedDevices = Ref<ConnectedDevices>();
-  static final liveTelemetry = Ref<LiveTelemetry>();
-  static final workoutSyncState = Ref<WorkoutSyncState>();
-  static final deviceStateManager = Ref<DeviceStateManager>();
 }
 
 extension BindUnboundRef<T> on Ref<T> {

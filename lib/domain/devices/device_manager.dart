@@ -32,7 +32,6 @@ library;
 
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
 import 'package:state_beacon/state_beacon.dart';
 import 'package:vekolo/domain/devices/fitness_device.dart';
 import 'package:vekolo/domain/models/device_info.dart';
@@ -79,29 +78,35 @@ class DeviceManager {
   final WritableBeacon<FitnessDevice?> _heartRateSourceBeacon = Beacon.writable(null);
 
   // ============================================================================
-  // Beacons for Aggregated Data
+  // Beacons for Aggregated Data (Derived from assigned devices)
   // ============================================================================
 
-  final WritableBeacon<PowerData?> _powerBeacon = Beacon.writable<PowerData?>(null);
-  final WritableBeacon<CadenceData?> _cadenceBeacon = Beacon.writable<CadenceData?>(null);
-  final WritableBeacon<SpeedData?> _speedBeacon = Beacon.writable<SpeedData?>(null);
-  final WritableBeacon<HeartRateData?> _heartRateBeacon = Beacon.writable<HeartRateData?>(null);
+  late final ReadableBeacon<PowerData?> _powerBeacon = Beacon.derived(() {
+    // Track assignment beacons so derived updates when assignments change
+    final powerSource = _powerSourceBeacon.value;
+    final primaryTrainer = _primaryTrainerBeacon.value;
+    final device = powerSource ?? primaryTrainer;
+    return device?.powerStream?.value;
+  });
 
-  // ============================================================================
-  // Active Beacon Subscriptions
-  // ============================================================================
+  late final ReadableBeacon<CadenceData?> _cadenceBeacon = Beacon.derived(() {
+    final cadenceSource = _cadenceSourceBeacon.value;
+    final primaryTrainer = _primaryTrainerBeacon.value;
+    final device = cadenceSource ?? primaryTrainer;
+    return device?.cadenceStream?.value;
+  });
 
-  /// Active subscription to power data from assigned device.
-  VoidCallback? _powerSubscription;
+  late final ReadableBeacon<SpeedData?> _speedBeacon = Beacon.derived(() {
+    final speedSource = _speedSourceBeacon.value;
+    final primaryTrainer = _primaryTrainerBeacon.value;
+    final device = speedSource ?? primaryTrainer;
+    return device?.speedStream?.value;
+  });
 
-  /// Active subscription to cadence data from assigned device.
-  VoidCallback? _cadenceSubscription;
-
-  /// Active subscription to speed data from assigned device.
-  VoidCallback? _speedSubscription;
-
-  /// Active subscription to heart rate data from assigned device.
-  VoidCallback? _heartRateSubscription;
+  late final ReadableBeacon<HeartRateData?> _heartRateBeacon = Beacon.derived(() {
+    final heartRateSource = _heartRateSourceBeacon.value;
+    return heartRateSource?.heartRateStream?.value;
+  });
 
   // ============================================================================
   // Aggregated Streams (Public API)
@@ -202,29 +207,22 @@ class DeviceManager {
     if (_primaryTrainer?.id == deviceId) {
       _primaryTrainer = null;
       _primaryTrainerBeacon.value = null;
-      _updatePowerStream();
-      _updateCadenceStream();
-      _updateSpeedStream();
     }
     if (_powerSource?.id == deviceId) {
       _powerSource = null;
       _powerSourceBeacon.value = null;
-      _updatePowerStream();
     }
     if (_cadenceSource?.id == deviceId) {
       _cadenceSource = null;
       _cadenceSourceBeacon.value = null;
-      _updateCadenceStream();
     }
     if (_speedSource?.id == deviceId) {
       _speedSource = null;
       _speedSourceBeacon.value = null;
-      _updateSpeedStream();
     }
     if (_heartRateSource?.id == deviceId) {
       _heartRateSource = null;
       _heartRateSourceBeacon.value = null;
-      _updateHeartRateStream();
     }
 
     _devices.remove(device);
@@ -248,9 +246,6 @@ class DeviceManager {
     if (deviceId == null) {
       _primaryTrainer = null;
       _primaryTrainerBeacon.value = null;
-      _updatePowerStream();
-      _updateCadenceStream();
-      _updateSpeedStream();
       return;
     }
 
@@ -262,17 +257,6 @@ class DeviceManager {
 
     _primaryTrainer = device;
     _primaryTrainerBeacon.value = device;
-
-    // Primary trainer affects power, cadence, and speed streams if no dedicated sources
-    if (_powerSource == null) {
-      _updatePowerStream();
-    }
-    if (_cadenceSource == null) {
-      _updateCadenceStream();
-    }
-    if (_speedSource == null) {
-      _updateSpeedStream();
-    }
   }
 
   /// Assigns a device as the dedicated power source.
@@ -287,7 +271,6 @@ class DeviceManager {
     if (deviceId == null) {
       _powerSource = null;
       _powerSourceBeacon.value = null;
-      _updatePowerStream();
       return;
     }
 
@@ -299,7 +282,6 @@ class DeviceManager {
 
     _powerSource = device;
     _powerSourceBeacon.value = device;
-    _updatePowerStream();
   }
 
   /// Assigns a device as the dedicated cadence source.
@@ -312,7 +294,6 @@ class DeviceManager {
     if (deviceId == null) {
       _cadenceSource = null;
       _cadenceSourceBeacon.value = null;
-      _updateCadenceStream();
       return;
     }
 
@@ -324,7 +305,6 @@ class DeviceManager {
 
     _cadenceSource = device;
     _cadenceSourceBeacon.value = device;
-    _updateCadenceStream();
   }
 
   /// Assigns a device as the dedicated speed source.
@@ -337,7 +317,6 @@ class DeviceManager {
     if (deviceId == null) {
       _speedSource = null;
       _speedSourceBeacon.value = null;
-      _updateSpeedStream();
       return;
     }
 
@@ -349,7 +328,6 @@ class DeviceManager {
 
     _speedSource = device;
     _speedSourceBeacon.value = device;
-    _updateSpeedStream();
   }
 
   /// Assigns a device as the heart rate source.
@@ -363,7 +341,6 @@ class DeviceManager {
     if (deviceId == null) {
       _heartRateSource = null;
       _heartRateSourceBeacon.value = null;
-      _updateHeartRateStream();
       return;
     }
 
@@ -375,7 +352,6 @@ class DeviceManager {
 
     _heartRateSource = device;
     _heartRateSourceBeacon.value = device;
-    _updateHeartRateStream();
   }
 
   // ============================================================================
@@ -420,104 +396,6 @@ class DeviceManager {
   /// Reactive beacon of heart rate source assignment.
   ReadableBeacon<FitnessDevice?> get heartRateSourceBeacon => _heartRateSourceBeacon;
 
-  // ============================================================================
-  // Stream Management (Private)
-  // ============================================================================
-
-  /// Updates the power stream to listen to the correct device.
-  ///
-  /// Priority:
-  /// 1. Dedicated power source if assigned
-  /// 2. Primary trainer if it provides power
-  /// 3. No stream (cancel subscription) if neither available
-  void _updatePowerStream() {
-    // Cancel existing subscription
-    _powerSubscription?.call();
-    _powerSubscription = null;
-
-    // Determine which device to use for power
-    final FitnessDevice? powerDevice = _powerSource ?? _primaryTrainer;
-
-    // Subscribe to device's power beacon and pipe to aggregated beacon
-    final beacon = powerDevice?.powerStream;
-    if (beacon != null) {
-      _powerSubscription = beacon.subscribe((PowerData? data) {
-        _powerBeacon.value = data;
-      });
-    } else {
-      _powerBeacon.value = null;
-    }
-  }
-
-  /// Updates the cadence stream to listen to the correct device.
-  ///
-  /// Priority:
-  /// 1. Dedicated cadence source if assigned
-  /// 2. Primary trainer if it provides cadence
-  /// 3. No stream (cancel subscription) if neither available
-  void _updateCadenceStream() {
-    // Cancel existing subscription
-    _cadenceSubscription?.call();
-    _cadenceSubscription = null;
-
-    // Determine which device to use for cadence
-    final FitnessDevice? cadenceDevice = _cadenceSource ?? _primaryTrainer;
-
-    // Subscribe to device's cadence beacon and pipe to aggregated beacon
-    final beacon = cadenceDevice?.cadenceStream;
-    if (beacon != null) {
-      _cadenceSubscription = beacon.subscribe((CadenceData? data) {
-        _cadenceBeacon.value = data;
-      });
-    } else {
-      _cadenceBeacon.value = null;
-    }
-  }
-
-  /// Updates the speed stream to listen to the correct device.
-  ///
-  /// Priority:
-  /// 1. Dedicated speed source if assigned
-  /// 2. Primary trainer if it provides speed
-  /// 3. No stream (cancel subscription) if neither available
-  void _updateSpeedStream() {
-    // Cancel existing subscription
-    _speedSubscription?.call();
-    _speedSubscription = null;
-
-    // Determine which device to use for speed
-    final FitnessDevice? speedDevice = _speedSource ?? _primaryTrainer;
-
-    // Subscribe to device's speed beacon and pipe to aggregated beacon
-    final beacon = speedDevice?.speedStream;
-    if (beacon != null) {
-      _speedSubscription = beacon.subscribe((SpeedData? data) {
-        _speedBeacon.value = data;
-      });
-    } else {
-      _speedBeacon.value = null;
-    }
-  }
-
-  /// Updates the heart rate stream to listen to the correct device.
-  ///
-  /// Uses the assigned heart rate source. No fallback since trainers
-  /// typically don't provide HR data.
-  void _updateHeartRateStream() {
-    // Cancel existing subscription
-    _heartRateSubscription?.call();
-    _heartRateSubscription = null;
-
-    // Subscribe to HR device's beacon and pipe to aggregated beacon
-    final beacon = _heartRateSource?.heartRateStream;
-    if (beacon != null) {
-      _heartRateSubscription = beacon.subscribe((HeartRateData? data) {
-        _heartRateBeacon.value = data;
-      });
-    } else {
-      _heartRateBeacon.value = null;
-    }
-  }
 
   // ============================================================================
   // Helper Methods
@@ -538,15 +416,11 @@ class DeviceManager {
 
   /// Disposes of all resources used by this manager.
   ///
-  /// Cancels all active beacon subscriptions and disposes beacons.
+  /// Disposes all beacons. Derived beacons are automatically cleaned up.
   /// After calling dispose, this manager should not be used anymore.
   ///
   /// Call this when the manager is no longer needed to prevent memory leaks.
   void dispose() {
-    _powerSubscription?.call();
-    _cadenceSubscription?.call();
-    _speedSubscription?.call();
-    _heartRateSubscription?.call();
 
     // Dispose aggregated data beacons
     _powerBeacon.dispose();

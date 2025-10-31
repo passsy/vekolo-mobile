@@ -1,10 +1,15 @@
 import 'dart:async';
+import 'dart:developer' as developer;
+
 import 'package:async/async.dart';
 import 'package:context_plus/context_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:vekolo/services/ble_manager.dart';
-import 'dart:developer' as developer;
+import 'package:vekolo/app/refs.dart';
+import 'package:vekolo/domain/devices/device_manager.dart';
+import 'package:vekolo/domain/devices/fitness_device.dart';
+import 'package:vekolo/domain/models/device_info.dart' as device_info;
+import 'package:vekolo/domain/models/fitness_data.dart';
 
 /// Live trainer control with manual power target adjustment.
 ///
@@ -21,8 +26,13 @@ class TrainerPage extends StatefulWidget {
 }
 
 class _TrainerPageState extends State<TrainerPage> {
-  late final BleManager _bleManager;
+  late final DeviceManager _deviceManager;
   CancelableOperation<void>? _connectionOperation;
+  FitnessDevice? _device;
+  VoidCallback? _powerSubscription;
+  VoidCallback? _cadenceSubscription;
+  VoidCallback? _speedSubscription;
+  VoidCallback? _connectionSubscription;
 
   int? _currentPower;
   int? _currentCadence;
@@ -31,11 +41,12 @@ class _TrainerPageState extends State<TrainerPage> {
   String? _errorMessage;
   int _targetPower = 150;
   bool _isDisposing = false;
+  bool _supportsErgMode = true;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _bleManager = bleManagerRef.of(context);
+    _deviceManager = Refs.deviceManager.of(context);
   }
 
   @override
@@ -50,7 +61,14 @@ class _TrainerPageState extends State<TrainerPage> {
   void dispose() {
     _isDisposing = true;
     _connectionOperation?.cancel();
-    _bleManager.disconnect();
+    _connectionSubscription?.call();
+    _powerSubscription?.call();
+    _cadenceSubscription?.call();
+    _speedSubscription?.call();
+    final device = _device;
+    if (device != null) {
+      unawaited(device.disconnect());
+    }
     super.dispose();
   }
 
@@ -60,41 +78,28 @@ class _TrainerPageState extends State<TrainerPage> {
       _errorMessage = null;
     });
 
-    _bleManager.onTrainerDataUpdate = (power, cadence, speed) {
-      setState(() {
-        _currentPower = power;
-        _currentCadence = cadence;
-        _currentSpeed = speed;
-        _isConnecting = false;
-      });
-    };
-
-    _bleManager.onError = (error) {
-      developer.log('[TrainerPage] Error: $error');
-      setState(() {
-        _errorMessage = error;
-        _isConnecting = false;
-      });
-    };
-
-    _bleManager.onDisconnected = () {
-      developer.log('[TrainerPage] Disconnected');
-      // Only navigate if not already disposing (to avoid using context after disposal)
-      if (mounted && !_isDisposing) {
-        context.go('/');
-      }
-    };
-
     try {
-      _connectionOperation = _bleManager.connectToDevice(widget.deviceId);
-      await _connectionOperation!.value;
+      final device = await _loadOrCreateDevice();
+      _device = device;
+      _subscribeToDevice(device);
+
+      if (device.connectionState.value != device_info.ConnectionState.connected) {
+        _connectionOperation = device.connect();
+        await _connectionOperation!.value;
+      }
+
       developer.log('[TrainerPage] Device connected successfully, starting power updates');
 
-      // Connection successful, start sending power commands
-      _startPowerUpdates();
+      final supportsErgMode = device.supportsErgMode;
+
       setState(() {
         _isConnecting = false;
+        _supportsErgMode = supportsErgMode;
       });
+
+      if (supportsErgMode) {
+        _sendTargetPower();
+      }
     } catch (e, stackTrace) {
       developer.log('[TrainerPage] Connection failed: $e');
       print(stackTrace);
@@ -107,10 +112,80 @@ class _TrainerPageState extends State<TrainerPage> {
     }
   }
 
-  void _startPowerUpdates() {
-    // Send initial power
+  /// Loads the device from DeviceManager.
+  ///
+  /// Throws [ArgumentError] if device is not found. Devices must be connected
+  /// via DevicesPage before opening TrainerPage.
+  Future<FitnessDevice> _loadOrCreateDevice() async {
+    final device = _deviceManager.devices.where((d) => d.id == widget.deviceId).firstOrNull;
+    if (device == null) {
+      throw ArgumentError(
+        'Device ${widget.deviceId} not found in DeviceManager. '
+        'Please connect the device via the Devices page first.',
+      );
+    }
+    return device;
+  }
+
+  void _subscribeToDevice(FitnessDevice device) {
+    _connectionSubscription?.call();
+    _connectionSubscription = device.connectionState.subscribe((state) {
+      if (!mounted) return;
+      if (state == device_info.ConnectionState.disconnected && !_isDisposing) {
+        context.go('/');
+      }
+    });
+
+    _powerSubscription?.call();
+    _powerSubscription = device.powerStream?.subscribe((PowerData? data) {
+      if (!mounted) return;
+      setState(() {
+        _currentPower = data?.watts;
+        _maybeEstimateSpeed();
+      });
+    });
+
+    _cadenceSubscription?.call();
+    _cadenceSubscription = device.cadenceStream?.subscribe((CadenceData? data) {
+      if (!mounted) return;
+      setState(() {
+        _currentCadence = data?.rpm;
+        _maybeEstimateSpeed();
+      });
+    });
+
+    _speedSubscription?.call();
+    _speedSubscription = device.speedStream?.subscribe((SpeedData? data) {
+      if (!mounted) return;
+      setState(() {
+        _currentSpeed = data?.kmh;
+      });
+    });
+  }
+
+  void _maybeEstimateSpeed() {
+    if (_device?.speedStream != null) {
+      return;
+    }
+    final cadence = _currentCadence;
+    if (cadence == null) {
+      _currentSpeed = null;
+      return;
+    }
+    _currentSpeed = cadence * 0.3125;
+  }
+
+  void _sendTargetPower() {
     developer.log('[TrainerPage] Initial target power: ${_targetPower}W');
-    _bleManager.setTargetPower(_targetPower);
+    unawaited(
+      _device?.setTargetPower(_targetPower).catchError((Object error, StackTrace stackTrace) {
+        developer.log('[TrainerPage] Failed to set target power: $error', error: error, stackTrace: stackTrace);
+        if (!mounted) return;
+        setState(() {
+          _errorMessage = 'Failed to set target power: $error';
+        });
+      }),
+    );
   }
 
   void _updateTargetPower(double power) {
@@ -118,7 +193,18 @@ class _TrainerPageState extends State<TrainerPage> {
       _targetPower = power.round();
     });
     developer.log('[TrainerPage] Setting target power to ${_targetPower}W');
-    _bleManager.setTargetPower(_targetPower);
+    if (!_supportsErgMode) {
+      return;
+    }
+    unawaited(
+      _device?.setTargetPower(_targetPower).catchError((Object error, StackTrace stackTrace) {
+        developer.log('[TrainerPage] Failed to set target power: $error', error: error, stackTrace: stackTrace);
+        if (!mounted) return;
+        setState(() {
+          _errorMessage = 'Failed to set target power: $error';
+        });
+      }),
+    );
   }
 
   @override
@@ -130,7 +216,10 @@ class _TrainerPageState extends State<TrainerPage> {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
-            _bleManager.disconnect();
+            final device = _device;
+            if (device != null) {
+              unawaited(device.disconnect());
+            }
             context.go('/');
           },
         ),
@@ -157,7 +246,10 @@ class _TrainerPageState extends State<TrainerPage> {
                   const SizedBox(height: 16),
                   ElevatedButton(
                     onPressed: () {
-                      _bleManager.disconnect();
+                      final device = _device;
+                      if (device != null) {
+                        unawaited(device.disconnect());
+                      }
                       context.go('/');
                     },
                     child: const Text('Go Back'),
@@ -201,8 +293,16 @@ class _TrainerPageState extends State<TrainerPage> {
                           divisions: 60,
                           label: '${_targetPower}W',
                           activeColor: Colors.orange,
-                          onChanged: _updateTargetPower,
+                          onChanged: _supportsErgMode ? _updateTargetPower : null,
                         ),
+                        if (!_supportsErgMode)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 12),
+                            child: Text(
+                              'ERG mode is unavailable for this device.',
+                              style: TextStyle(color: Colors.orange[900]),
+                            ),
+                          ),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
@@ -240,7 +340,10 @@ class _TrainerPageState extends State<TrainerPage> {
                   const SizedBox(height: 24),
                   ElevatedButton.icon(
                     onPressed: () {
-                      _bleManager.disconnect();
+                      final device = _device;
+                      if (device != null) {
+                        unawaited(device.disconnect());
+                      }
                       context.go('/');
                     },
                     icon: const Icon(Icons.close),

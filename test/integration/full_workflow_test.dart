@@ -17,8 +17,6 @@ import 'package:vekolo/domain/devices/device_manager.dart';
 import 'package:vekolo/domain/mocks/device_simulator.dart';
 import 'package:vekolo/domain/models/erg_command.dart';
 import 'package:vekolo/services/workout_sync_service.dart';
-import 'package:vekolo/state/device_state.dart';
-import 'package:vekolo/state/device_state_manager.dart';
 
 void main() {
   group('Full Workflow Integration', () {
@@ -28,35 +26,19 @@ void main() {
     ({
       DeviceManager deviceManager,
       WorkoutSyncService syncService,
-      DeviceStateManager stateManager,
-      ConnectedDevices devices,
-      LiveTelemetry telemetry,
-      WorkoutSyncState syncState,
     })
     createTestEnvironment() {
       final deviceManager = DeviceManager();
       final syncService = WorkoutSyncService(deviceManager);
-      final devices = ConnectedDevices();
-      final telemetry = LiveTelemetry();
-      final syncState = WorkoutSyncState();
-      final stateManager = DeviceStateManager(deviceManager, devices, telemetry, syncState);
 
       addTearDown(() {
         syncService.dispose();
-        stateManager.dispose();
-        devices.dispose();
-        telemetry.dispose();
-        syncState.dispose();
         deviceManager.dispose();
       });
 
       return (
         deviceManager: deviceManager,
         syncService: syncService,
-        stateManager: stateManager,
-        devices: devices,
-        telemetry: telemetry,
-        syncState: syncState,
       );
     }
 
@@ -64,8 +46,6 @@ void main() {
       final env = createTestEnvironment();
       final deviceManager = env.deviceManager;
       final syncService = env.syncService;
-      final devices = env.devices;
-      final telemetry = env.telemetry;
 
       // =====================================================================
       // Phase 1: Device Setup
@@ -86,7 +66,7 @@ void main() {
 
       // Wait for state polling to update beacons
       await Future<void>.delayed(const Duration(milliseconds: 600));
-      expect(devices.devices.value, hasLength(3));
+      expect(deviceManager.devicesBeacon.value, hasLength(3));
 
       // =====================================================================
       // Phase 2: Device Assignment
@@ -102,11 +82,11 @@ void main() {
       expect(deviceManager.powerSource?.id, equals(powerMeter.id));
       expect(deviceManager.heartRateSource?.id, equals(hrMonitor.id));
 
-      // Wait for state manager to update beacons
+      // Wait for beacons to update
       await Future<void>.delayed(const Duration(milliseconds: 600));
-      expect(devices.primaryTrainer.value?.id, equals(trainer.id));
-      expect(devices.powerSource.value?.id, equals(powerMeter.id));
-      expect(devices.heartRateSource.value?.id, equals(hrMonitor.id));
+      expect(deviceManager.primaryTrainerBeacon.value?.id, equals(trainer.id));
+      expect(deviceManager.powerSourceBeacon.value?.id, equals(powerMeter.id));
+      expect(deviceManager.heartRateSourceBeacon.value?.id, equals(hrMonitor.id));
 
       // =====================================================================
       // Phase 3: Device Connection
@@ -128,16 +108,16 @@ void main() {
       // =====================================================================
 
       // Verify power data comes from dedicated power meter (not trainer)
-      expect(telemetry.power.value, isNotNull);
-      expect(telemetry.power.value?.watts, greaterThan(0));
+      expect(deviceManager.powerStream.value, isNotNull);
+      expect(deviceManager.powerStream.value?.watts, greaterThan(0));
 
       // Verify cadence data comes from trainer (no dedicated cadence sensor)
-      expect(telemetry.cadence.value, isNotNull);
-      expect(telemetry.cadence.value?.rpm, greaterThan(0));
+      expect(deviceManager.cadenceStream.value, isNotNull);
+      expect(deviceManager.cadenceStream.value?.rpm, greaterThan(0));
 
       // Verify heart rate data comes from HR monitor
-      expect(telemetry.heartRate.value, isNotNull);
-      expect(telemetry.heartRate.value?.bpm, greaterThanOrEqualTo(55));
+      expect(deviceManager.heartRateStream.value, isNotNull);
+      expect(deviceManager.heartRateStream.value?.bpm, greaterThanOrEqualTo(55));
 
       // Collect multiple data points to verify continuous streaming
       final powerReadings = <int>[];
@@ -202,11 +182,11 @@ void main() {
       // Verify all beacons are continuously updated
       await Future<void>.delayed(const Duration(milliseconds: 600));
 
-      expect(devices.devices.value, hasLength(3));
-      expect(devices.primaryTrainer.value, isNotNull);
-      expect(telemetry.power.value, isNotNull);
-      expect(telemetry.cadence.value, isNotNull);
-      expect(telemetry.heartRate.value, isNotNull);
+      expect(deviceManager.devicesBeacon.value, hasLength(3));
+      expect(deviceManager.primaryTrainerBeacon.value, isNotNull);
+      expect(deviceManager.powerStream.value, isNotNull);
+      expect(deviceManager.cadenceStream.value, isNotNull);
+      expect(deviceManager.heartRateStream.value, isNotNull);
 
       // =====================================================================
       // Phase 8: Stop Sync
@@ -260,7 +240,6 @@ void main() {
     test('data streams handle device reassignment', () async {
       final env = createTestEnvironment();
       final deviceManager = env.deviceManager;
-      final telemetry = env.telemetry;
 
       // Setup initial trainer
       final trainer1 = DeviceSimulator.createRealisticTrainer(name: 'Trainer 1');
@@ -273,7 +252,7 @@ void main() {
       await Future<void>.delayed(const Duration(milliseconds: 600));
 
       // Verify we're getting power data
-      expect(telemetry.power.value, isNotNull);
+      expect(deviceManager.powerStream.value, isNotNull);
 
       // Add and switch to a dedicated power meter
       final powerMeter = DeviceSimulator.createPowerMeter(name: 'Power Meter');
@@ -292,11 +271,11 @@ void main() {
 
       // Power data should now come from power meter, not trainer
       expect(deviceManager.powerSource?.id, equals(powerMeter.id));
-      expect(telemetry.power.value, isNotNull);
+      expect(deviceManager.powerStream.value, isNotNull);
 
       // Cadence should still come from trainer (no reassignment)
       expect(deviceManager.cadenceSource, isNull); // Falls back to trainer
-      expect(telemetry.cadence.value, isNotNull);
+      expect(deviceManager.cadenceStream.value, isNotNull);
     });
 
     test('multiple devices emit data independently', () async {

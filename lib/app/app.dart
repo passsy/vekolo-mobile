@@ -15,11 +15,8 @@ import 'package:vekolo/config/api_config.dart';
 import 'package:vekolo/domain/devices/device_manager.dart';
 import 'package:vekolo/app/router.dart';
 import 'package:vekolo/services/auth_service.dart';
-import 'package:vekolo/services/ble_manager.dart';
 import 'package:vekolo/services/fresh_auth.dart';
 import 'package:vekolo/services/workout_sync_service.dart';
-import 'package:vekolo/state/device_state.dart';
-import 'package:vekolo/state/device_state_manager.dart';
 import 'package:vekolo/widgets/splash_screen.dart';
 
 class VekoloApp extends StatefulWidget {
@@ -37,10 +34,8 @@ class _VekoloAppState extends State<VekoloApp> {
     // Disable verbose flutter_blue_plus logging
     Refs.blePlatform.of(context).setLogLevel(LogLevel.none);
 
-    // Initialize DeviceStateManager to start streaming device data to UI beacons
-    // Must be done before any async operations to avoid BuildContext issues
-    Refs.deviceStateManager.of(context);
-    devloper.log('[VekoloApp] DeviceStateManager initialized');
+    // State holders are already initialized above via Refs
+    devloper.log('[VekoloApp] State holders initialized');
 
     // Run async initialization (load user from secure storage)
     final authService = Refs.authService.of(context);
@@ -101,7 +96,6 @@ class _VekoloAppState extends State<VekoloApp> {
             scanner.initialize();
             return scanner;
           });
-          bleManagerRef.bindWhenUnbound(context, () => BleManager());
 
           // Initialize DeviceManager
           Refs.deviceManager.bindWhenUnbound(context, () => DeviceManager());
@@ -109,33 +103,7 @@ class _VekoloAppState extends State<VekoloApp> {
           // Initialize WorkoutSyncService with DeviceManager dependency
           Refs.workoutSyncService.bindWhenUnbound(context, () => WorkoutSyncService(Refs.deviceManager.of(context)));
 
-          // Initialize state holders - each holds beacons for their domain
-          Refs.connectedDevices.bindWhenUnbound(
-            context,
-            () => ConnectedDevices(),
-            dispose: (devices) => devices.dispose(),
-          );
-          Refs.liveTelemetry.bindWhenUnbound(
-            context,
-            () => LiveTelemetry(),
-            dispose: (telemetry) => telemetry.dispose(),
-          );
-          Refs.workoutSyncState.bindWhenUnbound(
-            context,
-            () => WorkoutSyncState(),
-            dispose: (syncState) => syncState.dispose(),
-          );
 
-          // Initialize DeviceStateManager to bridge DeviceManager with state
-          Refs.deviceStateManager.bindWhenUnbound(
-            context,
-            () => DeviceStateManager(
-              Refs.deviceManager.of(context),
-              Refs.connectedDevices.of(context),
-              Refs.liveTelemetry.of(context),
-              Refs.workoutSyncState.of(context),
-            ),
-          );
 
           // Show splash screen during initialization
           if (!_initialized) {

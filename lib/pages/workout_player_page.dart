@@ -219,11 +219,11 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
         final currentBlockRemainingTime = player.currentBlockRemainingTime$.watch(context);
         final powerScaleFactor = player.powerScaleFactor.watch(context);
 
-        // Watch real-time metrics from LiveTelemetry
-        final telemetry = Refs.liveTelemetry.of(context);
-        final currentPower = telemetry.power.watch(context);
-        final currentCadence = telemetry.cadence.watch(context);
-        final currentHeartRate = telemetry.heartRate.watch(context);
+        // Watch real-time metrics from DeviceManager
+        final deviceManager = Refs.deviceManager.of(context);
+        final currentPower = deviceManager.powerStream.watch(context);
+        final currentCadence = deviceManager.cadenceStream.watch(context);
+        final currentHeartRate = deviceManager.heartRateStream.watch(context);
 
         return ListView(
           padding: const EdgeInsets.all(16),
