@@ -7,8 +7,6 @@ import 'package:go_router/go_router.dart';
 import 'package:state_beacon/state_beacon.dart';
 import 'package:vekolo/app/refs.dart';
 import 'package:vekolo/domain/devices/device_manager.dart';
-import 'package:vekolo/ble/ble_device.dart';
-import 'package:vekolo/ble/ble_scanner.dart';
 import 'package:vekolo/domain/devices/fitness_device.dart';
 import 'package:vekolo/domain/models/device_info.dart' as device_info;
 import 'package:vekolo/domain/models/erg_command.dart';
@@ -50,7 +48,11 @@ class _DevicesPageState extends State<DevicesPage> {
         title: const Text('Devices'),
         actions: [
           TextButton.icon(
-            onPressed: () => _showScanDialog(context),
+            onPressed: () => context.push('/scanner?connectMode=true').then((_) {
+              if (mounted) {
+                setState(() {}); // Refresh UI after returning from scanner
+              }
+            }),
             icon: const Icon(Icons.search),
             label: const Text('Scan'),
           ),
@@ -64,7 +66,6 @@ class _DevicesPageState extends State<DevicesPage> {
             deviceManager,
             title: 'POWER SOURCE',
             icon: Icons.bolt,
-            assignedDevice: deviceManager.powerSource,
             dataType: device_info.DeviceDataType.power,
           ),
           const SizedBox(height: 16),
@@ -73,7 +74,6 @@ class _DevicesPageState extends State<DevicesPage> {
             deviceManager,
             title: 'CADENCE SOURCE',
             icon: Icons.refresh,
-            assignedDevice: deviceManager.cadenceSource,
             dataType: device_info.DeviceDataType.cadence,
           ),
           const SizedBox(height: 16),
@@ -82,7 +82,6 @@ class _DevicesPageState extends State<DevicesPage> {
             deviceManager,
             title: 'HEART RATE',
             icon: Icons.favorite,
-            assignedDevice: deviceManager.heartRateSource,
             dataType: device_info.DeviceDataType.heartRate,
           ),
           const SizedBox(height: 16),
@@ -91,7 +90,6 @@ class _DevicesPageState extends State<DevicesPage> {
             deviceManager,
             title: 'SPEED',
             icon: Icons.speed,
-            assignedDevice: deviceManager.speedSource,
             dataType: device_info.DeviceDataType.speed,
           ),
           const SizedBox(height: 24),
@@ -122,8 +120,9 @@ class _DevicesPageState extends State<DevicesPage> {
         final isSyncing = syncService.isSyncing.watch(context);
         final syncError = syncService.syncError.watch(context);
         final lastSyncTime = syncService.lastSyncTime.watch(context);
-        final hasPrimaryTrainer = deviceManager.primaryTrainer != null;
-        final supportsErg = deviceManager.primaryTrainer?.supportsErgMode ?? false;
+        final primaryTrainer = deviceManager.primaryTrainerBeacon.watch(context);
+        final hasPrimaryTrainer = primaryTrainer != null;
+        final supportsErg = primaryTrainer?.supportsErgMode ?? false;
 
         return Card(
           color: Colors.blue[50],
@@ -388,28 +387,37 @@ class _DevicesPageState extends State<DevicesPage> {
   }
 
   Widget _buildPrimaryTrainerSection(BuildContext context, DeviceManager deviceManager) {
-    final trainer = deviceManager.primaryTrainer;
-    final hasTrainer = trainer != null;
+    return Builder(
+      builder: (context) {
+        final trainer = deviceManager.primaryTrainerBeacon.watch(context);
+        final hasTrainer = trainer != null;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Icon(Icons.directions_bike, size: 20),
-            const SizedBox(width: 8),
-            Text(
-              'PRIMARY TRAINER',
-              style: Theme.of(context).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.bold),
+            Row(
+              children: [
+                const Icon(Icons.directions_bike, size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  'PRIMARY TRAINER',
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.bold),
+                ),
+              ],
             ),
+            const SizedBox(height: 12),
+            if (hasTrainer)
+              _buildDeviceCard(
+                context,
+                device: trainer,
+                onUnassign: _handleUnassignPrimaryTrainer,
+                onRemove: () => _handleRemove(trainer),
+              )
+            else
+              _buildEmptyState(context, 'No trainer assigned'),
           ],
-        ),
-        const SizedBox(height: 12),
-        if (hasTrainer)
-          _buildDeviceCard(context, device: trainer, onUnassign: _handleUnassignPrimaryTrainer)
-        else
-          _buildEmptyState(context, 'No trainer assigned'),
-      ],
+        );
+      },
     );
   }
 
@@ -418,43 +426,58 @@ class _DevicesPageState extends State<DevicesPage> {
     DeviceManager deviceManager, {
     required String title,
     required IconData icon,
-    required FitnessDevice? assignedDevice,
     required device_info.DeviceDataType dataType,
   }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
+    return Builder(
+      builder: (context) {
+        final assignedDevice = switch (dataType) {
+          device_info.DeviceDataType.power => deviceManager.powerSourceBeacon.watch(context),
+          device_info.DeviceDataType.cadence => deviceManager.cadenceSourceBeacon.watch(context),
+          device_info.DeviceDataType.speed => deviceManager.speedSourceBeacon.watch(context),
+          device_info.DeviceDataType.heartRate => deviceManager.heartRateSourceBeacon.watch(context),
+        };
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon, size: 20),
-            const SizedBox(width: 8),
-            Text(title, style: Theme.of(context).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.bold)),
-            if (assignedDevice != null) ...[
-              const Spacer(),
-              Builder(
-                builder: (context) {
-                  final liveData = _getLiveDataForDevice(context, assignedDevice, dataType);
-                  return Text(
-                    liveData,
-                    style: Theme.of(
-                      context,
-                    ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold, color: Colors.blue[700]),
-                  );
-                },
+            Row(
+              children: [
+                Icon(icon, size: 20),
+                const SizedBox(width: 8),
+                Text(title, style: Theme.of(context).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.bold)),
+                if (assignedDevice != null) ...[
+                  const Spacer(),
+                  Builder(
+                    builder: (context) {
+                      final liveData = _getLiveDataForDevice(context, assignedDevice, dataType);
+                      return Text(
+                        liveData,
+                        style: Theme.of(
+                          context,
+                        ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold, color: Colors.blue[700]),
+                      );
+                    },
+                  ),
+                ],
+              ],
+            ),
+            const SizedBox(height: 12),
+            if (assignedDevice != null)
+              _buildDeviceCard(
+                context,
+                device: assignedDevice,
+                onUnassign: () => _handleUnassignDataSource(dataType),
+                onRemove: () => _handleRemove(assignedDevice),
+              )
+            else
+              OutlinedButton.icon(
+                onPressed: () => _showDeviceAssignmentDialog(context, deviceManager, dataType),
+                icon: const Icon(Icons.add),
+                label: const Text('Assign Device'),
               ),
-            ],
           ],
-        ),
-        const SizedBox(height: 12),
-        if (assignedDevice != null)
-          _buildDeviceCard(context, device: assignedDevice, onUnassign: () => _handleUnassignDataSource(dataType))
-        else
-          OutlinedButton.icon(
-            onPressed: () => _showDeviceAssignmentDialog(context, deviceManager, dataType),
-            icon: const Icon(Icons.add),
-            label: const Text('Assign Device'),
-          ),
-      ],
+        );
+      },
     );
   }
 
@@ -476,38 +499,49 @@ class _DevicesPageState extends State<DevicesPage> {
   }
 
   Widget _buildOtherDevicesSection(BuildContext context, DeviceManager deviceManager) {
-    // Get unassigned devices
-    final allDevices = deviceManager.devices;
-    final assignedDeviceIds = {
-      deviceManager.primaryTrainer?.id,
-      deviceManager.powerSource?.id,
-      deviceManager.cadenceSource?.id,
-      deviceManager.speedSource?.id,
-      deviceManager.heartRateSource?.id,
-    }.whereType<String>().toSet();
+    return Builder(
+      builder: (context) {
+        final allDevices = deviceManager.devicesBeacon.watch(context);
+        final primaryTrainer = deviceManager.primaryTrainerBeacon.watch(context);
+        final powerSource = deviceManager.powerSourceBeacon.watch(context);
+        final cadenceSource = deviceManager.cadenceSourceBeacon.watch(context);
+        final speedSource = deviceManager.speedSourceBeacon.watch(context);
+        final heartRateSource = deviceManager.heartRateSourceBeacon.watch(context);
+        
+        final assignedDeviceIds = {
+          primaryTrainer?.id,
+          powerSource?.id,
+          cadenceSource?.id,
+          speedSource?.id,
+          heartRateSource?.id,
+        }.whereType<String>().toSet();
 
-    final unassignedDevices = allDevices.where((device) => !assignedDeviceIds.contains(device.id)).toList();
+        final unassignedDevices = allDevices.where((device) => !assignedDeviceIds.contains(device.id)).toList();
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('OTHER DEVICES', style: Theme.of(context).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.bold)),
-        const SizedBox(height: 12),
-        if (unassignedDevices.isEmpty)
-          _buildEmptyState(context, 'No other devices found')
-        else
-          ...unassignedDevices.map(
-            (device) => Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: _buildDeviceCard(
-                context,
-                device: device,
-                showAssignButtons: true,
-                onConnect: () => _handleConnect(device),
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('OTHER DEVICES', style: Theme.of(context).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 12),
+            if (unassignedDevices.isEmpty)
+              _buildEmptyState(context, 'No other devices found')
+            else
+              ...unassignedDevices.map(
+                (device) => Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: _buildDeviceCard(
+                    context,
+                    device: device,
+                    showAssignButtons: true,
+                    onConnect: () => _handleConnect(device),
+                    onDisconnect: () => _handleDisconnect(device),
+                    onRemove: () => _handleRemove(device),
+                  ),
+                ),
               ),
-            ),
-          ),
-      ],
+          ],
+        );
+      },
     );
   }
 
@@ -517,6 +551,7 @@ class _DevicesPageState extends State<DevicesPage> {
     VoidCallback? onDisconnect,
     VoidCallback? onUnassign,
     VoidCallback? onConnect,
+    VoidCallback? onRemove,
     bool showAssignButtons = false,
   }) {
     return Builder(
@@ -585,6 +620,26 @@ class _DevicesPageState extends State<DevicesPage> {
                           onPressed: isConnecting ? null : onConnect,
                           child: Text(isConnecting ? 'Connecting...' : 'Connect'),
                         ),
+                      if (isConnected && onDisconnect != null)
+                        ElevatedButton.icon(
+                          onPressed: () => _handleDisconnect(device),
+                          icon: const Icon(Icons.bluetooth_disabled),
+                          label: const Text('Disconnect'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red[50],
+                            foregroundColor: Colors.red[900],
+                          ),
+                        ),
+                      if (onRemove != null)
+                        OutlinedButton.icon(
+                          onPressed: onRemove,
+                          icon: const Icon(Icons.delete_outline),
+                          label: const Text('Remove'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.red[900],
+                            side: BorderSide(color: Colors.red[300]!),
+                          ),
+                        ),
                     ],
                   )
                 else if (onUnassign != null)
@@ -619,6 +674,16 @@ class _DevicesPageState extends State<DevicesPage> {
                         style: OutlinedButton.styleFrom(
                           foregroundColor: Colors.orange[900],
                           side: BorderSide(color: Colors.orange[300]!),
+                        ),
+                      ),
+                      if (onRemove != null)
+                        OutlinedButton.icon(
+                          onPressed: onRemove,
+                          icon: const Icon(Icons.delete_outline),
+                          label: const Text('Remove'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.red[900],
+                            side: BorderSide(color: Colors.red[300]!),
                         ),
                       ),
                     ],
@@ -710,6 +775,23 @@ class _DevicesPageState extends State<DevicesPage> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Failed to disconnect: $e'), backgroundColor: Colors.red));
+    }
+  }
+
+  Future<void> _handleRemove(FitnessDevice device) async {
+    final deviceManager = Refs.deviceManager.of(context);
+    try {
+      await device.disconnect();
+      await deviceManager.removeDevice(device.id);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${device.name} removed')));
+      setState(() {}); // Refresh UI
+    } catch (e, stackTrace) {
+      developer.log('Error removing ${device.name}', name: 'DevicesPage', error: e, stackTrace: stackTrace);
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to remove device: $e'), backgroundColor: Colors.red));
     }
   }
 
@@ -834,64 +916,79 @@ class _DevicesPageState extends State<DevicesPage> {
     DeviceManager deviceManager,
     device_info.DeviceDataType dataType,
   ) {
-    final allDevices = deviceManager.devices;
     // Allow primary trainer to also be assigned as data source
     // (e.g., a KICKR CORE can control ERG mode AND provide power/cadence/speed data)
     // Allow same device to be assigned to multiple data sources (power, cadence, HR)
 
-    final eligibleDevices = allDevices.where((device) {
-      return device.capabilities.contains(dataType);
-    }).toList();
-
-    final dataTypeName = switch (dataType) {
-      device_info.DeviceDataType.power => 'Power',
-      device_info.DeviceDataType.cadence => 'Cadence',
-      device_info.DeviceDataType.speed => 'Speed',
-      device_info.DeviceDataType.heartRate => 'Heart Rate',
-    };
-
     showDialog<void>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text('Assign $dataTypeName Source'),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: eligibleDevices.isEmpty
-              ? Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.info_outline, size: 48, color: Colors.grey[400]),
-                      const SizedBox(height: 16),
-                      Text(
-                        'No eligible devices found.\n\nMake sure you have devices that support $dataTypeName and are not already assigned to another role.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: Colors.grey[600]),
-                      ),
-                    ],
+      builder: (dialogContext) {
+        final allDevices = deviceManager.devicesBeacon.watch(dialogContext);
+        final eligibleDevices = allDevices.where((device) {
+          return device.capabilities.contains(dataType);
+        }).toList();
+
+        final dataTypeName = switch (dataType) {
+          device_info.DeviceDataType.power => 'Power',
+          device_info.DeviceDataType.cadence => 'Cadence',
+          device_info.DeviceDataType.speed => 'Speed',
+          device_info.DeviceDataType.heartRate => 'Heart Rate',
+        };
+
+        return AlertDialog(
+          title: Text('Assign $dataTypeName Source'),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: eligibleDevices.isEmpty
+                ? Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.info_outline, size: 48, color: Colors.grey[400]),
+                        const SizedBox(height: 16),
+                        Text(
+                          'No eligible devices found.\n\nMake sure you have devices that support $dataTypeName and are not already assigned to another role.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: Colors.grey[600]),
+                        ),
+                        const SizedBox(height: 24),
+                        ElevatedButton.icon(
+                          onPressed: () {
+                            Navigator.of(dialogContext).pop();
+                            context.push('/scanner?connectMode=true').then((_) {
+                              if (mounted) {
+                                setState(() {}); // Refresh UI after returning from scanner
+                              }
+                            });
+                          },
+                          icon: const Icon(Icons.search),
+                          label: const Text('Scan for Devices'),
+                        ),
+                      ],
+                    ),
+                  )
+                : ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: eligibleDevices.length,
+                    itemBuilder: (context, index) {
+                      final device = eligibleDevices[index];
+                      return ListTile(
+                        leading: const Icon(Icons.bluetooth),
+                        title: Text(device.name),
+                        subtitle: Text(_formatCapabilities(device.capabilities)),
+                        trailing: const Icon(Icons.arrow_forward),
+                        onTap: () {
+                          Navigator.of(dialogContext).pop();
+                          _assignDeviceToDataType(device, dataType);
+                        },
+                      );
+                    },
                   ),
-                )
-              : ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: eligibleDevices.length,
-                  itemBuilder: (context, index) {
-                    final device = eligibleDevices[index];
-                    return ListTile(
-                      leading: const Icon(Icons.bluetooth),
-                      title: Text(device.name),
-                      subtitle: Text(_formatCapabilities(device.capabilities)),
-                      trailing: const Icon(Icons.arrow_forward),
-                      onTap: () {
-                        Navigator.of(ctx).pop();
-                        _assignDeviceToDataType(device, dataType);
-                      },
-                    );
-                  },
-                ),
-        ),
-        actions: [TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Cancel'))],
-      ),
+          ),
+          actions: [TextButton(onPressed: () => Navigator.of(dialogContext).pop(), child: const Text('Cancel'))],
+        );
+      },
     );
   }
 
@@ -917,504 +1014,4 @@ class _DevicesPageState extends State<DevicesPage> {
     }
   }
 
-  // ============================================================================
-  // BLE Scanning
-  // ============================================================================
-
-  void _showScanDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => _BleScanDialog(
-        onDeviceSelected: (device) async {
-          Navigator.of(ctx).pop();
-          await _handleDeviceSelected(device);
-        },
-      ),
-    );
-  }
-
-  Future<void> _handleDeviceSelected(DiscoveredDevice device) async {
-    final deviceName = device.name ?? '';
-    final deviceId = device.deviceId;
-    developer.log('[DevicesPage] Device selected: $deviceName ($deviceId)');
-
-    if (!mounted) return;
-
-    // Show connecting dialog
-    await showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => _DeviceConnectingDialog(
-        device: device,
-        onConnect: (fitnessDevice, autoAssignments, isReconnect) {
-          final message = isReconnect
-              ? '${fitnessDevice.name} reconnected'
-              : autoAssignments.isEmpty
-              ? '${fitnessDevice.name} added and connected'
-              : '${fitnessDevice.name} connected and assigned as ${autoAssignments.join(', ')}';
-
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
-            setState(() {}); // Refresh UI
-          }
-        },
-      ),
-    );
-  }
 }
-
-/// Dialog for scanning and selecting BLE devices.
-class _BleScanDialog extends StatefulWidget {
-  const _BleScanDialog({required this.onDeviceSelected});
-
-  final void Function(DiscoveredDevice device) onDeviceSelected;
-
-  @override
-  State<_BleScanDialog> createState() => _BleScanDialogState();
-}
-
-class _BleScanDialogState extends State<_BleScanDialog> {
-  BleScanner? _scanner;
-  List<DiscoveredDevice> _devices = [];
-  BluetoothState? _bluetoothState;
-  bool _isScanning = false;
-  bool _isInitialized = false;
-  ScanToken? _scanToken;
-  VoidCallback? _devicesUnsubscribe;
-  VoidCallback? _bluetoothStateUnsubscribe;
-  VoidCallback? _isScanningUnsubscribe;
-
-  @override
-  void initState() {
-    super.initState();
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final s = Refs.bleScanner.of(context);
-    if (s != _scanner) {
-      if (_scanner != null) {
-        developer.log('Scanner changed from $s to ${_scanner}');
-      }
-      _devicesUnsubscribe?.call();
-      _bluetoothStateUnsubscribe?.call();
-      _isScanningUnsubscribe?.call();
-      _isInitialized = false;
-      _scanner = s;
-      _initializeScanner();
-    }
-  }
-
-  void _initializeScanner() {
-    // Listen to discovered devices
-    _devicesUnsubscribe = _scanner!.devices.subscribe((devices) {
-      if (mounted) {
-        setState(() {
-          _devices = devices;
-        });
-      }
-    });
-
-    // Listen to Bluetooth state
-    _bluetoothStateUnsubscribe = _scanner!.bluetoothState.subscribe((state) {
-      if (mounted) {
-        setState(() {
-          _bluetoothState = state;
-        });
-
-        // Auto-start scan if ready
-        if (state.canScan && !_isScanning && _scanToken == null) {
-          _handleScanButtonPressed();
-        }
-      }
-    });
-
-    // Listen to scanning state
-    _isScanningUnsubscribe = _scanner!.isScanning.subscribe((scanning) {
-      if (mounted) {
-        setState(() {
-          _isScanning = scanning;
-        });
-      }
-    });
-
-    setState(() {
-      _isInitialized = true;
-    });
-  }
-
-  @override
-  void dispose() {
-    if (_scanToken != null) {
-      _scanner?.stopScan(_scanToken!);
-    }
-    _devicesUnsubscribe?.call();
-    _bluetoothStateUnsubscribe?.call();
-    _isScanningUnsubscribe?.call();
-    super.dispose();
-  }
-
-  void _handleScanButtonPressed() {
-    if (_isScanning) {
-      if (_scanToken != null) {
-        _scanner!.stopScan(_scanToken!);
-        _scanToken = null;
-      }
-    } else {
-      _scanToken = _scanner!.startScan();
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final canScan = _bluetoothState?.canScan ?? false;
-    final isScanning = _isScanning;
-    final statusMessage = _getStatusMessage(_bluetoothState);
-
-    return AlertDialog(
-      title: const Text('Scan for Devices'),
-      content: SizedBox(
-        width: double.maxFinite,
-        height: 400,
-        child: Column(
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(child: Text(statusMessage, style: Theme.of(context).textTheme.bodyMedium)),
-                const SizedBox(width: 8),
-                ElevatedButton(
-                  onPressed: _isInitialized && (canScan || isScanning) ? _handleScanButtonPressed : null,
-                  child: Text(isScanning ? 'Stop' : 'Scan'),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            const Divider(),
-            Expanded(
-              child: _devices.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            canScan ? Icons.bluetooth_searching : Icons.bluetooth_disabled,
-                            size: 64,
-                            color: canScan ? Colors.grey[400] : Colors.red[300],
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            isScanning ? 'Searching for devices...' : 'No devices found',
-                            style: TextStyle(fontSize: 16, color: canScan ? Colors.grey[600] : Colors.red[400]),
-                          ),
-                          if (!canScan && _bluetoothState != null) ...[
-                            const SizedBox(height: 16),
-                            if (_bluetoothState!.needsPermission)
-                              ElevatedButton.icon(
-                                onPressed: () async {
-                                  final messenger = ScaffoldMessenger.of(context);
-                                  final permissions = Refs.blePermissions.of(context);
-                                  final granted = await permissions.request();
-                                  if (granted && mounted) {
-                                    _handleScanButtonPressed();
-                                  } else {
-                                    final permanentlyDenied = await permissions.isPermanentlyDenied();
-                                    if (permanentlyDenied && mounted) {
-                                      messenger.showSnackBar(
-                                        SnackBar(
-                                          content: const Text('Please enable permissions in app settings'),
-                                          action: SnackBarAction(
-                                            label: 'Settings',
-                                            onPressed: () => permissions.openSettings(),
-                                          ),
-                                        ),
-                                      );
-                                    }
-                                  }
-                                },
-                                icon: const Icon(Icons.security),
-                                label: const Text('Grant Permissions'),
-                              )
-                            else if (!_bluetoothState!.isBluetoothOn)
-                              const Text('Please turn on Bluetooth', style: TextStyle(color: Colors.red)),
-                          ],
-                        ],
-                      ),
-                    )
-                  : ListView.builder(
-                      itemCount: _devices.length,
-                      itemBuilder: (context, index) {
-                        final device = _devices[index];
-                        final deviceName = device.name ?? '';
-                        return ListTile(
-                          leading: const Icon(Icons.bluetooth),
-                          title: Text(deviceName.isEmpty ? 'Unknown Device' : deviceName),
-                          subtitle: Text('${device.deviceId}\nRSSI: ${device.rssi}'),
-                          trailing: const Icon(Icons.arrow_forward),
-                          onTap: () => widget.onDeviceSelected(device),
-                        );
-                      },
-                    ),
-            ),
-          ],
-        ),
-      ),
-      actions: [TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Close'))],
-    );
-  }
-
-  String _getStatusMessage(BluetoothState? state) {
-    if (state == null) return 'Initializing...';
-    if (!state.isBluetoothOn) return 'Bluetooth is off';
-    if (!state.hasPermission) return 'Bluetooth permissions required';
-    if (!state.isLocationServiceEnabled) return 'Location services required';
-    if (_isScanning) return 'Scanning for devices...';
-    return 'Ready to scan';
-  }
-}
-
-/// Dialog shown while connecting to a selected device.
-class _DeviceConnectingDialog extends StatefulWidget {
-  const _DeviceConnectingDialog({required this.device, required this.onConnect});
-
-  final DiscoveredDevice device;
-  final void Function(FitnessDevice fitnessDevice, List<String> autoAssignments, bool isReconnect) onConnect;
-
-  @override
-  State<_DeviceConnectingDialog> createState() => _DeviceConnectingDialogState();
-}
-
-class _DeviceConnectingDialogState extends State<_DeviceConnectingDialog> {
-  _DialogConnectionState _state = _DialogConnectionState.connecting;
-  String? _errorMessage;
-  String _statusMessage = 'Initializing...';
-
-  @override
-  void initState() {
-    super.initState();
-    // Defer connection until after the first frame to ensure context is available
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _connectToDevice();
-    });
-  }
-
-  Future<void> _connectToDevice() async {
-    if (!mounted) return;
-
-    setState(() {
-      _state = _DialogConnectionState.connecting;
-      _errorMessage = null;
-      _statusMessage = 'Initializing device...';
-    });
-
-    try {
-      final deviceManager = Refs.deviceManager.of(context);
-
-      // Detect compatible transports and create device instance
-      setState(() => _statusMessage = 'Detecting device type...');
-      final transportRegistry = Refs.transportRegistry.of(context);
-
-      // Detect all compatible transports for this device
-      final transports = transportRegistry.detectCompatibleTransports(
-        widget.device,
-        deviceId: widget.device.deviceId,
-      );
-
-      developer.log(
-        '[DeviceConnectingDialog] Found ${transports.length} compatible transport(s)',
-        name: 'DeviceConnectingDialog',
-      );
-
-      if (transports.isEmpty) {
-        throw Exception(
-          'Device does not advertise any recognized fitness services. '
-          'Advertised services: ${widget.device.serviceUuids.map((uuid) => uuid.toString()).join(', ')}',
-        );
-      }
-
-      setState(() => _statusMessage = 'Creating device profile...');
-      final newDevice = BleDevice(
-        id: widget.device.deviceId,
-        name: widget.device.name ?? 'Unknown Device',
-        transports: transports,
-      );
-
-      // Add to device manager (or get existing if already exists)
-      setState(() => _statusMessage = 'Registering device...');
-      final fitnessDevice = await deviceManager.addOrGetExistingDevice(newDevice);
-      final isReconnect = fitnessDevice != newDevice;
-
-      if (isReconnect) {
-        developer.log('[DeviceConnectingDialog] Device already exists in manager, reconnecting');
-      }
-
-      if (!mounted) return;
-
-      // Auto-assign device to available data sources based on its capabilities (only for new devices)
-      final autoAssignments = <String>[];
-
-      if (!isReconnect) {
-        setState(() => _statusMessage = 'Configuring device assignments...');
-
-        // Check if device supports ERG mode and no trainer is assigned
-        if (fitnessDevice.supportsErgMode && deviceManager.primaryTrainer == null) {
-          deviceManager.assignPrimaryTrainer(fitnessDevice.id);
-          autoAssignments.add('primary trainer');
-        }
-
-        // Auto-assign to data sources
-        if (fitnessDevice.capabilities.contains(device_info.DeviceDataType.power) &&
-            deviceManager.powerSource == null) {
-          deviceManager.assignPowerSource(fitnessDevice.id);
-          autoAssignments.add('power source');
-        }
-
-        if (fitnessDevice.capabilities.contains(device_info.DeviceDataType.cadence) &&
-            deviceManager.cadenceSource == null) {
-          deviceManager.assignCadenceSource(fitnessDevice.id);
-          autoAssignments.add('cadence source');
-        }
-
-        if (fitnessDevice.capabilities.contains(device_info.DeviceDataType.speed) &&
-            deviceManager.speedSource == null) {
-          deviceManager.assignSpeedSource(fitnessDevice.id);
-          autoAssignments.add('speed source');
-        }
-
-        if (fitnessDevice.capabilities.contains(device_info.DeviceDataType.heartRate) &&
-            deviceManager.heartRateSource == null) {
-          deviceManager.assignHeartRateSource(fitnessDevice.id);
-          autoAssignments.add('heart rate source');
-        }
-      }
-
-      // Connect the device
-      setState(() => _statusMessage = 'Establishing Bluetooth connection...');
-      developer.log(
-        '[DeviceConnectingDialog] ${isReconnect ? 'Reconnecting' : 'Auto-connecting'} device: ${fitnessDevice.name}',
-      );
-      await fitnessDevice.connect().value;
-
-      if (!mounted) return;
-
-      setState(() {
-        _statusMessage = 'Connection established!';
-        _state = _DialogConnectionState.connected;
-      });
-
-      // Auto-close after brief success message
-      await Future.delayed(const Duration(milliseconds: 500));
-      if (!mounted) return;
-
-      widget.onConnect(fitnessDevice, autoAssignments, isReconnect);
-      Navigator.of(context).pop();
-    } catch (e, stackTrace) {
-      developer.log('Error connecting to device', name: 'DeviceConnectingDialog', error: e, stackTrace: stackTrace);
-
-      if (!mounted) return;
-
-      setState(() {
-        _state = _DialogConnectionState.error;
-        _errorMessage = e.toString();
-      });
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final deviceName = widget.device.name ?? 'Unknown Device';
-
-    return AlertDialog(
-      title: Row(
-        children: [
-          Icon(
-            _state == _DialogConnectionState.connecting
-                ? Icons.bluetooth_searching
-                : _state == _DialogConnectionState.connected
-                ? Icons.check_circle
-                : Icons.error,
-            color: _state == _DialogConnectionState.connecting
-                ? Colors.blue
-                : _state == _DialogConnectionState.connected
-                ? Colors.green
-                : Colors.red,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              _state == _DialogConnectionState.connecting
-                  ? 'Connecting...'
-                  : _state == _DialogConnectionState.connected
-                  ? 'Connected!'
-                  : 'Connection Failed',
-              style: TextStyle(color: _state == _DialogConnectionState.error ? Colors.red : null),
-            ),
-          ),
-        ],
-      ),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Device: $deviceName', style: const TextStyle(fontWeight: FontWeight.bold)),
-          const SizedBox(height: 16),
-          if (_state == _DialogConnectionState.connecting) ...[
-            Center(
-              child: Column(
-                children: [const CircularProgressIndicator(), const SizedBox(height: 16), Text(_statusMessage)],
-              ),
-            ),
-          ] else if (_state == _DialogConnectionState.connected) ...[
-            const Row(
-              children: [
-                Icon(Icons.check, color: Colors.green),
-                SizedBox(width: 8),
-                Text('Successfully connected!'),
-              ],
-            ),
-          ] else if (_state == _DialogConnectionState.error) ...[
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.red[50],
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.red[200]!),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Row(
-                    children: [
-                      Icon(Icons.error, color: Colors.red, size: 20),
-                      SizedBox(width: 8),
-                      Text(
-                        'Error',
-                        style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    _errorMessage ?? 'Unknown error occurred',
-                    style: TextStyle(color: Colors.red[900], fontSize: 13),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ],
-      ),
-      actions: [
-        if (_state == _DialogConnectionState.error) ...[
-          TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
-          ElevatedButton.icon(onPressed: _connectToDevice, icon: const Icon(Icons.refresh), label: const Text('Retry')),
-        ] else if (_state == _DialogConnectionState.connecting)
-          TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
-      ],
-    );
-  }
-}
-
-enum _DialogConnectionState { connecting, connected, error }

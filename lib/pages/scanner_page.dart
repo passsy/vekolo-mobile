@@ -1,17 +1,24 @@
+import 'dart:developer' as developer;
+
 import 'package:context_plus/context_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:vekolo/app/refs.dart';
+import 'package:vekolo/ble/ble_device.dart';
 import 'package:vekolo/ble/ble_scanner.dart';
+import 'package:vekolo/domain/devices/fitness_device.dart';
+import 'package:vekolo/domain/models/device_info.dart' as device_info;
 import 'package:visibility_detector/visibility_detector.dart';
-import 'dart:developer' as developer;
 
 /// BLE device scanner with auto-start when Bluetooth is ready.
 ///
 /// Keeps discovered devices visible after scan stops.
-/// Navigates to TrainerPage on device selection.
+/// If [connectMode] is true, connects device via DeviceManager before navigation.
+/// Otherwise, navigates directly to TrainerPage.
 class ScannerPage extends StatefulWidget {
-  const ScannerPage({super.key});
+  const ScannerPage({super.key, this.connectMode = false});
+
+  final bool connectMode;
 
   @override
   State<ScannerPage> createState() => _ScannerPageState();
@@ -30,9 +37,7 @@ class _ScannerPageState extends State<ScannerPage> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Get scanner from dependency injection
     _scanner = Refs.bleScanner.of(context);
-    // TODO unsubscribe like in devices_page.dart
   }
 
   @override
@@ -40,29 +45,24 @@ class _ScannerPageState extends State<ScannerPage> {
     super.initState();
     developer.log('[ScannerPage] Initializing scanner page');
 
-    // Note: _scanner will be initialized in didChangeDependencies
-    // We set up listeners in a post-frame callback to ensure _scanner is ready
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _setupListeners();
     });
   }
 
   void _setupListeners() {
-    // Listen to Bluetooth state
     _bluetoothStateUnsubscribe = _scanner.bluetoothState.subscribe((state) {
       if (!mounted) return;
       setState(() {
         _bluetoothState = state;
       });
 
-      // Auto-start scan when ready
       if (state.canScan && !_isScanning && _scanToken == null) {
         developer.log('[ScannerPage] Ready to scan, auto-starting');
         _startScan();
       }
     });
 
-    // Listen to scanning state
     _isScanningUnsubscribe = _scanner.isScanning.subscribe((scanning) {
       if (!mounted) return;
       setState(() {
@@ -70,23 +70,13 @@ class _ScannerPageState extends State<ScannerPage> {
       });
     });
 
-    // Listen to discovered devices
     _devicesUnsubscribe = _scanner.devices.subscribe((devices) {
       if (!mounted) return;
       setState(() {
-        // If scanner's device list becomes empty, keep our local devices.
-        // This handles:
-        // 1. User stopping scan (scanner clears devices)
-        // 2. Race condition where devices beacon fires before isScanning beacon
-        // The devices will be shown with "Unknown" RSSI when not scanning.
         if (devices.isEmpty && _devices.isNotEmpty) {
-          // Keep existing devices - don't clear them
           return;
         }
 
-        // Update device list when:
-        // - New devices discovered (devices.isNotEmpty)
-        // - Initial state (both empty)
         _devices.clear();
         _devices.addAll(devices);
       });
@@ -102,7 +92,6 @@ class _ScannerPageState extends State<ScannerPage> {
     _devicesUnsubscribe?.call();
     _bluetoothStateUnsubscribe?.call();
     _isScanningUnsubscribe?.call();
-    // Don't dispose scanner - it's managed by the app's dependency injection
     super.dispose();
   }
 
@@ -121,17 +110,35 @@ class _ScannerPageState extends State<ScannerPage> {
     if (!mounted) return;
 
     if (info.visibleFraction == 0) {
-      // Page is no longer visible, stop scanning
       developer.log('[ScannerPage] Page hidden, stopping scan');
       _stopScan();
     } else if (info.visibleFraction > 0) {
-      // Page became visible again
       final bluetoothState = _bluetoothState;
       if (bluetoothState != null && bluetoothState.canScan && !_isScanning && _scanToken == null) {
         developer.log('[ScannerPage] Page visible again, restarting scan');
         _startScan();
       }
     }
+  }
+
+  Future<void> _showConnectingDialog(BuildContext context, DiscoveredDevice device) async {
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => _DeviceConnectingDialog(
+        device: device,
+        onConnect: (fitnessDevice, autoAssignments, isReconnect) {
+          final message = isReconnect
+              ? '${fitnessDevice.name} reconnected'
+              : (autoAssignments.isEmpty
+                    ? '${fitnessDevice.name} added and connected'
+                    : '${fitnessDevice.name} connected and assigned as ${autoAssignments.join(', ')}');
+
+          scaffoldMessenger.showSnackBar(SnackBar(content: Text(message)));
+        },
+      ),
+    );
   }
 
   String _getStatusMessage(BluetoothState? state) {
@@ -197,8 +204,6 @@ class _ScannerPageState extends State<ScannerPage> {
                             const SizedBox(height: 24),
                             ElevatedButton.icon(
                               onPressed: () {
-                                // Permissions are checked automatically by the scanner
-                                // Just trigger a state update
                                 setState(() {});
                               },
                               icon: const Icon(Icons.security),
@@ -211,34 +216,86 @@ class _ScannerPageState extends State<ScannerPage> {
                         ],
                       ),
                     )
-                  : ListView.builder(
-                      itemCount: _devices.length,
-                      itemBuilder: (context, index) {
-                        final device = _devices[index];
-                        final deviceName = device.name ?? '';
-                        final deviceId = device.deviceId;
-                        final rssi = device.rssi;
-                        final rssiText = _isScanning ? (rssi != null ? '$rssi' : 'No signal') : 'Unknown';
-                        final isActive = _isScanning && rssi != null;
+                  : Builder(
+                      builder: (context) {
+                        final deviceManager = Refs.deviceManager.of(context);
+                        final managedDevices = deviceManager.devicesBeacon.value;
+                        final connectedDeviceIds = <String>{};
+                        for (final managedDevice in managedDevices) {
+                          if (managedDevice.connectionState.value == device_info.ConnectionState.connected) {
+                            connectedDeviceIds.add(managedDevice.id);
+                          }
+                        }
 
-                        return ListTile(
-                          leading: Icon(Icons.bluetooth, color: isActive ? null : Colors.grey),
-                          title: Text(
-                            deviceName.isEmpty ? 'Unknown Device' : deviceName,
-                            style: TextStyle(color: isActive ? null : Colors.grey[700]),
-                          ),
-                          subtitle: Text(
-                            '$deviceId\nRSSI: $rssiText',
-                            style: TextStyle(color: isActive ? null : Colors.grey[600]),
-                          ),
-                          trailing: const Icon(Icons.chevron_right),
-                          onTap: () {
-                            developer.log(
-                              '[ScannerPage] ✅ Selected device: ${deviceName.isEmpty ? "Unknown" : deviceName} '
-                              '(ID: $deviceId, RSSI: ${rssi ?? "unknown"})',
+                        return ListView.builder(
+                          itemCount: _devices.length,
+                          itemBuilder: (context, index) {
+                            final device = _devices[index];
+                            final deviceName = device.name ?? '';
+                            final deviceId = device.deviceId;
+                            final rssi = device.rssi;
+                            final rssiText = _isScanning ? (rssi != null ? '$rssi' : 'No signal') : 'Unknown';
+                            final isActive = _isScanning && rssi != null;
+                            final isAlreadyConnected = connectedDeviceIds.contains(deviceId);
+
+                            // Determine icon and color
+                            final leadingIcon = isAlreadyConnected ? Icons.check_circle : Icons.bluetooth;
+                            final leadingColor = isAlreadyConnected ? Colors.green : (isActive ? null : Colors.grey);
+
+                            // Determine title
+                            final displayName = deviceName.isEmpty ? 'Unknown Device' : deviceName;
+                            final titleColor = isAlreadyConnected
+                                ? Colors.green[700]
+                                : (isActive ? null : Colors.grey[700]);
+
+                            // Determine subtitle
+                            final subtitleText = isAlreadyConnected
+                                ? '$deviceId\nAlready connected'
+                                : '$deviceId\nRSSI: $rssiText';
+                            final subtitleColor = isAlreadyConnected
+                                ? Colors.green[600]
+                                : (isActive ? null : Colors.grey[600]);
+
+                            // Determine trailing icon
+                            final trailingIcon = isAlreadyConnected
+                                ? const Icon(Icons.check, color: Colors.green)
+                                : const Icon(Icons.chevron_right);
+
+                            // Determine if tap should be disabled
+                            final isTapDisabled = isAlreadyConnected && widget.connectMode;
+
+                            return ListTile(
+                              leading: Icon(leadingIcon, color: leadingColor),
+                              title: Text(displayName, style: TextStyle(color: titleColor)),
+                              subtitle: Text(subtitleText, style: TextStyle(color: subtitleColor)),
+                              trailing: trailingIcon,
+                              enabled: !isAlreadyConnected || !widget.connectMode,
+                              onTap: isTapDisabled
+                                  ? null
+                                  : () async {
+                                      developer.log(
+                                        '[ScannerPage] ✅ Selected device: ${deviceName.isEmpty ? "Unknown" : deviceName} '
+                                        '(ID: $deviceId, RSSI: ${rssi ?? "unknown"})',
+                                      );
+                                      _stopScan();
+
+                                      if (widget.connectMode) {
+                                        if (context.mounted) {
+                                          final navigator = Navigator.of(context);
+                                          final parentContext = navigator.context;
+                                          navigator.pop();
+                                          await Future.delayed(const Duration(milliseconds: 100));
+                                          if (parentContext.mounted) {
+                                            await _showConnectingDialog(parentContext, device);
+                                          }
+                                        }
+                                      } else {
+                                        if (context.mounted) {
+                                          context.push('/trainer?deviceId=$deviceId&deviceName=$deviceName');
+                                        }
+                                      }
+                                    },
                             );
-                            _stopScan();
-                            context.push('/trainer?deviceId=$deviceId&deviceName=$deviceName');
                           },
                         );
                       },
@@ -265,3 +322,244 @@ class _ScannerPageState extends State<ScannerPage> {
     );
   }
 }
+
+/// Dialog shown while connecting to a selected device.
+class _DeviceConnectingDialog extends StatefulWidget {
+  const _DeviceConnectingDialog({required this.device, required this.onConnect});
+
+  final DiscoveredDevice device;
+  final void Function(FitnessDevice fitnessDevice, List<String> autoAssignments, bool isReconnect) onConnect;
+
+  @override
+  State<_DeviceConnectingDialog> createState() => _DeviceConnectingDialogState();
+}
+
+class _DeviceConnectingDialogState extends State<_DeviceConnectingDialog> {
+  _DialogConnectionState _state = _DialogConnectionState.connecting;
+  String? _errorMessage;
+  String _statusMessage = 'Initializing...';
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _connectToDevice();
+    });
+  }
+
+  Future<void> _connectToDevice() async {
+    if (!mounted) return;
+
+    setState(() {
+      _state = _DialogConnectionState.connecting;
+      _errorMessage = null;
+      _statusMessage = 'Initializing device...';
+    });
+
+    try {
+      final deviceManager = Refs.deviceManager.of(context);
+
+      // Check if device already exists in manager (reconnection scenario)
+      final existingDevice = deviceManager.devices.where((d) => d.id == widget.device.deviceId).firstOrNull;
+      final isReconnect = existingDevice != null;
+
+      FitnessDevice fitnessDevice;
+      if (isReconnect) {
+        developer.log('[DeviceConnectingDialog] Device already exists in manager, reconnecting');
+        fitnessDevice = existingDevice;
+      } else {
+        setState(() => _statusMessage = 'Detecting device type...');
+        final transportRegistry = Refs.transportRegistry.of(context);
+
+        final transports = transportRegistry.detectCompatibleTransports(
+          widget.device,
+          deviceId: widget.device.deviceId,
+        );
+
+        developer.log(
+          '[DeviceConnectingDialog] Found ${transports.length} compatible transport(s)',
+          name: 'DeviceConnectingDialog',
+        );
+
+        if (transports.isEmpty) {
+          throw Exception(
+            'Device does not advertise any recognized fitness services. '
+            'Advertised services: ${widget.device.serviceUuids.map((uuid) => uuid.toString()).join(', ')}',
+          );
+        }
+
+        setState(() => _statusMessage = 'Creating device profile...');
+        final newDevice = BleDevice(
+          id: widget.device.deviceId,
+          name: widget.device.name ?? 'Unknown Device',
+          transports: transports,
+        );
+
+        setState(() => _statusMessage = 'Registering device...');
+        fitnessDevice = await deviceManager.addOrGetExistingDevice(newDevice);
+      }
+
+      if (!mounted) return;
+
+      setState(() => _statusMessage = 'Establishing Bluetooth connection...');
+      developer.log(
+        '[DeviceConnectingDialog] ${isReconnect ? 'Reconnecting' : 'Auto-connecting'} device: ${fitnessDevice.name}',
+      );
+      await fitnessDevice.connect().value;
+
+      if (!mounted) return;
+
+      setState(() => _statusMessage = 'Configuring device assignments...');
+      final autoAssignments = <String>[];
+
+      // Auto-assign all capabilities that are not already assigned
+      // Check after connection so supportsErgMode and capabilities are accurate
+      if (fitnessDevice.supportsErgMode && deviceManager.primaryTrainer == null) {
+        deviceManager.assignPrimaryTrainer(fitnessDevice.id);
+        autoAssignments.add('primary trainer');
+      }
+
+      if (fitnessDevice.capabilities.contains(device_info.DeviceDataType.power) && deviceManager.powerSource == null) {
+        deviceManager.assignPowerSource(fitnessDevice.id);
+        autoAssignments.add('power source');
+      }
+
+      if (fitnessDevice.capabilities.contains(device_info.DeviceDataType.cadence) &&
+          deviceManager.cadenceSource == null) {
+        deviceManager.assignCadenceSource(fitnessDevice.id);
+        autoAssignments.add('cadence source');
+      }
+
+      if (fitnessDevice.capabilities.contains(device_info.DeviceDataType.speed) && deviceManager.speedSource == null) {
+        deviceManager.assignSpeedSource(fitnessDevice.id);
+        autoAssignments.add('speed source');
+      }
+
+      if (fitnessDevice.capabilities.contains(device_info.DeviceDataType.heartRate) &&
+          deviceManager.heartRateSource == null) {
+        deviceManager.assignHeartRateSource(fitnessDevice.id);
+        autoAssignments.add('heart rate source');
+      }
+
+      if (!mounted) return;
+
+      setState(() {
+        _statusMessage = 'Connection established!';
+        _state = _DialogConnectionState.connected;
+      });
+
+      await Future.delayed(const Duration(milliseconds: 500));
+      if (!mounted) return;
+
+      Navigator.of(context).pop();
+      if (!mounted) return;
+
+      widget.onConnect(fitnessDevice, autoAssignments, isReconnect);
+    } catch (e, stackTrace) {
+      developer.log('Error connecting to device', name: 'DeviceConnectingDialog', error: e, stackTrace: stackTrace);
+
+      if (!mounted) return;
+
+      setState(() {
+        _state = _DialogConnectionState.error;
+        _errorMessage = e.toString();
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final deviceName = widget.device.name ?? 'Unknown Device';
+
+    return AlertDialog(
+      title: Row(
+        children: [
+          Icon(
+            _state == _DialogConnectionState.connecting
+                ? Icons.bluetooth_searching
+                : _state == _DialogConnectionState.connected
+                ? Icons.check_circle
+                : Icons.error,
+            color: _state == _DialogConnectionState.connecting
+                ? Colors.blue
+                : _state == _DialogConnectionState.connected
+                ? Colors.green
+                : Colors.red,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              _state == _DialogConnectionState.connecting
+                  ? 'Connecting...'
+                  : _state == _DialogConnectionState.connected
+                  ? 'Connected!'
+                  : 'Connection Failed',
+              style: TextStyle(color: _state == _DialogConnectionState.error ? Colors.red : null),
+            ),
+          ),
+        ],
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Device: $deviceName', style: const TextStyle(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 16),
+          if (_state == _DialogConnectionState.connecting) ...[
+            Center(
+              child: Column(
+                children: [const CircularProgressIndicator(), const SizedBox(height: 16), Text(_statusMessage)],
+              ),
+            ),
+          ] else if (_state == _DialogConnectionState.connected) ...[
+            const Row(
+              children: [
+                Icon(Icons.check, color: Colors.green),
+                SizedBox(width: 8),
+                Text('Successfully connected!'),
+              ],
+            ),
+          ] else if (_state == _DialogConnectionState.error) ...[
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.red[50],
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.red[200]!),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(Icons.error, color: Colors.red, size: 20),
+                      SizedBox(width: 8),
+                      Text(
+                        'Error',
+                        style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    _errorMessage ?? 'Unknown error occurred',
+                    style: TextStyle(color: Colors.red[900], fontSize: 13),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+      actions: [
+        if (_state == _DialogConnectionState.error) ...[
+          TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
+          ElevatedButton.icon(onPressed: _connectToDevice, icon: const Icon(Icons.refresh), label: const Text('Retry')),
+        ] else if (_state == _DialogConnectionState.connecting)
+          TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
+      ],
+    );
+  }
+}
+
+enum _DialogConnectionState { connecting, connected, error }

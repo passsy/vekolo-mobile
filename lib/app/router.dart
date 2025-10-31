@@ -15,7 +15,13 @@ final router = GoRouter(
     GoRoute(path: '/login', builder: (context, state) => const LoginPage()),
     GoRoute(path: '/signup', builder: (context, state) => const SignupPage()),
     GoRoute(path: '/profile', builder: (context, state) => const ProfilePage()),
-    GoRoute(path: '/scanner', builder: (context, state) => const ScannerPage()),
+    GoRoute(
+      path: '/scanner',
+      builder: (context, state) {
+        final connectMode = state.uri.queryParameters['connectMode'] == 'true';
+        return ScannerPage(connectMode: connectMode);
+      },
+    ),
     GoRoute(path: '/devices', builder: (context, state) => const DevicesPage()),
     GoRoute(
       path: '/trainer',
