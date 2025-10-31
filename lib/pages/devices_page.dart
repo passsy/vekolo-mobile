@@ -1,6 +1,5 @@
 import 'dart:developer' as developer;
 
-import 'package:clock/clock.dart';
 import 'package:context_plus/context_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -9,35 +8,24 @@ import 'package:vekolo/app/refs.dart';
 import 'package:vekolo/domain/devices/device_manager.dart';
 import 'package:vekolo/domain/devices/fitness_device.dart';
 import 'package:vekolo/domain/models/device_info.dart' as device_info;
-import 'package:vekolo/domain/models/erg_command.dart';
 
 /// Page for managing connected fitness devices and assigning them to data sources.
 ///
 /// Allows users to:
 /// - Scan for and connect to Bluetooth devices
-/// - Assign devices to specific roles (primary trainer, power/cadence/HR sources)
+/// - Assign devices to specific roles (power/cadence/HR/speed sources)
 /// - View device connection status and capabilities
 /// - Manage device connections (connect/disconnect)
 ///
 /// The page shows separate sections for:
-/// - Primary Trainer (ERG control + can provide data)
 /// - Power Source (dedicated power meter)
 /// - Cadence Source (dedicated cadence sensor)
 /// - Heart Rate Source (dedicated HR monitor)
 /// - Other Devices (unassigned devices available for assignment)
 ///
 /// Used from anywhere in the app via go_router route '/devices'.
-class DevicesPage extends StatefulWidget {
+class DevicesPage extends StatelessWidget {
   const DevicesPage({super.key});
-
-  @override
-  State<DevicesPage> createState() => _DevicesPageState();
-}
-
-class _DevicesPageState extends State<DevicesPage> {
-  bool _isConnecting = false;
-  String? _connectingDeviceId;
-  double _targetPower = 100.0;
 
   @override
   Widget build(BuildContext context) {
@@ -48,11 +36,7 @@ class _DevicesPageState extends State<DevicesPage> {
         title: const Text('Devices'),
         actions: [
           TextButton.icon(
-            onPressed: () => context.push('/scanner?connectMode=true').then((_) {
-              if (mounted) {
-                setState(() {}); // Refresh UI after returning from scanner
-              }
-            }),
+            onPressed: () => context.push('/scanner?connectMode=true'),
             icon: const Icon(Icons.search),
             label: const Text('Scan'),
           ),
@@ -95,329 +79,9 @@ class _DevicesPageState extends State<DevicesPage> {
           const SizedBox(height: 24),
           const Divider(),
           const SizedBox(height: 24),
-          _buildErgControlTestSection(context),
-          const SizedBox(height: 24),
-          _buildWorkoutPlayerTestSection(context),
-          const SizedBox(height: 24),
-          const Divider(),
-          const SizedBox(height: 24),
-          _buildPrimaryTrainerSection(context, deviceManager),
-          const SizedBox(height: 24),
-          const Divider(),
-          const SizedBox(height: 24),
-          _buildOtherDevicesSection(context, deviceManager),
+          _buildAllDevicesSection(context, deviceManager),
         ],
       ),
-    );
-  }
-
-  Widget _buildErgControlTestSection(BuildContext context) {
-    final syncService = Refs.workoutSyncService.of(context);
-    final deviceManager = Refs.deviceManager.of(context);
-
-    return Builder(
-      builder: (context) {
-        final isSyncing = syncService.isSyncing.watch(context);
-        final syncError = syncService.syncError.watch(context);
-        final lastSyncTime = syncService.lastSyncTime.watch(context);
-        final primaryTrainer = deviceManager.primaryTrainerBeacon.watch(context);
-        final hasPrimaryTrainer = primaryTrainer != null;
-        final supportsErg = primaryTrainer?.supportsErgMode ?? false;
-
-        return Card(
-          color: Colors.blue[50],
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    const Icon(Icons.science, size: 20, color: Colors.blue),
-                    const SizedBox(width: 8),
-                    Text(
-                      'ERG CONTROL TEST',
-                      style: Theme.of(
-                        context,
-                      ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.bold, color: Colors.blue[900]),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Test the WorkoutSyncService by controlling the trainer ERG mode directly',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.blue[700]),
-                ),
-                const SizedBox(height: 16),
-                if (!hasPrimaryTrainer)
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(color: Colors.orange[100], borderRadius: BorderRadius.circular(8)),
-                    child: Row(
-                      children: [
-                        Icon(Icons.warning, color: Colors.orange[900], size: 20),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'No primary trainer assigned. Assign a trainer below to test ERG control.',
-                            style: TextStyle(color: Colors.orange[900]),
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
-                else if (!supportsErg)
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(color: Colors.orange[100], borderRadius: BorderRadius.circular(8)),
-                    child: Row(
-                      children: [
-                        Icon(Icons.warning, color: Colors.orange[900], size: 20),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'Primary trainer does not support ERG mode',
-                            style: TextStyle(color: Colors.orange[900]),
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
-                else ...[
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Target Power: ${_targetPower.toInt()}W',
-                              style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-                            ),
-                            const SizedBox(height: 8),
-                            Slider(
-                              value: _targetPower,
-                              min: 50,
-                              max: 400,
-                              divisions: 35,
-                              label: '${_targetPower.toInt()}W',
-                              onChanged: (value) {
-                                setState(() {
-                                  _targetPower = value;
-                                });
-                              },
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      ElevatedButton.icon(
-                        onPressed: isSyncing
-                            ? null
-                            : () {
-                                syncService.startSync();
-                                syncService.currentTarget.value = ErgCommand(
-                                  targetWatts: _targetPower.toInt(),
-                                  timestamp: clock.now(),
-                                );
-                                ScaffoldMessenger.of(
-                                  context,
-                                ).showSnackBar(SnackBar(content: Text('Syncing target: ${_targetPower.toInt()}W')));
-                              },
-                        icon: const Icon(Icons.play_arrow),
-                        label: const Text('Start Sync'),
-                        style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white),
-                      ),
-                      ElevatedButton.icon(
-                        onPressed: isSyncing
-                            ? () {
-                                syncService.currentTarget.value = ErgCommand(
-                                  targetWatts: _targetPower.toInt(),
-                                  timestamp: clock.now(),
-                                );
-                                ScaffoldMessenger.of(
-                                  context,
-                                ).showSnackBar(SnackBar(content: Text('Updated target: ${_targetPower.toInt()}W')));
-                              }
-                            : null,
-                        icon: const Icon(Icons.update),
-                        label: const Text('Update Target'),
-                      ),
-                      ElevatedButton.icon(
-                        onPressed: !isSyncing
-                            ? null
-                            : () {
-                                syncService.stopSync();
-                                ScaffoldMessenger.of(
-                                  context,
-                                ).showSnackBar(const SnackBar(content: Text('Sync stopped')));
-                              },
-                        icon: const Icon(Icons.stop),
-                        label: const Text('Stop Sync'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red[700],
-                          foregroundColor: Colors.white,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.blue[200]!),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(
-                              isSyncing ? Icons.sync : Icons.sync_disabled,
-                              size: 16,
-                              color: isSyncing ? Colors.green : Colors.grey,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Status: ${isSyncing ? "Syncing" : "Not syncing"}',
-                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold),
-                            ),
-                          ],
-                        ),
-                        if (syncError != null) ...[
-                          const SizedBox(height: 8),
-                          Row(
-                            children: [
-                              const Icon(Icons.error, size: 16, color: Colors.red),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text('Error: $syncError', style: const TextStyle(color: Colors.red)),
-                              ),
-                            ],
-                          ),
-                        ],
-                        if (lastSyncTime != null) ...[
-                          const SizedBox(height: 8),
-                          Row(
-                            children: [
-                              const Icon(Icons.access_time, size: 16, color: Colors.grey),
-                              const SizedBox(width: 8),
-                              Text(
-                                'Last sync: ${_formatTime(lastSyncTime)}',
-                                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey[700]),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  String _formatTime(DateTime time) {
-    final now = clock.now();
-    final diff = now.difference(time);
-    if (diff.inSeconds < 60) {
-      return '${diff.inSeconds}s ago';
-    }
-    if (diff.inMinutes < 60) {
-      return '${diff.inMinutes}m ago';
-    }
-    return '${diff.inHours}h ago';
-  }
-
-  Widget _buildWorkoutPlayerTestSection(BuildContext context) {
-    return Card(
-      color: Colors.green[50],
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Icon(Icons.fitness_center, size: 20, color: Colors.green),
-                const SizedBox(width: 8),
-                Text(
-                  'WORKOUT PLAYER TEST',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.bold, color: Colors.green[900]),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Test the Workout Player by running a structured workout from save.json',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.green[700]),
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () => context.push('/workout-player'),
-                icon: const Icon(Icons.play_circle_filled),
-                label: const Text('Start Workout Player'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPrimaryTrainerSection(BuildContext context, DeviceManager deviceManager) {
-    return Builder(
-      builder: (context) {
-        final trainer = deviceManager.primaryTrainerBeacon.watch(context);
-        final hasTrainer = trainer != null;
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Icon(Icons.directions_bike, size: 20),
-                const SizedBox(width: 8),
-                Text(
-                  'PRIMARY TRAINER',
-                  style: Theme.of(context).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.bold),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            if (hasTrainer)
-              _buildDeviceCard(
-                context,
-                device: trainer,
-                onUnassign: _handleUnassignPrimaryTrainer,
-                onRemove: () => _handleRemove(trainer),
-              )
-            else
-              _buildEmptyState(context, 'No trainer assigned'),
-          ],
-        );
-      },
     );
   }
 
@@ -466,8 +130,8 @@ class _DevicesPageState extends State<DevicesPage> {
               _buildDeviceCard(
                 context,
                 device: assignedDevice,
-                onUnassign: () => _handleUnassignDataSource(dataType),
-                onRemove: () => _handleRemove(assignedDevice),
+                onUnassign: () => _handleUnassignDataSource(context, dataType),
+                onRemove: () => _handleRemove(context, assignedDevice),
               )
             else
               OutlinedButton.icon(
@@ -498,44 +162,29 @@ class _DevicesPageState extends State<DevicesPage> {
     }
   }
 
-  Widget _buildOtherDevicesSection(BuildContext context, DeviceManager deviceManager) {
+  Widget _buildAllDevicesSection(BuildContext context, DeviceManager deviceManager) {
     return Builder(
       builder: (context) {
         final allDevices = deviceManager.devicesBeacon.watch(context);
-        final primaryTrainer = deviceManager.primaryTrainerBeacon.watch(context);
-        final powerSource = deviceManager.powerSourceBeacon.watch(context);
-        final cadenceSource = deviceManager.cadenceSourceBeacon.watch(context);
-        final speedSource = deviceManager.speedSourceBeacon.watch(context);
-        final heartRateSource = deviceManager.heartRateSourceBeacon.watch(context);
-        
-        final assignedDeviceIds = {
-          primaryTrainer?.id,
-          powerSource?.id,
-          cadenceSource?.id,
-          speedSource?.id,
-          heartRateSource?.id,
-        }.whereType<String>().toSet();
-
-        final unassignedDevices = allDevices.where((device) => !assignedDeviceIds.contains(device.id)).toList();
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('OTHER DEVICES', style: Theme.of(context).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.bold)),
+            Text('ALL DEVICES', style: Theme.of(context).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.bold)),
             const SizedBox(height: 12),
-            if (unassignedDevices.isEmpty)
-              _buildEmptyState(context, 'No other devices found')
+            if (allDevices.isEmpty)
+              _buildEmptyState(context, 'No devices found')
             else
-              ...unassignedDevices.map(
+              ...allDevices.map(
                 (device) => Padding(
                   padding: const EdgeInsets.only(bottom: 12),
                   child: _buildDeviceCard(
                     context,
                     device: device,
                     showAssignButtons: true,
-                    onConnect: () => _handleConnect(device),
-                    onDisconnect: () => _handleDisconnect(device),
-                    onRemove: () => _handleRemove(device),
+                    onConnect: () => _handleConnect(context, device),
+                    onDisconnect: () => _handleDisconnect(context, device),
+                    onRemove: () => _handleRemove(context, device),
                   ),
                 ),
               ),
@@ -558,7 +207,7 @@ class _DevicesPageState extends State<DevicesPage> {
       builder: (context) {
         final connectionState = device.connectionState.watch(context);
         final isConnected = connectionState == device_info.ConnectionState.connected;
-        final isConnecting = _isConnecting && _connectingDeviceId == device.id;
+        final isConnecting = connectionState == device_info.ConnectionState.connecting;
 
         return Card(
           child: Padding(
@@ -590,29 +239,24 @@ class _DevicesPageState extends State<DevicesPage> {
                     spacing: 8,
                     runSpacing: 8,
                     children: [
-                      if (device.supportsErgMode)
-                        OutlinedButton(
-                          onPressed: () => _handleAssignPrimaryTrainer(device),
-                          child: const Text('Assign as Trainer'),
-                        ),
                       if (device.capabilities.contains(device_info.DeviceDataType.heartRate))
                         OutlinedButton(
-                          onPressed: () => _handleAssignHeartRate(device),
+                          onPressed: () => _handleAssignHeartRate(context, device),
                           child: const Text('Assign to HR'),
                         ),
                       if (device.capabilities.contains(device_info.DeviceDataType.power))
                         OutlinedButton(
-                          onPressed: () => _handleAssignPower(device),
+                          onPressed: () => _handleAssignPower(context, device),
                           child: const Text('Assign to Power'),
                         ),
                       if (device.capabilities.contains(device_info.DeviceDataType.cadence))
                         OutlinedButton(
-                          onPressed: () => _handleAssignCadence(device),
+                          onPressed: () => _handleAssignCadence(context, device),
                           child: const Text('Assign to Cadence'),
                         ),
                       if (device.capabilities.contains(device_info.DeviceDataType.speed))
                         OutlinedButton(
-                          onPressed: () => _handleAssignSpeed(device),
+                          onPressed: () => _handleAssignSpeed(context, device),
                           child: const Text('Assign to Speed'),
                         ),
                       if (onConnect != null && !isConnected)
@@ -622,7 +266,7 @@ class _DevicesPageState extends State<DevicesPage> {
                         ),
                       if (isConnected && onDisconnect != null)
                         ElevatedButton.icon(
-                          onPressed: () => _handleDisconnect(device),
+                          onPressed: onDisconnect,
                           icon: const Icon(Icons.bluetooth_disabled),
                           label: const Text('Disconnect'),
                           style: ElevatedButton.styleFrom(
@@ -649,7 +293,7 @@ class _DevicesPageState extends State<DevicesPage> {
                     children: [
                       if (isConnected)
                         ElevatedButton.icon(
-                          onPressed: () => _handleDisconnect(device),
+                          onPressed: onDisconnect,
                           icon: const Icon(Icons.bluetooth_disabled),
                           label: const Text('Disconnect'),
                           style: ElevatedButton.styleFrom(
@@ -659,7 +303,7 @@ class _DevicesPageState extends State<DevicesPage> {
                         )
                       else
                         ElevatedButton.icon(
-                          onPressed: () => _handleConnect(device),
+                          onPressed: onConnect,
                           icon: const Icon(Icons.bluetooth_connected),
                           label: const Text('Connect'),
                           style: ElevatedButton.styleFrom(
@@ -684,8 +328,8 @@ class _DevicesPageState extends State<DevicesPage> {
                           style: OutlinedButton.styleFrom(
                             foregroundColor: Colors.red[900],
                             side: BorderSide(color: Colors.red[300]!),
+                          ),
                         ),
-                      ),
                     ],
                   )
                 else if (onDisconnect != null)
@@ -737,84 +381,55 @@ class _DevicesPageState extends State<DevicesPage> {
   // Action Handlers
   // ============================================================================
 
-  Future<void> _handleConnect(FitnessDevice device) async {
-    setState(() {
-      _isConnecting = true;
-      _connectingDeviceId = device.id;
-    });
-
+  Future<void> _handleConnect(BuildContext context, FitnessDevice device) async {
     try {
       await device.connect().value;
-      if (!mounted) return;
+      if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${device.name} connected')));
     } catch (e, stackTrace) {
       developer.log('Error connecting to ${device.name}', name: 'DevicesPage', error: e, stackTrace: stackTrace);
-      if (!mounted) return;
+      if (!context.mounted) return;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Failed to connect: $e'), backgroundColor: Colors.red));
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isConnecting = false;
-          _connectingDeviceId = null;
-        });
-      }
     }
   }
 
-  Future<void> _handleDisconnect(FitnessDevice device) async {
+  Future<void> _handleDisconnect(BuildContext context, FitnessDevice device) async {
     try {
       await device.disconnect();
-      if (!mounted) return;
+      if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${device.name} disconnected')));
-      setState(() {}); // Refresh UI
     } catch (e, stackTrace) {
       developer.log('Error disconnecting from ${device.name}', name: 'DevicesPage', error: e, stackTrace: stackTrace);
-      if (!mounted) return;
+      if (!context.mounted) return;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Failed to disconnect: $e'), backgroundColor: Colors.red));
     }
   }
 
-  Future<void> _handleRemove(FitnessDevice device) async {
+  Future<void> _handleRemove(BuildContext context, FitnessDevice device) async {
     final deviceManager = Refs.deviceManager.of(context);
     try {
       await device.disconnect();
       await deviceManager.removeDevice(device.id);
-      if (!mounted) return;
+      if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${device.name} removed')));
-      setState(() {}); // Refresh UI
     } catch (e, stackTrace) {
       developer.log('Error removing ${device.name}', name: 'DevicesPage', error: e, stackTrace: stackTrace);
-      if (!mounted) return;
+      if (!context.mounted) return;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Failed to remove device: $e'), backgroundColor: Colors.red));
     }
   }
 
-  void _handleAssignPrimaryTrainer(FitnessDevice device) {
-    final deviceManager = Refs.deviceManager.of(context);
-    try {
-      deviceManager.assignPrimaryTrainer(device.id);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${device.name} assigned as primary trainer')));
-      setState(() {}); // Refresh UI
-    } catch (e, stackTrace) {
-      developer.log('Error assigning primary trainer', name: 'DevicesPage', error: e, stackTrace: stackTrace);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Failed to assign: $e'), backgroundColor: Colors.red));
-    }
-  }
-
-  void _handleAssignPower(FitnessDevice device) {
+  void _handleAssignPower(BuildContext context, FitnessDevice device) {
     final deviceManager = Refs.deviceManager.of(context);
     try {
       deviceManager.assignPowerSource(device.id);
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${device.name} assigned as power source')));
-      setState(() {}); // Refresh UI
     } catch (e, stackTrace) {
       developer.log('Error assigning power source', name: 'DevicesPage', error: e, stackTrace: stackTrace);
       ScaffoldMessenger.of(
@@ -823,12 +438,11 @@ class _DevicesPageState extends State<DevicesPage> {
     }
   }
 
-  void _handleAssignCadence(FitnessDevice device) {
+  void _handleAssignCadence(BuildContext context, FitnessDevice device) {
     final deviceManager = Refs.deviceManager.of(context);
     try {
       deviceManager.assignCadenceSource(device.id);
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${device.name} assigned as cadence source')));
-      setState(() {}); // Refresh UI
     } catch (e, stackTrace) {
       developer.log('Error assigning cadence source', name: 'DevicesPage', error: e, stackTrace: stackTrace);
       ScaffoldMessenger.of(
@@ -837,14 +451,13 @@ class _DevicesPageState extends State<DevicesPage> {
     }
   }
 
-  void _handleAssignHeartRate(FitnessDevice device) {
+  void _handleAssignHeartRate(BuildContext context, FitnessDevice device) {
     final deviceManager = Refs.deviceManager.of(context);
     try {
       deviceManager.assignHeartRateSource(device.id);
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('${device.name} assigned as heart rate source')));
-      setState(() {}); // Refresh UI
     } catch (e, stackTrace) {
       developer.log('Error assigning heart rate source', name: 'DevicesPage', error: e, stackTrace: stackTrace);
       ScaffoldMessenger.of(
@@ -853,12 +466,11 @@ class _DevicesPageState extends State<DevicesPage> {
     }
   }
 
-  void _handleAssignSpeed(FitnessDevice device) {
+  void _handleAssignSpeed(BuildContext context, FitnessDevice device) {
     final deviceManager = Refs.deviceManager.of(context);
     try {
       deviceManager.assignSpeedSource(device.id);
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${device.name} assigned as speed source')));
-      setState(() {}); // Refresh UI
     } catch (e, stackTrace) {
       developer.log('Error assigning speed source', name: 'DevicesPage', error: e, stackTrace: stackTrace);
       ScaffoldMessenger.of(
@@ -867,21 +479,7 @@ class _DevicesPageState extends State<DevicesPage> {
     }
   }
 
-  void _handleUnassignPrimaryTrainer() {
-    final deviceManager = Refs.deviceManager.of(context);
-    try {
-      deviceManager.assignPrimaryTrainer(null);
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Primary trainer unassigned')));
-      setState(() {}); // Refresh UI
-    } catch (e, stackTrace) {
-      developer.log('Error unassigning primary trainer', name: 'DevicesPage', error: e, stackTrace: stackTrace);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Failed to unassign: $e'), backgroundColor: Colors.red));
-    }
-  }
-
-  void _handleUnassignDataSource(device_info.DeviceDataType dataType) {
+  void _handleUnassignDataSource(BuildContext context, device_info.DeviceDataType dataType) {
     final deviceManager = Refs.deviceManager.of(context);
     try {
       switch (dataType) {
@@ -898,7 +496,6 @@ class _DevicesPageState extends State<DevicesPage> {
           deviceManager.assignSpeedSource(null);
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Speed source unassigned')));
       }
-      setState(() {}); // Refresh UI
     } catch (e, stackTrace) {
       developer.log('Error unassigning data source', name: 'DevicesPage', error: e, stackTrace: stackTrace);
       ScaffoldMessenger.of(
@@ -956,11 +553,7 @@ class _DevicesPageState extends State<DevicesPage> {
                         ElevatedButton.icon(
                           onPressed: () {
                             Navigator.of(dialogContext).pop();
-                            context.push('/scanner?connectMode=true').then((_) {
-                              if (mounted) {
-                                setState(() {}); // Refresh UI after returning from scanner
-                              }
-                            });
+                            context.push('/scanner?connectMode=true');
                           },
                           icon: const Icon(Icons.search),
                           label: const Text('Scan for Devices'),
@@ -980,7 +573,7 @@ class _DevicesPageState extends State<DevicesPage> {
                         trailing: const Icon(Icons.arrow_forward),
                         onTap: () {
                           Navigator.of(dialogContext).pop();
-                          _assignDeviceToDataType(device, dataType);
+                          _assignDeviceToDataType(context, device, dataType);
                         },
                       );
                     },
@@ -992,26 +585,25 @@ class _DevicesPageState extends State<DevicesPage> {
     );
   }
 
-  void _assignDeviceToDataType(FitnessDevice device, device_info.DeviceDataType dataType) {
+  void _assignDeviceToDataType(BuildContext context, FitnessDevice device, device_info.DeviceDataType dataType) {
     try {
       switch (dataType) {
         case device_info.DeviceDataType.power:
-          _handleAssignPower(device);
+          _handleAssignPower(context, device);
         case device_info.DeviceDataType.cadence:
-          _handleAssignCadence(device);
+          _handleAssignCadence(context, device);
         case device_info.DeviceDataType.speed:
-          _handleAssignSpeed(device);
+          _handleAssignSpeed(context, device);
         case device_info.DeviceDataType.heartRate:
-          _handleAssignHeartRate(device);
+          _handleAssignHeartRate(context, device);
       }
     } catch (e, stackTrace) {
       developer.log('Error assigning device', name: 'DevicesPage', error: e, stackTrace: stackTrace);
-      if (mounted) {
+      if (context.mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('Failed to assign device: $e'), backgroundColor: Colors.red));
       }
     }
   }
-
 }

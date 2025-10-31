@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:vekolo/app/refs.dart';
 import 'package:vekolo/ble/ble_device.dart';
 import 'package:vekolo/ble/ble_scanner.dart';
+import 'package:vekolo/ble/transport_capabilities.dart';
 import 'package:vekolo/domain/devices/fitness_device.dart';
 import 'package:vekolo/domain/models/device_info.dart' as device_info;
 import 'package:visibility_detector/visibility_detector.dart';
@@ -150,6 +151,32 @@ class _ScannerPageState extends State<ScannerPage> {
     return 'Ready to scan';
   }
 
+  Set<device_info.DeviceDataType> _detectCapabilities(BuildContext context, DiscoveredDevice device) {
+    try {
+      final transportRegistry = Refs.transportRegistry.of(context);
+      final transports = transportRegistry.detectCompatibleTransports(device, deviceId: device.deviceId);
+
+      final capabilities = <device_info.DeviceDataType>{};
+
+      for (final transport in transports) {
+        if (transport is PowerSource) capabilities.add(device_info.DeviceDataType.power);
+        if (transport is CadenceSource) capabilities.add(device_info.DeviceDataType.cadence);
+        if (transport is SpeedSource) capabilities.add(device_info.DeviceDataType.speed);
+        if (transport is HeartRateSource) capabilities.add(device_info.DeviceDataType.heartRate);
+      }
+
+      // Dispose transports since we only needed them for capability detection
+      for (final transport in transports) {
+        transport.dispose();
+      }
+
+      return capabilities;
+    } catch (e) {
+      developer.log('Error detecting capabilities: $e', name: 'ScannerPage');
+      return {};
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final bluetoothState = _bluetoothState;
@@ -231,70 +258,39 @@ class _ScannerPageState extends State<ScannerPage> {
                           itemCount: _devices.length,
                           itemBuilder: (context, index) {
                             final device = _devices[index];
-                            final deviceName = device.name ?? '';
-                            final deviceId = device.deviceId;
-                            final rssi = device.rssi;
-                            final rssiText = _isScanning ? (rssi != null ? '$rssi' : 'No signal') : 'Unknown';
-                            final isActive = _isScanning && rssi != null;
-                            final isAlreadyConnected = connectedDeviceIds.contains(deviceId);
+                            final capabilities = _detectCapabilities(context, device);
+                            final isAlreadyConnected = connectedDeviceIds.contains(device.deviceId);
 
-                            // Determine icon and color
-                            final leadingIcon = isAlreadyConnected ? Icons.check_circle : Icons.bluetooth;
-                            final leadingColor = isAlreadyConnected ? Colors.green : (isActive ? null : Colors.grey);
+                            return _DeviceListTile(
+                              device: device,
+                              isScanning: _isScanning,
+                              isAlreadyConnected: isAlreadyConnected,
+                              capabilities: capabilities,
+                              connectMode: widget.connectMode,
+                              onTap: () async {
+                                developer.log(
+                                  '[ScannerPage] ✅ Selected device: ${device.name?.isEmpty ?? true ? "Unknown" : device.name} '
+                                  '(ID: ${device.deviceId}, RSSI: ${device.rssi ?? "unknown"})',
+                                );
+                                _stopScan();
 
-                            // Determine title
-                            final displayName = deviceName.isEmpty ? 'Unknown Device' : deviceName;
-                            final titleColor = isAlreadyConnected
-                                ? Colors.green[700]
-                                : (isActive ? null : Colors.grey[700]);
-
-                            // Determine subtitle
-                            final subtitleText = isAlreadyConnected
-                                ? '$deviceId\nAlready connected'
-                                : '$deviceId\nRSSI: $rssiText';
-                            final subtitleColor = isAlreadyConnected
-                                ? Colors.green[600]
-                                : (isActive ? null : Colors.grey[600]);
-
-                            // Determine trailing icon
-                            final trailingIcon = isAlreadyConnected
-                                ? const Icon(Icons.check, color: Colors.green)
-                                : const Icon(Icons.chevron_right);
-
-                            // Determine if tap should be disabled
-                            final isTapDisabled = isAlreadyConnected && widget.connectMode;
-
-                            return ListTile(
-                              leading: Icon(leadingIcon, color: leadingColor),
-                              title: Text(displayName, style: TextStyle(color: titleColor)),
-                              subtitle: Text(subtitleText, style: TextStyle(color: subtitleColor)),
-                              trailing: trailingIcon,
-                              enabled: !isAlreadyConnected || !widget.connectMode,
-                              onTap: isTapDisabled
-                                  ? null
-                                  : () async {
-                                      developer.log(
-                                        '[ScannerPage] ✅ Selected device: ${deviceName.isEmpty ? "Unknown" : deviceName} '
-                                        '(ID: $deviceId, RSSI: ${rssi ?? "unknown"})',
-                                      );
-                                      _stopScan();
-
-                                      if (widget.connectMode) {
-                                        if (context.mounted) {
-                                          final navigator = Navigator.of(context);
-                                          final parentContext = navigator.context;
-                                          navigator.pop();
-                                          await Future.delayed(const Duration(milliseconds: 100));
-                                          if (parentContext.mounted) {
-                                            await _showConnectingDialog(parentContext, device);
-                                          }
-                                        }
-                                      } else {
-                                        if (context.mounted) {
-                                          context.push('/trainer?deviceId=$deviceId&deviceName=$deviceName');
-                                        }
-                                      }
-                                    },
+                                if (widget.connectMode) {
+                                  if (context.mounted) {
+                                    final navigator = Navigator.of(context);
+                                    final parentContext = navigator.context;
+                                    navigator.pop();
+                                    await Future.delayed(const Duration(milliseconds: 100));
+                                    if (parentContext.mounted) {
+                                      await _showConnectingDialog(parentContext, device);
+                                    }
+                                  }
+                                } else {
+                                  if (context.mounted) {
+                                    final deviceName = device.name ?? '';
+                                    context.push('/trainer?deviceId=${device.deviceId}&deviceName=$deviceName');
+                                  }
+                                }
+                              },
                             );
                           },
                         );
@@ -320,6 +316,137 @@ class _ScannerPageState extends State<ScannerPage> {
         ),
       ),
     );
+  }
+}
+
+class _DeviceListTile extends StatelessWidget {
+  const _DeviceListTile({
+    required this.device,
+    required this.isScanning,
+    required this.isAlreadyConnected,
+    required this.capabilities,
+    required this.connectMode,
+    required this.onTap,
+  });
+
+  final DiscoveredDevice device;
+  final bool isScanning;
+  final bool isAlreadyConnected;
+  final Set<device_info.DeviceDataType> capabilities;
+  final bool connectMode;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final deviceName = device.name ?? '';
+    final deviceId = device.deviceId;
+    final rssi = device.rssi;
+    final isActive = isScanning && rssi != null;
+
+    final leadingIcon = isAlreadyConnected ? Icons.check_circle : Icons.bluetooth;
+    final leadingColor = isAlreadyConnected ? Colors.green : (isActive ? null : Colors.grey);
+
+    final displayName = deviceName.isEmpty ? 'Unknown Device' : deviceName;
+    final titleColor = isAlreadyConnected ? Colors.green[700] : (isActive ? null : Colors.grey[700]);
+
+    final subtitleColor = isAlreadyConnected ? Colors.green[600] : (isActive ? null : Colors.grey[600]);
+
+    final trailingIcon = isAlreadyConnected
+        ? const Icon(Icons.check, color: Colors.green)
+        : const Icon(Icons.chevron_right);
+
+    final isTapDisabled = isAlreadyConnected && connectMode;
+
+    return ListTile(
+      leading: Icon(leadingIcon, color: leadingColor),
+      title: Text(displayName, style: TextStyle(color: titleColor)),
+      subtitle: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  isAlreadyConnected ? '$deviceId\nAlready connected' : deviceId,
+                  style: TextStyle(color: subtitleColor),
+                ),
+              ),
+              if (!isAlreadyConnected && isScanning && rssi != null)
+                _buildSignalStrengthIcon(rssi)
+              else if (!isAlreadyConnected && isScanning)
+                Icon(Icons.signal_cellular_off, size: 24, color: Colors.grey[400])
+              else if (!isAlreadyConnected)
+                Icon(Icons.signal_cellular_off, size: 24, color: Colors.grey[300]),
+            ],
+          ),
+          if (capabilities.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Wrap(
+              spacing: 4,
+              runSpacing: 4,
+              children: [
+                if (capabilities.contains(device_info.DeviceDataType.power))
+                  _buildCapabilityChip(context, 'Power', Icons.bolt),
+                if (capabilities.contains(device_info.DeviceDataType.cadence))
+                  _buildCapabilityChip(context, 'Cadence', Icons.refresh),
+                if (capabilities.contains(device_info.DeviceDataType.speed))
+                  _buildCapabilityChip(context, 'Speed', Icons.speed),
+                if (capabilities.contains(device_info.DeviceDataType.heartRate))
+                  _buildCapabilityChip(context, 'HR', Icons.favorite),
+              ],
+            ),
+          ],
+        ],
+      ),
+      trailing: trailingIcon,
+      enabled: !isAlreadyConnected || !connectMode,
+      onTap: isTapDisabled ? null : onTap,
+    );
+  }
+
+  Widget _buildCapabilityChip(BuildContext context, String label, IconData icon) {
+    return Chip(
+      label: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14),
+          const SizedBox(width: 4),
+          Text(label, style: const TextStyle(fontSize: 11)),
+        ],
+      ),
+      padding: EdgeInsets.zero,
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      visualDensity: VisualDensity.compact,
+      labelPadding: const EdgeInsets.symmetric(horizontal: 6, vertical: 0),
+    );
+  }
+
+  Widget _buildSignalStrengthIcon(int rssi) {
+    IconData icon;
+    Color color;
+
+    if (rssi >= -50) {
+      icon = Icons.signal_cellular_4_bar;
+      color = Colors.green;
+    } else if (rssi >= -70) {
+      icon = Icons.signal_cellular_4_bar;
+      color = Colors.lightGreen;
+    } else if (rssi >= -80) {
+      icon = Icons.signal_cellular_alt;
+      color = Colors.yellow[700]!;
+    } else if (rssi >= -90) {
+      icon = Icons.signal_cellular_alt_2_bar;
+      color = Colors.orange[700]!;
+    } else if (rssi >= -100) {
+      icon = Icons.signal_cellular_alt_1_bar;
+      color = Colors.red[700]!;
+    } else {
+      icon = Icons.signal_cellular_off;
+      color = Colors.red[900]!;
+    }
+
+    return Icon(icon, size: 24, color: color);
   }
 }
 
@@ -364,6 +491,8 @@ class _DeviceConnectingDialogState extends State<_DeviceConnectingDialog> {
       final isReconnect = existingDevice != null;
 
       FitnessDevice fitnessDevice;
+      BleDevice? newDevice; // Only created for new devices, before adding to manager
+
       if (isReconnect) {
         developer.log('[DeviceConnectingDialog] Device already exists in manager, reconnecting');
         fitnessDevice = existingDevice;
@@ -389,23 +518,27 @@ class _DeviceConnectingDialogState extends State<_DeviceConnectingDialog> {
         }
 
         setState(() => _statusMessage = 'Creating device profile...');
-        final newDevice = BleDevice(
+        newDevice = BleDevice(
           id: widget.device.deviceId,
           name: widget.device.name ?? 'Unknown Device',
           transports: transports,
         );
-
-        setState(() => _statusMessage = 'Registering device...');
-        fitnessDevice = await deviceManager.addOrGetExistingDevice(newDevice);
+        fitnessDevice = newDevice; // Use temporarily for connection
       }
 
       if (!mounted) return;
 
       setState(() => _statusMessage = 'Establishing Bluetooth connection...');
       developer.log(
-        '[DeviceConnectingDialog] ${isReconnect ? 'Reconnecting' : 'Auto-connecting'} device: ${fitnessDevice.name}',
+        '[DeviceConnectingDialog] ${isReconnect ? 'Reconnecting' : 'Connecting'} device: ${fitnessDevice.name}',
       );
       await fitnessDevice.connect().value;
+
+      // Only add to manager AFTER successful connection
+      if (!isReconnect && newDevice != null) {
+        setState(() => _statusMessage = 'Registering device...');
+        fitnessDevice = await deviceManager.addOrGetExistingDevice(newDevice);
+      }
 
       if (!mounted) return;
 
