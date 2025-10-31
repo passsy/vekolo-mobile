@@ -97,10 +97,7 @@ class BleDeviceInspector {
 
     // Get or create device
     final devices = fbp.FlutterBluePlus.connectedDevices;
-    _device = devices.firstWhere(
-      (d) => d.remoteId.str == deviceId,
-      orElse: () => fbp.BluetoothDevice.fromId(deviceId),
-    );
+    _device = devices.firstWhere((d) => d.remoteId.str == deviceId, orElse: () => fbp.BluetoothDevice.fromId(deviceId));
 
     _connectionSubscription = _device!.connectionState.listen(
       (state) {
@@ -194,31 +191,27 @@ class BleDeviceInspector {
               descriptorReadError = e.toString();
             }
 
-            descriptors.add(_DescriptorInfo(
-              uuid: descriptor.uuid,
-              value: descriptorValue,
-              readError: descriptorReadError,
-            ));
+            descriptors.add(
+              _DescriptorInfo(uuid: descriptor.uuid, value: descriptorValue, readError: descriptorReadError),
+            );
           }
 
-          characteristics.add(_CharacteristicInfo(
-            uuid: characteristic.uuid,
-            isReadable: characteristic.properties.read,
-            isWritableWithResponse: characteristic.properties.write,
-            isWritableWithoutResponse: characteristic.properties.writeWithoutResponse,
-            isNotifiable: characteristic.properties.notify,
-            isIndicatable: characteristic.properties.indicate,
-            value: charValue,
-            readError: charReadError,
-            descriptors: descriptors,
-          ));
+          characteristics.add(
+            _CharacteristicInfo(
+              uuid: characteristic.uuid,
+              isReadable: characteristic.properties.read,
+              isWritableWithResponse: characteristic.properties.write,
+              isWritableWithoutResponse: characteristic.properties.writeWithoutResponse,
+              isNotifiable: characteristic.properties.notify,
+              isIndicatable: characteristic.properties.indicate,
+              value: charValue,
+              readError: charReadError,
+              descriptors: descriptors,
+            ),
+          );
         }
 
-        _services.add(_ServiceInfo(
-          uuid: service.uuid,
-          isPrimary: service.isPrimary,
-          characteristics: characteristics,
-        ));
+        _services.add(_ServiceInfo(uuid: service.uuid, isPrimary: service.isPrimary, characteristics: characteristics));
       }
 
       developer.log('[BleDeviceInspector] Service discovery completed');
@@ -229,9 +222,7 @@ class BleDeviceInspector {
   }
 
   /// Reads a characteristic value with timeout and error handling.
-  Future<({List<int>? value, String? error})> _readCharacteristic(
-    fbp.BluetoothCharacteristic characteristic,
-  ) async {
+  Future<({List<int>? value, String? error})> _readCharacteristic(fbp.BluetoothCharacteristic characteristic) async {
     try {
       final value = await characteristic.read().timeout(
         _characteristicReadTimeout,
@@ -443,11 +434,7 @@ class BleDeviceInspector {
 
 /// Internal class to store service information.
 class _ServiceInfo {
-  _ServiceInfo({
-    required this.uuid,
-    required this.isPrimary,
-    required this.characteristics,
-  });
+  _ServiceInfo({required this.uuid, required this.isPrimary, required this.characteristics});
 
   final fbp.Guid uuid;
   final bool isPrimary;
@@ -481,11 +468,7 @@ class _CharacteristicInfo {
 
 /// Internal class to store descriptor information.
 class _DescriptorInfo {
-  _DescriptorInfo({
-    required this.uuid,
-    required this.value,
-    required this.readError,
-  });
+  _DescriptorInfo({required this.uuid, required this.value, required this.readError});
 
   final fbp.Guid uuid;
   final List<int>? value;

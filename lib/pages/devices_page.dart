@@ -7,12 +7,11 @@ import 'package:go_router/go_router.dart';
 import 'package:state_beacon/state_beacon.dart';
 import 'package:vekolo/app/refs.dart';
 import 'package:vekolo/domain/devices/device_manager.dart';
+import 'package:vekolo/ble/ble_device.dart';
+import 'package:vekolo/ble/ble_scanner.dart';
 import 'package:vekolo/domain/devices/fitness_device.dart';
 import 'package:vekolo/domain/models/device_info.dart' as device_info;
 import 'package:vekolo/domain/models/erg_command.dart';
-import 'package:vekolo/domain/models/fitness_data.dart';
-import 'package:vekolo/domain/protocols/ftms_device.dart';
-import 'package:vekolo/ble/ble_scanner.dart';
 
 /// Page for managing connected fitness devices and assigning them to data sources.
 ///
@@ -948,12 +947,12 @@ class _DevicesPageState extends State<DevicesPage> {
       barrierDismissible: false,
       builder: (ctx) => _DeviceConnectingDialog(
         device: device,
-        onConnect: (ftmsDevice, autoAssignments, isReconnect) {
+        onConnect: (fitnessDevice, autoAssignments, isReconnect) {
           final message = isReconnect
-              ? '${ftmsDevice.name} reconnected'
+              ? '${fitnessDevice.name} reconnected'
               : autoAssignments.isEmpty
-              ? '${ftmsDevice.name} added and connected'
-              : '${ftmsDevice.name} connected and assigned as ${autoAssignments.join(', ')}';
+              ? '${fitnessDevice.name} added and connected'
+              : '${fitnessDevice.name} connected and assigned as ${autoAssignments.join(', ')}';
 
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
@@ -1181,7 +1180,7 @@ class _DeviceConnectingDialog extends StatefulWidget {
   const _DeviceConnectingDialog({required this.device, required this.onConnect});
 
   final DiscoveredDevice device;
-  final void Function(FtmsDevice ftmsDevice, List<String> autoAssignments, bool isReconnect) onConnect;
+  final void Function(FitnessDevice fitnessDevice, List<String> autoAssignments, bool isReconnect) onConnect;
 
   @override
   State<_DeviceConnectingDialog> createState() => _DeviceConnectingDialogState();
@@ -1210,20 +1209,42 @@ class _DeviceConnectingDialogState extends State<_DeviceConnectingDialog> {
       _statusMessage = 'Initializing device...';
     });
 
-    final deviceName = widget.device.name ?? '';
-    final deviceId = widget.device.deviceId;
-
     try {
       final deviceManager = Refs.deviceManager.of(context);
 
-      // Create FTMS device from scanned device
+      // Detect compatible transports and create device instance
+      setState(() => _statusMessage = 'Detecting device type...');
+      final transportRegistry = Refs.transportRegistry.of(context);
+
+      // Detect all compatible transports for this device
+      final transports = transportRegistry.detectCompatibleTransports(
+        widget.device,
+        deviceId: widget.device.deviceId,
+      );
+
+      developer.log(
+        '[DeviceConnectingDialog] Found ${transports.length} compatible transport(s)',
+        name: 'DeviceConnectingDialog',
+      );
+
+      if (transports.isEmpty) {
+        throw Exception(
+          'Device does not advertise any recognized fitness services. '
+          'Advertised services: ${widget.device.serviceUuids.map((uuid) => uuid.toString()).join(', ')}',
+        );
+      }
+
       setState(() => _statusMessage = 'Creating device profile...');
-      final newDevice = FtmsDevice(deviceId: deviceId, name: deviceName.isEmpty ? 'Unknown Device' : deviceName);
+      final newDevice = BleDevice(
+        id: widget.device.deviceId,
+        name: widget.device.name ?? 'Unknown Device',
+        transports: transports,
+      );
 
       // Add to device manager (or get existing if already exists)
       setState(() => _statusMessage = 'Registering device...');
-      final ftmsDevice = await deviceManager.addOrGetExistingDevice(newDevice) as FtmsDevice;
-      final isReconnect = ftmsDevice != newDevice;
+      final fitnessDevice = await deviceManager.addOrGetExistingDevice(newDevice);
+      final isReconnect = fitnessDevice != newDevice;
 
       if (isReconnect) {
         developer.log('[DeviceConnectingDialog] Device already exists in manager, reconnecting');
@@ -1238,31 +1259,33 @@ class _DeviceConnectingDialogState extends State<_DeviceConnectingDialog> {
         setState(() => _statusMessage = 'Configuring device assignments...');
 
         // Check if device supports ERG mode and no trainer is assigned
-        if (ftmsDevice.supportsErgMode && deviceManager.primaryTrainer == null) {
-          deviceManager.assignPrimaryTrainer(ftmsDevice.id);
+        if (fitnessDevice.supportsErgMode && deviceManager.primaryTrainer == null) {
+          deviceManager.assignPrimaryTrainer(fitnessDevice.id);
           autoAssignments.add('primary trainer');
         }
 
         // Auto-assign to data sources
-        if (ftmsDevice.capabilities.contains(device_info.DeviceDataType.power) && deviceManager.powerSource == null) {
-          deviceManager.assignPowerSource(ftmsDevice.id);
+        if (fitnessDevice.capabilities.contains(device_info.DeviceDataType.power) &&
+            deviceManager.powerSource == null) {
+          deviceManager.assignPowerSource(fitnessDevice.id);
           autoAssignments.add('power source');
         }
 
-        if (ftmsDevice.capabilities.contains(device_info.DeviceDataType.cadence) &&
+        if (fitnessDevice.capabilities.contains(device_info.DeviceDataType.cadence) &&
             deviceManager.cadenceSource == null) {
-          deviceManager.assignCadenceSource(ftmsDevice.id);
+          deviceManager.assignCadenceSource(fitnessDevice.id);
           autoAssignments.add('cadence source');
         }
 
-        if (ftmsDevice.capabilities.contains(device_info.DeviceDataType.speed) && deviceManager.speedSource == null) {
-          deviceManager.assignSpeedSource(ftmsDevice.id);
+        if (fitnessDevice.capabilities.contains(device_info.DeviceDataType.speed) &&
+            deviceManager.speedSource == null) {
+          deviceManager.assignSpeedSource(fitnessDevice.id);
           autoAssignments.add('speed source');
         }
 
-        if (ftmsDevice.capabilities.contains(device_info.DeviceDataType.heartRate) &&
+        if (fitnessDevice.capabilities.contains(device_info.DeviceDataType.heartRate) &&
             deviceManager.heartRateSource == null) {
-          deviceManager.assignHeartRateSource(ftmsDevice.id);
+          deviceManager.assignHeartRateSource(fitnessDevice.id);
           autoAssignments.add('heart rate source');
         }
       }
@@ -1270,9 +1293,9 @@ class _DeviceConnectingDialogState extends State<_DeviceConnectingDialog> {
       // Connect the device
       setState(() => _statusMessage = 'Establishing Bluetooth connection...');
       developer.log(
-        '[DeviceConnectingDialog] ${isReconnect ? 'Reconnecting' : 'Auto-connecting'} device: ${ftmsDevice.name}',
+        '[DeviceConnectingDialog] ${isReconnect ? 'Reconnecting' : 'Auto-connecting'} device: ${fitnessDevice.name}',
       );
-      await ftmsDevice.connect().value;
+      await fitnessDevice.connect().value;
 
       if (!mounted) return;
 
@@ -1285,7 +1308,7 @@ class _DeviceConnectingDialogState extends State<_DeviceConnectingDialog> {
       await Future.delayed(const Duration(milliseconds: 500));
       if (!mounted) return;
 
-      widget.onConnect(ftmsDevice, autoAssignments, isReconnect);
+      widget.onConnect(fitnessDevice, autoAssignments, isReconnect);
       Navigator.of(context).pop();
     } catch (e, stackTrace) {
       developer.log('Error connecting to device', name: 'DeviceConnectingDialog', error: e, stackTrace: stackTrace);

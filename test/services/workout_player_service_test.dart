@@ -14,21 +14,9 @@ void main() {
     group('Initialization', () {
       test('initializes with correct state', () {
         final deviceManager = createDeviceManager();
-        final plan = WorkoutPlan(
-          plan: [
-            PowerBlock(
-              id: 'block1',
-              duration: 60000,
-              power: 0.8,
-            ),
-          ],
-        );
+        final plan = WorkoutPlan(plan: [PowerBlock(id: 'block1', duration: 60000, power: 0.8)]);
 
-        final player = WorkoutPlayerService(
-          workoutPlan: plan,
-          deviceManager: deviceManager,
-          ftp: 200,
-        );
+        final player = WorkoutPlayerService(workoutPlan: plan, deviceManager: deviceManager, ftp: 200);
 
         expect(player.isPaused.value, true);
         expect(player.isComplete.value, false);
@@ -46,15 +34,7 @@ void main() {
 
       test('initializes with custom power scale factor', () {
         final deviceManager = createDeviceManager();
-        final plan = WorkoutPlan(
-          plan: [
-            PowerBlock(
-              id: 'block1',
-              duration: 60000,
-              power: 1.0,
-            ),
-          ],
-        );
+        final plan = WorkoutPlan(plan: [PowerBlock(id: 'block1', duration: 60000, power: 1.0)]);
 
         final player = WorkoutPlayerService(
           workoutPlan: plan,
@@ -72,40 +52,20 @@ void main() {
         final deviceManager = createDeviceManager();
         final plan = WorkoutPlan(
           plan: [
-            PowerBlock(
-              id: 'warmup',
-              duration: 30000,
-              power: 0.5,
-            ),
+            PowerBlock(id: 'warmup', duration: 30000, power: 0.5),
             WorkoutInterval(
               id: 'intervals',
               repeat: 2,
               parts: [
-                PowerBlock(
-                  id: 'work',
-                  duration: 10000,
-                  power: 1.2,
-                ),
-                PowerBlock(
-                  id: 'rest',
-                  duration: 10000,
-                  power: 0.6,
-                ),
+                PowerBlock(id: 'work', duration: 10000, power: 1.2),
+                PowerBlock(id: 'rest', duration: 10000, power: 0.6),
               ],
             ),
-            PowerBlock(
-              id: 'cooldown',
-              duration: 30000,
-              power: 0.5,
-            ),
+            PowerBlock(id: 'cooldown', duration: 30000, power: 0.5),
           ],
         );
 
-        final player = WorkoutPlayerService(
-          workoutPlan: plan,
-          deviceManager: deviceManager,
-          ftp: 200,
-        );
+        final player = WorkoutPlayerService(workoutPlan: plan, deviceManager: deviceManager, ftp: 200);
 
         // Should be: warmup, work1, rest1, work2, rest2, cooldown = 6 blocks
         // Total duration: 30 + 10 + 10 + 10 + 10 + 30 = 100 seconds
@@ -128,11 +88,7 @@ void main() {
           ],
         );
 
-        final player = WorkoutPlayerService(
-          workoutPlan: plan,
-          deviceManager: deviceManager,
-          ftp: 200,
-        );
+        final player = WorkoutPlayerService(workoutPlan: plan, deviceManager: deviceManager, ftp: 200);
 
         player.start();
         await Future.delayed(Duration(milliseconds: 200));
@@ -184,11 +140,7 @@ void main() {
           ],
         );
 
-        final player = WorkoutPlayerService(
-          workoutPlan: plan,
-          deviceManager: deviceManager,
-          ftp: 200,
-        );
+        final player = WorkoutPlayerService(workoutPlan: plan, deviceManager: deviceManager, ftp: 200);
 
         player.start();
 
@@ -214,23 +166,10 @@ void main() {
       test('sets cadence targets for power block', () async {
         final deviceManager = createDeviceManager();
         final plan = WorkoutPlan(
-          plan: [
-            PowerBlock(
-              id: 'block1',
-              duration: 1000,
-              power: 0.8,
-              cadence: 90,
-              cadenceLow: 80,
-              cadenceHigh: 100,
-            ),
-          ],
+          plan: [PowerBlock(id: 'block1', duration: 1000, power: 0.8, cadence: 90, cadenceLow: 80, cadenceHigh: 100)],
         );
 
-        final player = WorkoutPlayerService(
-          workoutPlan: plan,
-          deviceManager: deviceManager,
-          ftp: 200,
-        );
+        final player = WorkoutPlayerService(workoutPlan: plan, deviceManager: deviceManager, ftp: 200);
 
         player.start();
         await Future.delayed(Duration(milliseconds: 200));
@@ -246,22 +185,11 @@ void main() {
         final deviceManager = createDeviceManager();
         final plan = WorkoutPlan(
           plan: [
-            RampBlock(
-              id: 'ramp1',
-              duration: 1000,
-              powerStart: 0.5,
-              powerEnd: 1.0,
-              cadenceStart: 80,
-              cadenceEnd: 100,
-            ),
+            RampBlock(id: 'ramp1', duration: 1000, powerStart: 0.5, powerEnd: 1.0, cadenceStart: 80, cadenceEnd: 100),
           ],
         );
 
-        final player = WorkoutPlayerService(
-          workoutPlan: plan,
-          deviceManager: deviceManager,
-          ftp: 200,
-        );
+        final player = WorkoutPlayerService(workoutPlan: plan, deviceManager: deviceManager, ftp: 200);
 
         player.start();
 
@@ -289,21 +217,9 @@ void main() {
     group('Timer and State Updates', () {
       test('updates elapsed time during playback', () async {
         final deviceManager = createDeviceManager();
-        final plan = WorkoutPlan(
-          plan: [
-            PowerBlock(
-              id: 'block1',
-              duration: 10000,
-              power: 0.8,
-            ),
-          ],
-        );
+        final plan = WorkoutPlan(plan: [PowerBlock(id: 'block1', duration: 10000, power: 0.8)]);
 
-        final player = WorkoutPlayerService(
-          workoutPlan: plan,
-          deviceManager: deviceManager,
-          ftp: 200,
-        );
+        final player = WorkoutPlayerService(workoutPlan: plan, deviceManager: deviceManager, ftp: 200);
 
         expect(player.elapsedTime$.value, 0);
 
@@ -319,21 +235,9 @@ void main() {
 
       test('updates remaining time during playback', () async {
         final deviceManager = createDeviceManager();
-        final plan = WorkoutPlan(
-          plan: [
-            PowerBlock(
-              id: 'block1',
-              duration: 1000,
-              power: 0.8,
-            ),
-          ],
-        );
+        final plan = WorkoutPlan(plan: [PowerBlock(id: 'block1', duration: 1000, power: 0.8)]);
 
-        final player = WorkoutPlayerService(
-          workoutPlan: plan,
-          deviceManager: deviceManager,
-          ftp: 200,
-        );
+        final player = WorkoutPlayerService(workoutPlan: plan, deviceManager: deviceManager, ftp: 200);
 
         expect(player.remainingTime$.value, 1000);
 
@@ -349,21 +253,9 @@ void main() {
 
       test('updates progress during playback', () async {
         final deviceManager = createDeviceManager();
-        final plan = WorkoutPlan(
-          plan: [
-            PowerBlock(
-              id: 'block1',
-              duration: 1000,
-              power: 0.8,
-            ),
-          ],
-        );
+        final plan = WorkoutPlan(plan: [PowerBlock(id: 'block1', duration: 1000, power: 0.8)]);
 
-        final player = WorkoutPlayerService(
-          workoutPlan: plan,
-          deviceManager: deviceManager,
-          ftp: 200,
-        );
+        final player = WorkoutPlayerService(workoutPlan: plan, deviceManager: deviceManager, ftp: 200);
 
         expect(player.progress$.value, 0.0);
 
@@ -388,19 +280,11 @@ void main() {
               duration: 300, // 300ms
               power: 0.5,
             ),
-            PowerBlock(
-              id: 'block2',
-              duration: 300,
-              power: 0.8,
-            ),
+            PowerBlock(id: 'block2', duration: 300, power: 0.8),
           ],
         );
 
-        final player = WorkoutPlayerService(
-          workoutPlan: plan,
-          deviceManager: deviceManager,
-          ftp: 200,
-        );
+        final player = WorkoutPlayerService(workoutPlan: plan, deviceManager: deviceManager, ftp: 200);
 
         expect(player.currentBlockIndex$.value, 0);
         expect((player.currentBlock$.value as PowerBlock).id, 'block1');
@@ -419,21 +303,9 @@ void main() {
 
       test('completes workout after last block', () async {
         final deviceManager = createDeviceManager();
-        final plan = WorkoutPlan(
-          plan: [
-            PowerBlock(
-              id: 'block1',
-              duration: 300,
-              power: 0.8,
-            ),
-          ],
-        );
+        final plan = WorkoutPlan(plan: [PowerBlock(id: 'block1', duration: 300, power: 0.8)]);
 
-        final player = WorkoutPlayerService(
-          workoutPlan: plan,
-          deviceManager: deviceManager,
-          ftp: 200,
-        );
+        final player = WorkoutPlayerService(workoutPlan: plan, deviceManager: deviceManager, ftp: 200);
 
         expect(player.isComplete.value, false);
 
@@ -453,21 +325,9 @@ void main() {
     group('Pause and Resume', () {
       test('pauses workout', () async {
         final deviceManager = createDeviceManager();
-        final plan = WorkoutPlan(
-          plan: [
-            PowerBlock(
-              id: 'block1',
-              duration: 10000,
-              power: 0.8,
-            ),
-          ],
-        );
+        final plan = WorkoutPlan(plan: [PowerBlock(id: 'block1', duration: 10000, power: 0.8)]);
 
-        final player = WorkoutPlayerService(
-          workoutPlan: plan,
-          deviceManager: deviceManager,
-          ftp: 200,
-        );
+        final player = WorkoutPlayerService(workoutPlan: plan, deviceManager: deviceManager, ftp: 200);
 
         player.start();
         await Future.delayed(Duration(milliseconds: 300));
@@ -488,21 +348,9 @@ void main() {
 
       test('resumes workout from paused state', () async {
         final deviceManager = createDeviceManager();
-        final plan = WorkoutPlan(
-          plan: [
-            PowerBlock(
-              id: 'block1',
-              duration: 10000,
-              power: 0.8,
-            ),
-          ],
-        );
+        final plan = WorkoutPlan(plan: [PowerBlock(id: 'block1', duration: 10000, power: 0.8)]);
 
-        final player = WorkoutPlayerService(
-          workoutPlan: plan,
-          deviceManager: deviceManager,
-          ftp: 200,
-        );
+        final player = WorkoutPlayerService(workoutPlan: plan, deviceManager: deviceManager, ftp: 200);
 
         player.start();
         await Future.delayed(Duration(milliseconds: 300));
@@ -529,24 +377,12 @@ void main() {
         final deviceManager = createDeviceManager();
         final plan = WorkoutPlan(
           plan: [
-            PowerBlock(
-              id: 'block1',
-              duration: 60000,
-              power: 0.5,
-            ),
-            PowerBlock(
-              id: 'block2',
-              duration: 60000,
-              power: 0.8,
-            ),
+            PowerBlock(id: 'block1', duration: 60000, power: 0.5),
+            PowerBlock(id: 'block2', duration: 60000, power: 0.8),
           ],
         );
 
-        final player = WorkoutPlayerService(
-          workoutPlan: plan,
-          deviceManager: deviceManager,
-          ftp: 200,
-        );
+        final player = WorkoutPlayerService(workoutPlan: plan, deviceManager: deviceManager, ftp: 200);
 
         expect(player.currentBlockIndex$.value, 0);
         expect((player.currentBlock$.value as PowerBlock).id, 'block1');
@@ -562,21 +398,9 @@ void main() {
 
       test('skipping last block completes workout', () {
         final deviceManager = createDeviceManager();
-        final plan = WorkoutPlan(
-          plan: [
-            PowerBlock(
-              id: 'block1',
-              duration: 60000,
-              power: 0.8,
-            ),
-          ],
-        );
+        final plan = WorkoutPlan(plan: [PowerBlock(id: 'block1', duration: 60000, power: 0.8)]);
 
-        final player = WorkoutPlayerService(
-          workoutPlan: plan,
-          deviceManager: deviceManager,
-          ftp: 200,
-        );
+        final player = WorkoutPlayerService(workoutPlan: plan, deviceManager: deviceManager, ftp: 200);
 
         expect(player.isComplete.value, false);
 
@@ -592,21 +416,9 @@ void main() {
     group('Power Scale Factor', () {
       test('adjusts power scale factor', () async {
         final deviceManager = createDeviceManager();
-        final plan = WorkoutPlan(
-          plan: [
-            PowerBlock(
-              id: 'block1',
-              duration: 1000,
-              power: 1.0,
-            ),
-          ],
-        );
+        final plan = WorkoutPlan(plan: [PowerBlock(id: 'block1', duration: 1000, power: 1.0)]);
 
-        final player = WorkoutPlayerService(
-          workoutPlan: plan,
-          deviceManager: deviceManager,
-          ftp: 200,
-        );
+        final player = WorkoutPlayerService(workoutPlan: plan, deviceManager: deviceManager, ftp: 200);
 
         player.start();
         await Future.delayed(Duration(milliseconds: 200));
@@ -633,21 +445,9 @@ void main() {
 
       test('clamps power scale factor to valid range', () {
         final deviceManager = createDeviceManager();
-        final plan = WorkoutPlan(
-          plan: [
-            PowerBlock(
-              id: 'block1',
-              duration: 60000,
-              power: 1.0,
-            ),
-          ],
-        );
+        final plan = WorkoutPlan(plan: [PowerBlock(id: 'block1', duration: 60000, power: 1.0)]);
 
-        final player = WorkoutPlayerService(
-          workoutPlan: plan,
-          deviceManager: deviceManager,
-          ftp: 200,
-        );
+        final player = WorkoutPlayerService(workoutPlan: plan, deviceManager: deviceManager, ftp: 200);
 
         // Try to set too low
         player.setPowerScaleFactor(0.05);
@@ -664,21 +464,9 @@ void main() {
     group('Complete Early', () {
       test('completes workout early', () async {
         final deviceManager = createDeviceManager();
-        final plan = WorkoutPlan(
-          plan: [
-            PowerBlock(
-              id: 'block1',
-              duration: 10000,
-              power: 0.8,
-            ),
-          ],
-        );
+        final plan = WorkoutPlan(plan: [PowerBlock(id: 'block1', duration: 10000, power: 0.8)]);
 
-        final player = WorkoutPlayerService(
-          workoutPlan: plan,
-          deviceManager: deviceManager,
-          ftp: 200,
-        );
+        final player = WorkoutPlayerService(workoutPlan: plan, deviceManager: deviceManager, ftp: 200);
 
         player.start();
         await Future.delayed(Duration(milliseconds: 300));
@@ -700,13 +488,7 @@ void main() {
       test('triggers message events at correct times', () async {
         final deviceManager = createDeviceManager();
         final plan = WorkoutPlan(
-          plan: [
-            PowerBlock(
-              id: 'block1',
-              duration: 2000,
-              power: 0.8,
-            ),
-          ],
+          plan: [PowerBlock(id: 'block1', duration: 2000, power: 0.8)],
           events: [
             MessageEvent(
               id: 'msg1',
@@ -717,11 +499,7 @@ void main() {
           ],
         );
 
-        final player = WorkoutPlayerService(
-          workoutPlan: plan,
-          deviceManager: deviceManager,
-          ftp: 200,
-        );
+        final player = WorkoutPlayerService(workoutPlan: plan, deviceManager: deviceManager, ftp: 200);
 
         final triggeredEvents = <dynamic>[];
         player.triggeredEvent$.listen((event) {
@@ -743,28 +521,11 @@ void main() {
       test('does not retrigger events', () async {
         final deviceManager = createDeviceManager();
         final plan = WorkoutPlan(
-          plan: [
-            PowerBlock(
-              id: 'block1',
-              duration: 2000,
-              power: 0.8,
-            ),
-          ],
-          events: [
-            MessageEvent(
-              id: 'msg1',
-              parentBlockId: 'block1',
-              relativeTimeOffset: 100,
-              text: 'Test',
-            ),
-          ],
+          plan: [PowerBlock(id: 'block1', duration: 2000, power: 0.8)],
+          events: [MessageEvent(id: 'msg1', parentBlockId: 'block1', relativeTimeOffset: 100, text: 'Test')],
         );
 
-        final player = WorkoutPlayerService(
-          workoutPlan: plan,
-          deviceManager: deviceManager,
-          ftp: 200,
-        );
+        final player = WorkoutPlayerService(workoutPlan: plan, deviceManager: deviceManager, ftp: 200);
 
         final triggeredEvents = <dynamic>[];
         player.triggeredEvent$.listen((event) {
@@ -785,28 +546,13 @@ void main() {
       test('triggers effect events at correct times', () async {
         final deviceManager = createDeviceManager();
         final plan = WorkoutPlan(
-          plan: [
-            PowerBlock(
-              id: 'block1',
-              duration: 2000,
-              power: 0.8,
-            ),
-          ],
+          plan: [PowerBlock(id: 'block1', duration: 2000, power: 0.8)],
           events: [
-            EffectEvent(
-              id: 'effect1',
-              parentBlockId: 'block1',
-              relativeTimeOffset: 500,
-              effect: EffectType.fireworks,
-            ),
+            EffectEvent(id: 'effect1', parentBlockId: 'block1', relativeTimeOffset: 500, effect: EffectType.fireworks),
           ],
         );
 
-        final player = WorkoutPlayerService(
-          workoutPlan: plan,
-          deviceManager: deviceManager,
-          ftp: 200,
-        );
+        final player = WorkoutPlayerService(workoutPlan: plan, deviceManager: deviceManager, ftp: 200);
 
         final triggeredEvents = <dynamic>[];
         player.triggeredEvent$.listen((event) {
@@ -831,11 +577,7 @@ void main() {
         final deviceManager = createDeviceManager();
         final plan = WorkoutPlan(plan: []);
 
-        final player = WorkoutPlayerService(
-          workoutPlan: plan,
-          deviceManager: deviceManager,
-          ftp: 200,
-        );
+        final player = WorkoutPlayerService(workoutPlan: plan, deviceManager: deviceManager, ftp: 200);
 
         expect(player.currentBlock$.value, null);
         expect(player.remainingTime$.value, 0);
@@ -850,21 +592,9 @@ void main() {
 
       test('handles multiple pause/resume cycles', () async {
         final deviceManager = createDeviceManager();
-        final plan = WorkoutPlan(
-          plan: [
-            PowerBlock(
-              id: 'block1',
-              duration: 10000,
-              power: 0.8,
-            ),
-          ],
-        );
+        final plan = WorkoutPlan(plan: [PowerBlock(id: 'block1', duration: 10000, power: 0.8)]);
 
-        final player = WorkoutPlayerService(
-          workoutPlan: plan,
-          deviceManager: deviceManager,
-          ftp: 200,
-        );
+        final player = WorkoutPlayerService(workoutPlan: plan, deviceManager: deviceManager, ftp: 200);
 
         // Cycle 1
         player.start();
@@ -894,21 +624,9 @@ void main() {
 
       test('cannot start completed workout', () async {
         final deviceManager = createDeviceManager();
-        final plan = WorkoutPlan(
-          plan: [
-            PowerBlock(
-              id: 'block1',
-              duration: 300,
-              power: 0.8,
-            ),
-          ],
-        );
+        final plan = WorkoutPlan(plan: [PowerBlock(id: 'block1', duration: 300, power: 0.8)]);
 
-        final player = WorkoutPlayerService(
-          workoutPlan: plan,
-          deviceManager: deviceManager,
-          ftp: 200,
-        );
+        final player = WorkoutPlayerService(workoutPlan: plan, deviceManager: deviceManager, ftp: 200);
 
         player.start();
         await Future.delayed(Duration(milliseconds: 500));
@@ -927,21 +645,9 @@ void main() {
 
       test('dispose cleans up resources', () {
         final deviceManager = createDeviceManager();
-        final plan = WorkoutPlan(
-          plan: [
-            PowerBlock(
-              id: 'block1',
-              duration: 60000,
-              power: 0.8,
-            ),
-          ],
-        );
+        final plan = WorkoutPlan(plan: [PowerBlock(id: 'block1', duration: 60000, power: 0.8)]);
 
-        final player = WorkoutPlayerService(
-          workoutPlan: plan,
-          deviceManager: deviceManager,
-          ftp: 200,
-        );
+        final player = WorkoutPlayerService(workoutPlan: plan, deviceManager: deviceManager, ftp: 200);
 
         player.start();
         player.dispose();

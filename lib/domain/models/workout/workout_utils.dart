@@ -32,23 +32,15 @@ import 'package:vekolo/domain/models/workout/workout_models.dart';
 /// final flattened = flattenWorkoutPlan(plan);
 /// // Returns: [warmup, work1, rest1, work2, rest2, work3, rest3]
 /// ```
-List<dynamic> flattenWorkoutPlan(
-  List<dynamic> plan, {
-  double powerScaleFactor = 1.0,
-}) {
+List<dynamic> flattenWorkoutPlan(List<dynamic> plan, {double powerScaleFactor = 1.0}) {
   final flattened = <dynamic>[];
 
   void processItem(dynamic item) {
     if (item is PowerBlock) {
-      flattened.add(
-        item.copyWith(power: item.power * powerScaleFactor),
-      );
+      flattened.add(item.copyWith(power: item.power * powerScaleFactor));
     } else if (item is RampBlock) {
       flattened.add(
-        item.copyWith(
-          powerStart: item.powerStart * powerScaleFactor,
-          powerEnd: item.powerEnd * powerScaleFactor,
-        ),
+        item.copyWith(powerStart: item.powerStart * powerScaleFactor, powerEnd: item.powerEnd * powerScaleFactor),
       );
     } else if (item is WorkoutInterval) {
       for (var i = 0; i < item.repeat; i++) {
@@ -100,10 +92,7 @@ int calculateBlockDuration(dynamic item) {
   } else if (item is RampBlock) {
     return item.duration;
   } else if (item is WorkoutInterval) {
-    final singleRepDuration = item.parts.fold<int>(
-      0,
-      (total, part) => total + calculateBlockDuration(part),
-    );
+    final singleRepDuration = item.parts.fold<int>(0, (total, part) => total + calculateBlockDuration(part));
     return singleRepDuration * item.repeat;
   }
   return 0;
@@ -131,10 +120,7 @@ int calculateBlockDuration(dynamic item) {
 /// final flattened = flattenWorkoutEvents(plan, events);
 /// // Returns events with absolute timeOffset calculated from workout start
 /// ```
-List<dynamic> flattenWorkoutEvents(
-  List<dynamic> plan,
-  List<dynamic> events,
-) {
+List<dynamic> flattenWorkoutEvents(List<dynamic> plan, List<dynamic> events) {
   if (events.isEmpty) return [];
 
   // Build a map of block IDs to their start times in the workout
@@ -156,34 +142,28 @@ List<dynamic> flattenWorkoutEvents(
   }
 
   // Flatten events by adding block start time to relative offset
-  final flattenedEvents = events.where((event) {
-    final parentBlockId = event is MessageEvent ? event.parentBlockId : (event as EffectEvent).parentBlockId;
-    final startTime = blockStartTimes[parentBlockId];
-    if (startTime == null) {
-      developer.log(
-        'Event ${(event as dynamic).id} references unknown block $parentBlockId',
-        name: 'WorkoutUtils',
-      );
-      return false;
-    }
-    return true;
-  }).map((event) {
-    final parentBlockId = event is MessageEvent ? event.parentBlockId : (event as EffectEvent).parentBlockId;
-    final startTime = blockStartTimes[parentBlockId]!;
+  final flattenedEvents = events
+      .where((event) {
+        final parentBlockId = event is MessageEvent ? event.parentBlockId : (event as EffectEvent).parentBlockId;
+        final startTime = blockStartTimes[parentBlockId];
+        if (startTime == null) {
+          developer.log('Event ${(event as dynamic).id} references unknown block $parentBlockId', name: 'WorkoutUtils');
+          return false;
+        }
+        return true;
+      })
+      .map((event) {
+        final parentBlockId = event is MessageEvent ? event.parentBlockId : (event as EffectEvent).parentBlockId;
+        final startTime = blockStartTimes[parentBlockId]!;
 
-    if (event is MessageEvent) {
-      return FlattenedMessageEvent.fromMessageEvent(
-        event,
-        startTime + event.relativeTimeOffset,
-      );
-    } else {
-      final effectEvent = event as EffectEvent;
-      return FlattenedEffectEvent.fromEffectEvent(
-        effectEvent,
-        startTime + effectEvent.relativeTimeOffset,
-      );
-    }
-  }).toList();
+        if (event is MessageEvent) {
+          return FlattenedMessageEvent.fromMessageEvent(event, startTime + event.relativeTimeOffset);
+        } else {
+          final effectEvent = event as EffectEvent;
+          return FlattenedEffectEvent.fromEffectEvent(effectEvent, startTime + effectEvent.relativeTimeOffset);
+        }
+      })
+      .toList();
 
   // Sort by absolute time offset
   flattenedEvents.sort((a, b) {
@@ -212,10 +192,7 @@ List<dynamic> flattenWorkoutEvents(
 ///   print('At block ${position.blockId}, ${position.offset}ms into it');
 /// }
 /// ```
-({String blockId, int offset})? mapAbsoluteTimeToBlockRelative(
-  List<dynamic> plan,
-  int absoluteTime,
-) {
+({String blockId, int offset})? mapAbsoluteTimeToBlockRelative(List<dynamic> plan, int absoluteTime) {
   var cumulativeTime = 0;
 
   for (final planItem in plan) {
@@ -227,10 +204,10 @@ List<dynamic> flattenWorkoutEvents(
       final blockId = planItem is PowerBlock
           ? planItem.id
           : planItem is RampBlock
-              ? planItem.id
-              : planItem is WorkoutInterval
-                  ? planItem.id
-                  : null;
+          ? planItem.id
+          : planItem is WorkoutInterval
+          ? planItem.id
+          : null;
 
       if (blockId == null) {
         cumulativeTime += duration;
@@ -251,21 +228,17 @@ List<dynamic> flattenWorkoutEvents(
 /// Returns the absolute time offset from workout start for a given
 /// block ID and relative offset within that block. Returns null if
 /// the block is not found.
-int? mapBlockRelativeToAbsoluteTime(
-  List<dynamic> plan,
-  String parentBlockId,
-  int relativeTimeOffset,
-) {
+int? mapBlockRelativeToAbsoluteTime(List<dynamic> plan, String parentBlockId, int relativeTimeOffset) {
   var cumulativeTime = 0;
 
   for (final planItem in plan) {
     final blockId = planItem is PowerBlock
         ? planItem.id
         : planItem is RampBlock
-            ? planItem.id
-            : planItem is WorkoutInterval
-                ? planItem.id
-                : null;
+        ? planItem.id
+        : planItem is WorkoutInterval
+        ? planItem.id
+        : null;
 
     if (blockId == parentBlockId) {
       return cumulativeTime + relativeTimeOffset;
@@ -324,8 +297,7 @@ int? calculateCadenceAtTime(dynamic block, int elapsedTime) {
     // Interpolate cadence based on elapsed time
     final progress = elapsedTime / block.duration;
     final clampedProgress = progress.clamp(0.0, 1.0);
-    final interpolated = block.cadenceStart! +
-        (block.cadenceEnd! - block.cadenceStart!) * clampedProgress;
+    final interpolated = block.cadenceStart! + (block.cadenceEnd! - block.cadenceStart!) * clampedProgress;
     return interpolated.round();
   }
   return null;
@@ -362,10 +334,7 @@ int? calculateCadenceAtTime(dynamic block, int elapsedTime) {
     processItem(item);
   }
 
-  return (
-    minPower: minPower.isInfinite ? 0.0 : minPower,
-    maxPower: maxPower.isInfinite ? 0.0 : maxPower,
-  );
+  return (minPower: minPower.isInfinite ? 0.0 : minPower, maxPower: maxPower.isInfinite ? 0.0 : maxPower);
 }
 
 /// Calculates cadence statistics for a workout plan.

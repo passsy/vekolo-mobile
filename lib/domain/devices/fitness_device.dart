@@ -18,6 +18,7 @@ library;
 
 import 'package:async/async.dart';
 import 'package:state_beacon/state_beacon.dart';
+import 'package:vekolo/ble/transport_capabilities.dart';
 import 'package:vekolo/domain/models/device_info.dart';
 import 'package:vekolo/domain/models/fitness_data.dart';
 
@@ -152,7 +153,7 @@ abstract class FitnessDevice {
 
   /// Whether this device supports ERG mode (target power control).
   ///
-  /// Returns `true` only for smart trainers that can be controlled.
+  /// Returns `true` only for smart trainers that can be controlled in ERG mode.
   /// Returns `false` for all sensors (power meters, cadence, HR monitors).
   ///
   /// When `true`, [setTargetPower] can be called to control resistance.
@@ -176,6 +177,31 @@ abstract class FitnessDevice {
   ///
   /// Throws an exception if the device is not connected or if the command fails.
   Future<void> setTargetPower(int watts);
+
+  /// Returns `true` only for smart trainers that support simulation mode.
+  /// Returns `false` for all sensors and trainers without simulation support.
+  ///
+  /// When `true`, [setSimulationParameters] can be called to simulate road conditions.
+  /// This is the "Free Ride" mode used by apps like Zwift to simulate virtual terrain.
+  bool get supportsSimulationMode;
+
+  /// Sets simulation parameters for realistic road feel.
+  ///
+  /// Commands the trainer to adjust resistance based on environmental factors
+  /// (grade, wind, rolling resistance, wind resistance coefficient).
+  /// The trainer calculates required resistance based on these parameters
+  /// combined with the rider's current speed/cadence.
+  ///
+  /// Only valid when [supportsSimulationMode] is `true`. Throws an exception if
+  /// called on a device that doesn't support simulation mode.
+  ///
+  /// Apps like Zwift send updates every ~2 seconds as terrain changes in the virtual world.
+  ///
+  /// For devices where [requiresContinuousRefresh] is `true`, this command
+  /// must be periodically resent at [refreshInterval] to maintain the parameters.
+  ///
+  /// Throws an exception if the device is not connected or if the command fails.
+  Future<void> setSimulationParameters(SimulationParameters parameters);
 
   // ============================================================================
   // Protocol-Specific Behavior

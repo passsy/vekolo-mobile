@@ -6,13 +6,7 @@ import 'package:vekolo/domain/models/workout/workout_utils.dart';
 void main() {
   group('WorkoutModels JSON serialization', () {
     test('PowerBlock roundtrip', () {
-      final block = PowerBlock(
-        id: 'abc12345',
-        duration: 300000,
-        power: 0.85,
-        description: 'Steady state',
-        cadence: 90,
-      );
+      final block = PowerBlock(id: 'abc12345', duration: 300000, power: 0.85, description: 'Steady state', cadence: 90);
 
       final json = block.toJson();
       final restored = PowerBlock.fromJson(json);
@@ -53,18 +47,8 @@ void main() {
         repeat: 3,
         description: 'VO2max intervals',
         parts: [
-          PowerBlock(
-            id: 'work1234',
-            duration: 180000,
-            power: 1.05,
-            description: 'Work',
-          ),
-          PowerBlock(
-            id: 'rest1234',
-            duration: 120000,
-            power: 0.6,
-            description: 'Recovery',
-          ),
+          PowerBlock(id: 'work1234', duration: 180000, power: 1.05, description: 'Work'),
+          PowerBlock(id: 'rest1234', duration: 120000, power: 0.6, description: 'Recovery'),
         ],
       );
 
@@ -120,46 +104,20 @@ void main() {
     test('WorkoutPlan roundtrip', () {
       final plan = WorkoutPlan(
         plan: [
-          RampBlock(
-            id: 'warmup01',
-            duration: 300000,
-            powerStart: 0.5,
-            powerEnd: 0.75,
-            description: 'Warm up',
-          ),
+          RampBlock(id: 'warmup01', duration: 300000, powerStart: 0.5, powerEnd: 0.75, description: 'Warm up'),
           WorkoutInterval(
             id: 'int12345',
             repeat: 2,
             description: 'Intervals',
             parts: [
-              PowerBlock(
-                id: 'work1234',
-                duration: 120000,
-                power: 1.0,
-                cadence: 95,
-              ),
-              PowerBlock(
-                id: 'rest1234',
-                duration: 60000,
-                power: 0.6,
-              ),
+              PowerBlock(id: 'work1234', duration: 120000, power: 1.0, cadence: 95),
+              PowerBlock(id: 'rest1234', duration: 60000, power: 0.6),
             ],
           ),
-          RampBlock(
-            id: 'cooldown',
-            duration: 300000,
-            powerStart: 0.7,
-            powerEnd: 0.5,
-            description: 'Cool down',
-          ),
+          RampBlock(id: 'cooldown', duration: 300000, powerStart: 0.7, powerEnd: 0.5, description: 'Cool down'),
         ],
         events: [
-          MessageEvent(
-            id: 'msg00001',
-            parentBlockId: 'warmup01',
-            relativeTimeOffset: 60000,
-            text: 'Get ready!',
-          ),
+          MessageEvent(id: 'msg00001', parentBlockId: 'warmup01', relativeTimeOffset: 60000, text: 'Get ready!'),
           EffectEvent(
             id: 'eff00001',
             parentBlockId: 'cooldown',
@@ -181,22 +139,9 @@ void main() {
 
     test('Complete JSON string roundtrip', () {
       final workout = WorkoutPlan(
-        plan: [
-          PowerBlock(
-            id: 'block001',
-            duration: 300000,
-            power: 0.8,
-            description: 'Steady',
-            cadence: 90,
-          ),
-        ],
+        plan: [PowerBlock(id: 'block001', duration: 300000, power: 0.8, description: 'Steady', cadence: 90)],
         events: [
-          MessageEvent(
-            id: 'msg00001',
-            parentBlockId: 'block001',
-            relativeTimeOffset: 150000,
-            text: 'Halfway there!',
-          ),
+          MessageEvent(id: 'msg00001', parentBlockId: 'block001', relativeTimeOffset: 150000, text: 'Halfway there!'),
         ],
       );
 
@@ -217,11 +162,7 @@ void main() {
   group('WorkoutUtils', () {
     test('flattenWorkoutPlan expands intervals', () {
       final plan = [
-        PowerBlock(
-          id: 'warmup01',
-          duration: 300000,
-          power: 0.6,
-        ),
+        PowerBlock(id: 'warmup01', duration: 300000, power: 0.6),
         WorkoutInterval(
           id: 'int12345',
           repeat: 3,
@@ -244,12 +185,7 @@ void main() {
     test('flattenWorkoutPlan applies power scale factor', () {
       final plan = [
         PowerBlock(id: 'block1', duration: 60000, power: 1.0),
-        RampBlock(
-          id: 'block2',
-          duration: 60000,
-          powerStart: 0.8,
-          powerEnd: 1.0,
-        ),
+        RampBlock(id: 'block2', duration: 60000, powerStart: 0.8, powerEnd: 1.0),
       ];
 
       final flattened = flattenWorkoutPlan(plan, powerScaleFactor: 0.9);
@@ -286,18 +222,8 @@ void main() {
       ];
 
       final events = [
-        MessageEvent(
-          id: 'msg1',
-          parentBlockId: 'block1',
-          relativeTimeOffset: 60000,
-          text: 'First message',
-        ),
-        MessageEvent(
-          id: 'msg2',
-          parentBlockId: 'block2',
-          relativeTimeOffset: 90000,
-          text: 'Second message',
-        ),
+        MessageEvent(id: 'msg1', parentBlockId: 'block1', relativeTimeOffset: 60000, text: 'First message'),
+        MessageEvent(id: 'msg2', parentBlockId: 'block2', relativeTimeOffset: 90000, text: 'Second message'),
       ];
 
       final flattened = flattenWorkoutEvents(plan, events);
@@ -318,12 +244,7 @@ void main() {
     });
 
     test('calculatePowerAtTime for RampBlock', () {
-      final block = RampBlock(
-        id: 'test',
-        duration: 60000,
-        powerStart: 0.6,
-        powerEnd: 1.0,
-      );
+      final block = RampBlock(id: 'test', duration: 60000, powerStart: 0.6, powerEnd: 1.0);
 
       expect(calculatePowerAtTime(block, 0), closeTo(0.6, 0.001));
       expect(calculatePowerAtTime(block, 30000), closeTo(0.8, 0.001));
@@ -351,18 +272,11 @@ void main() {
     test('calculatePowerStats', () {
       final plan = [
         PowerBlock(id: 'block1', duration: 60000, power: 0.6),
-        RampBlock(
-          id: 'block2',
-          duration: 60000,
-          powerStart: 0.5,
-          powerEnd: 1.2,
-        ),
+        RampBlock(id: 'block2', duration: 60000, powerStart: 0.5, powerEnd: 1.2),
         WorkoutInterval(
           id: 'int1',
           repeat: 2,
-          parts: [
-            PowerBlock(id: 'work1', duration: 60000, power: 1.5),
-          ],
+          parts: [PowerBlock(id: 'work1', duration: 60000, power: 1.5)],
         ),
       ];
 
@@ -388,9 +302,7 @@ void main() {
         WorkoutInterval(
           id: 'int1',
           repeat: 2,
-          parts: [
-            PowerBlock(id: 'nested1', duration: 60000, power: 1.0),
-          ],
+          parts: [PowerBlock(id: 'nested1', duration: 60000, power: 1.0)],
         ),
       ];
 

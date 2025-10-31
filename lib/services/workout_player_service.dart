@@ -73,19 +73,12 @@ class WorkoutPlayerService {
     required DeviceManager deviceManager,
     required int ftp,
     double powerScaleFactor = 1.0,
-  })  : _workoutPlan = workoutPlan,
-        _ftp = ftp,
-        _syncService = WorkoutSyncService(deviceManager),
-        _flattenedPlan = flattenWorkoutPlan(
-          workoutPlan.plan,
-          powerScaleFactor: powerScaleFactor,
-        ),
-        _flattenedEvents = flattenWorkoutEvents(
-          workoutPlan.plan,
-          workoutPlan.events,
-        ),
-        _totalDuration = calculateTotalDuration(workoutPlan.plan) {
-
+  }) : _workoutPlan = workoutPlan,
+       _ftp = ftp,
+       _syncService = WorkoutSyncService(deviceManager),
+       _flattenedPlan = flattenWorkoutPlan(workoutPlan.plan, powerScaleFactor: powerScaleFactor),
+       _flattenedEvents = flattenWorkoutEvents(workoutPlan.plan, workoutPlan.events),
+       _totalDuration = calculateTotalDuration(workoutPlan.plan) {
     // Set initial scale factor
     this.powerScaleFactor.value = powerScaleFactor;
 
@@ -231,8 +224,7 @@ class WorkoutPlayerService {
   ///
   /// Emits events (MessageEvent or EffectEvent) as they occur during playback.
   /// Subscribe to this to display messages or trigger visual effects.
-  final StreamController<dynamic> _triggeredEventController =
-      StreamController<dynamic>.broadcast();
+  final StreamController<dynamic> _triggeredEventController = StreamController<dynamic>.broadcast();
 
   /// Stream of triggered events during workout execution.
   Stream<dynamic> get triggeredEvent$ => _triggeredEventController.stream;
@@ -255,18 +247,12 @@ class WorkoutPlayerService {
     }
 
     if (isComplete.value) {
-      developer.log(
-        'Cannot start: workout is already complete',
-        name: 'WorkoutPlayerService',
-      );
+      developer.log('Cannot start: workout is already complete', name: 'WorkoutPlayerService');
       return;
     }
 
     if (_currentBlockIndex >= _flattenedPlan.length) {
-      developer.log(
-        'Cannot start: no blocks remaining',
-        name: 'WorkoutPlayerService',
-      );
+      developer.log('Cannot start: no blocks remaining', name: 'WorkoutPlayerService');
       return;
     }
 
@@ -320,17 +306,11 @@ class WorkoutPlayerService {
   void skip() {
     final currentBlock = currentBlock$.value;
     if (currentBlock == null) {
-      developer.log(
-        'Cannot skip: no current block',
-        name: 'WorkoutPlayerService',
-      );
+      developer.log('Cannot skip: no current block', name: 'WorkoutPlayerService');
       return;
     }
 
-    developer.log(
-      'Skipping block ${_currentBlockIndex}',
-      name: 'WorkoutPlayerService',
-    );
+    developer.log('Skipping block ${_currentBlockIndex}', name: 'WorkoutPlayerService');
 
     // Calculate how much time to add (remaining time in current block)
     final elapsedUntilCurrentBlock = _getWorkoutElapsedUntilCurrentBlock();
@@ -366,21 +346,13 @@ class WorkoutPlayerService {
   void setPowerScaleFactor(double factor) {
     final clampedFactor = factor.clamp(0.1, 5.0);
 
-    developer.log(
-      'Setting power scale factor: ${clampedFactor.toStringAsFixed(2)}',
-      name: 'WorkoutPlayerService',
-    );
+    developer.log('Setting power scale factor: ${clampedFactor.toStringAsFixed(2)}', name: 'WorkoutPlayerService');
 
     powerScaleFactor.value = clampedFactor;
 
     // Re-flatten the plan with the new factor
     _flattenedPlan.clear();
-    _flattenedPlan.addAll(
-      flattenWorkoutPlan(
-        _workoutPlan.plan,
-        powerScaleFactor: clampedFactor,
-      ),
-    );
+    _flattenedPlan.addAll(flattenWorkoutPlan(_workoutPlan.plan, powerScaleFactor: clampedFactor));
 
     // Update current/next blocks
     _updateCurrentAndNextBlock();
@@ -394,10 +366,7 @@ class WorkoutPlayerService {
   /// Use this when the user manually ends the workout before finishing
   /// all blocks.
   void completeEarly() {
-    developer.log(
-      'Completing workout early at ${_workoutElapsedTime}ms',
-      name: 'WorkoutPlayerService',
-    );
+    developer.log('Completing workout early at ${_workoutElapsedTime}ms', name: 'WorkoutPlayerService');
 
     _updateGlobalElapsedTime();
     _completeWorkout();
@@ -439,10 +408,7 @@ class WorkoutPlayerService {
   void _startTimer() {
     _stopTimer(); // Ensure no existing timer
 
-    _timer = Timer.periodic(
-      Duration(milliseconds: _timerInterval),
-      (timer) => _tick(),
-    );
+    _timer = Timer.periodic(Duration(milliseconds: _timerInterval), (timer) => _tick());
   }
 
   /// Stops the timer loop.
@@ -521,10 +487,7 @@ class WorkoutPlayerService {
     cadenceHigh$.value = block.cadenceHigh;
 
     // Update sync service with new target
-    _syncService.currentTarget.value = ErgCommand(
-      targetWatts: powerWatts,
-      timestamp: clock.now(),
-    );
+    _syncService.currentTarget.value = ErgCommand(targetWatts: powerWatts, timestamp: clock.now());
   }
 
   /// Handles a ramp block (gradually changing power).
@@ -553,10 +516,7 @@ class WorkoutPlayerService {
     cadenceHigh$.value = block.cadenceHigh;
 
     // Update sync service with new target
-    _syncService.currentTarget.value = ErgCommand(
-      targetWatts: powerWatts,
-      timestamp: clock.now(),
-    );
+    _syncService.currentTarget.value = ErgCommand(targetWatts: powerWatts, timestamp: clock.now());
   }
 
   /// Advances to the next block.
@@ -599,10 +559,7 @@ class WorkoutPlayerService {
         _triggeredEventController.add(flattenedEvent);
         _triggeredEventIds.add(eventId);
 
-        developer.log(
-          'Triggered event: $eventId at ${globalElapsedTime}ms',
-          name: 'WorkoutPlayerService',
-        );
+        developer.log('Triggered event: $eventId at ${globalElapsedTime}ms', name: 'WorkoutPlayerService');
       }
     }
   }
@@ -630,9 +587,7 @@ class WorkoutPlayerService {
 
   /// Updates the progress beacon.
   void _updateProgress() {
-    progress$.value = _totalDuration > 0
-        ? (_workoutElapsedTime / _totalDuration).clamp(0.0, 1.0)
-        : 0.0;
+    progress$.value = _totalDuration > 0 ? (_workoutElapsedTime / _totalDuration).clamp(0.0, 1.0) : 0.0;
 
     // Update current block remaining time
     final currentBlock = currentBlock$.value;
@@ -659,10 +614,7 @@ class WorkoutPlayerService {
 
   /// Completes the workout.
   void _completeWorkout() {
-    developer.log(
-      'Workout complete at ${_workoutElapsedTime}ms',
-      name: 'WorkoutPlayerService',
-    );
+    developer.log('Workout complete at ${_workoutElapsedTime}ms', name: 'WorkoutPlayerService');
 
     isPaused.value = true;
     isComplete.value = true;

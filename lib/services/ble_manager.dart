@@ -3,22 +3,24 @@ import 'dart:developer' as developer;
 import 'package:async/async.dart';
 import 'package:context_plus/context_plus.dart';
 import 'package:flutter/foundation.dart';
-import 'package:vekolo/domain/protocols/ftms_device.dart';
+import 'package:vekolo/ble/ble_device.dart';
+import 'package:vekolo/ble/ftms_ble_transport.dart';
+import 'package:vekolo/domain/devices/fitness_device.dart';
 
-/// Service layer wrapper for FtmsDevice.
+/// Service layer wrapper for BleDevice with FTMS transport.
 ///
 /// Provides a simple callback-based API for testing and debugging trainer connections.
-/// This is a thin wrapper that delegates to FtmsDevice (which uses FtmsBleTransport).
+/// This is a thin wrapper that delegates to BleDevice (which uses BLE transports).
 ///
 /// Architecture flow:
 /// - BleManager (service layer, callback API)
-///   → FtmsDevice (protocol layer, stream API)
-///     → FtmsBleTransport (infrastructure layer, BLE communication)
+///   → BleDevice (domain layer, stream API)
+///     → FtmsBleTransport (BLE communication layer)
 ///
 /// Used by TrainerPage for simple testing UI. For production multi-device
 /// management, use DeviceManager instead.
 class BleManager {
-  FtmsDevice? _device;
+  FitnessDevice? _device;
   VoidCallback? _powerSubscription;
   VoidCallback? _cadenceSubscription;
 
@@ -38,18 +40,23 @@ class BleManager {
 
   /// Connects to an FTMS device.
   ///
-  /// Creates an FtmsDevice internally and delegates connection to it.
+  /// Creates a BleDevice with FTMS transport and delegates connection to it.
   /// Returns a CancelableOperation for backward compatibility.
   CancelableOperation<void> connectToDevice(String deviceId) {
     developer.log('[BleManager] Connecting to device: $deviceId');
 
-    // Create FtmsDevice (which uses FtmsBleTransport internally)
-    _device = FtmsDevice(deviceId: deviceId, name: 'Trainer');
+    // Create BleDevice with FTMS transport
+    final ftmsTransport = FtmsBleTransport(deviceId: deviceId);
+    _device = BleDevice(
+      id: deviceId,
+      name: 'Trainer',
+      transports: [ftmsTransport],
+    );
 
     // Subscribe to data streams and convert to callbacks
     _setupDataStreamSubscriptions();
 
-    // Delegate connection to FtmsDevice
+    // Delegate connection to BleDevice
     final connectOperation = _device!.connect();
 
     // Wrap in CancelableOperation with custom cancel logic
@@ -76,32 +83,28 @@ class BleManager {
     }
   }
 
-  /// Subscribe to FtmsDevice data streams and convert to callbacks.
+  /// Subscribe to BleDevice data streams and convert to callbacks.
   void _setupDataStreamSubscriptions() {
     // Subscribe to power beacon
-    _powerSubscription = _device?.powerStream?.subscribe(
-      (data) {
-        if (data != null) {
-          currentPower = data.watts;
-          _notifyDataUpdate();
-        }
-      },
-    );
+    _powerSubscription = _device?.powerStream?.subscribe((data) {
+      if (data != null) {
+        currentPower = data.watts;
+        _notifyDataUpdate();
+      }
+    });
 
     // Subscribe to cadence beacon
-    _cadenceSubscription = _device?.cadenceStream?.subscribe(
-      (data) {
-        if (data != null) {
-          currentCadence = data.rpm;
-          _notifyDataUpdate();
-        }
-      },
-    );
+    _cadenceSubscription = _device?.cadenceStream?.subscribe((data) {
+      if (data != null) {
+        currentCadence = data.rpm;
+        _notifyDataUpdate();
+      }
+    });
 
     // Note: Speed is provided by FTMS Indoor Bike Data characteristic
-    // but FtmsDevice doesn't expose it yet. For now we'll simulate it
+    // but BleDevice doesn't expose it yet. For now we'll simulate it
     // based on power and cadence (rough approximation).
-    // TODO: Add speed support to FtmsDevice/FtmsBleTransport
+    // TODO: Add speed support to BleDevice/FtmsBleTransport
   }
 
   /// Notify callbacks when we have updated data.
@@ -116,7 +119,7 @@ class BleManager {
 
   /// Sets target power for ERG mode.
   ///
-  /// Delegates to FtmsDevice.setTargetPower().
+  /// Delegates to BleDevice.setTargetPower().
   void setTargetPower(int powerInWatts) {
     developer.log('[BleManager] setTargetPower called with ${powerInWatts}W');
 
@@ -125,7 +128,7 @@ class BleManager {
       return;
     }
 
-    // Delegate to FtmsDevice (which handles clamping and FTMS commands)
+    // Delegate to BleDevice (which handles clamping and FTMS commands)
     _device!.setTargetPower(powerInWatts).catchError((e, stackTrace) {
       print('[BleManager] Failed to set target power: $e');
       print(stackTrace);
@@ -145,8 +148,13 @@ class BleManager {
     _powerSubscription = null;
     _cadenceSubscription = null;
 
-    _device?.disconnect();
-    _device?.dispose();
+    final device = _device;
+    if (device != null) {
+      device.disconnect();
+      if (device is BleDevice) {
+        device.dispose();
+      }
+    }
     _device = null;
 
     currentPower = null;

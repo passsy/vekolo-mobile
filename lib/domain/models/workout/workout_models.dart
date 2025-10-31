@@ -127,15 +127,7 @@ class PowerBlock {
   }
 
   @override
-  int get hashCode => Object.hash(
-        id,
-        description,
-        duration,
-        power,
-        cadence,
-        cadenceHigh,
-        cadenceLow,
-      );
+  int get hashCode => Object.hash(id, description, duration, power, cadence, cadenceHigh, cadenceLow);
 
   @override
   String toString() {
@@ -274,17 +266,8 @@ class RampBlock {
   }
 
   @override
-  int get hashCode => Object.hash(
-        id,
-        description,
-        duration,
-        powerStart,
-        powerEnd,
-        cadenceStart,
-        cadenceEnd,
-        cadenceHigh,
-        cadenceLow,
-      );
+  int get hashCode =>
+      Object.hash(id, description, duration, powerStart, powerEnd, cadenceStart, cadenceEnd, cadenceHigh, cadenceLow);
 
   @override
   String toString() {
@@ -301,12 +284,7 @@ class RampBlock {
 /// Example: 3x (3min @ 105% FTP, 2min @ 60% FTP)
 class WorkoutInterval {
   /// Creates an interval.
-  const WorkoutInterval({
-    required this.id,
-    required this.parts,
-    required this.repeat,
-    this.description,
-  });
+  const WorkoutInterval({required this.id, required this.parts, required this.repeat, this.description});
 
   /// Creates an interval from JSON.
   factory WorkoutInterval.fromJson(Map<String, dynamic> json) {
@@ -370,12 +348,7 @@ class WorkoutInterval {
   }
 
   /// Creates a copy with optional field replacements.
-  WorkoutInterval copyWith({
-    String? id,
-    String? description,
-    List<dynamic>? parts,
-    int? repeat,
-  }) {
+  WorkoutInterval copyWith({String? id, String? description, List<dynamic>? parts, int? repeat}) {
     return WorkoutInterval(
       id: id ?? this.id,
       description: description ?? this.description,
@@ -396,12 +369,7 @@ class WorkoutInterval {
   }
 
   @override
-  int get hashCode => Object.hash(
-        id,
-        description,
-        Object.hashAll(parts),
-        repeat,
-      );
+  int get hashCode => Object.hash(id, description, Object.hashAll(parts), repeat);
 
   @override
   String toString() {
@@ -475,13 +443,7 @@ class MessageEvent {
   }
 
   /// Creates a copy with optional field replacements.
-  MessageEvent copyWith({
-    String? id,
-    String? parentBlockId,
-    int? relativeTimeOffset,
-    String? text,
-    int? duration,
-  }) {
+  MessageEvent copyWith({String? id, String? parentBlockId, int? relativeTimeOffset, String? text, int? duration}) {
     return MessageEvent(
       id: id ?? this.id,
       parentBlockId: parentBlockId ?? this.parentBlockId,
@@ -504,13 +466,7 @@ class MessageEvent {
   }
 
   @override
-  int get hashCode => Object.hash(
-        id,
-        parentBlockId,
-        relativeTimeOffset,
-        text,
-        duration,
-      );
+  int get hashCode => Object.hash(id, parentBlockId, relativeTimeOffset, text, duration);
 
   @override
   String toString() {
@@ -567,12 +523,7 @@ class EffectEvent {
   }
 
   /// Creates a copy with optional field replacements.
-  EffectEvent copyWith({
-    String? id,
-    String? parentBlockId,
-    int? relativeTimeOffset,
-    EffectType? effect,
-  }) {
+  EffectEvent copyWith({String? id, String? parentBlockId, int? relativeTimeOffset, EffectType? effect}) {
     return EffectEvent(
       id: id ?? this.id,
       parentBlockId: parentBlockId ?? this.parentBlockId,
@@ -593,12 +544,7 @@ class EffectEvent {
   }
 
   @override
-  int get hashCode => Object.hash(
-        id,
-        parentBlockId,
-        relativeTimeOffset,
-        effect,
-      );
+  int get hashCode => Object.hash(id, parentBlockId, relativeTimeOffset, effect);
 
   @override
   String toString() {
@@ -646,10 +592,7 @@ class FlattenedMessageEvent {
   });
 
   /// Creates from a MessageEvent with calculated absolute time.
-  factory FlattenedMessageEvent.fromMessageEvent(
-    MessageEvent event,
-    int absoluteTimeOffset,
-  ) {
+  factory FlattenedMessageEvent.fromMessageEvent(MessageEvent event, int absoluteTimeOffset) {
     return FlattenedMessageEvent(
       id: event.id,
       timeOffset: absoluteTimeOffset,
@@ -702,10 +645,7 @@ class FlattenedEffectEvent {
   });
 
   /// Creates from an EffectEvent with calculated absolute time.
-  factory FlattenedEffectEvent.fromEffectEvent(
-    EffectEvent event,
-    int absoluteTimeOffset,
-  ) {
+  factory FlattenedEffectEvent.fromEffectEvent(EffectEvent event, int absoluteTimeOffset) {
     return FlattenedEffectEvent(
       id: event.id,
       timeOffset: absoluteTimeOffset,
@@ -748,15 +688,15 @@ class FlattenedEffectEvent {
 /// This is the top-level model loaded from JSON representing a full workout.
 class WorkoutPlan {
   /// Creates a workout plan.
-  const WorkoutPlan({
-    required this.plan,
-    this.events = const [],
-  });
+  const WorkoutPlan({required this.plan, this.events = const []});
 
   /// Creates a workout plan from JSON.
   factory WorkoutPlan.fromJson(Map<String, dynamic> json) {
     final planList = pick(json, 'plan').asListOrThrow<Map<String, dynamic>>((p) => p.asMapOrThrow<String, dynamic>());
-    final eventsList = pick(json, 'events').asListOrEmpty<Map<String, dynamic>>((p) => p.asMapOrThrow<String, dynamic>());
+    final eventsList = pick(
+      json,
+      'events',
+    ).asListOrEmpty<Map<String, dynamic>>((p) => p.asMapOrThrow<String, dynamic>());
 
     return WorkoutPlan(
       plan: planList.map((itemJson) {

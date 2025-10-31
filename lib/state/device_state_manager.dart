@@ -50,12 +50,7 @@ class DeviceStateManager {
   /// Creates a new device state manager and initializes stream subscriptions.
   ///
   /// Call [dispose] when done to clean up resources.
-  DeviceStateManager(
-    this.deviceManager,
-    this.devices,
-    this.telemetry,
-    this.syncState,
-  ) {
+  DeviceStateManager(this.deviceManager, this.devices, this.telemetry, this.syncState) {
     _init();
   }
 

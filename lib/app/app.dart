@@ -8,6 +8,9 @@ import 'package:vekolo/app/refs.dart';
 import 'package:vekolo/ble/ble_permissions.dart';
 import 'package:vekolo/ble/ble_platform.dart';
 import 'package:vekolo/ble/ble_scanner.dart';
+import 'package:vekolo/ble/ftms_ble_transport.dart';
+import 'package:vekolo/ble/heart_rate_ble_transport.dart';
+import 'package:vekolo/ble/transport_registry.dart';
 import 'package:vekolo/config/api_config.dart';
 import 'package:vekolo/domain/devices/device_manager.dart';
 import 'package:vekolo/app/router.dart';
@@ -82,6 +85,15 @@ class _VekoloAppState extends State<VekoloApp> {
 
           final blePlatform = Refs.blePlatform.bindWhenUnbound(context, () => BlePlatformImpl());
           final blePermissions = Refs.blePermissions.bindWhenUnbound(context, () => BlePermissionsImpl());
+
+          // Initialize transport registry and register available transports
+          Refs.transportRegistry.bindWhenUnbound(context, () {
+            final registry = TransportRegistry();
+            // Register transport implementations
+            registry.register(ftmsTransportRegistration);
+            registry.register(heartRateTransportRegistration);
+            return registry;
+          });
 
           // Initialize BLE services
           Refs.bleScanner.bindWhenUnbound(context, () {

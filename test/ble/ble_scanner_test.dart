@@ -87,10 +87,7 @@ void main() {
   });
 
   group('BleScanner - Token Management', () {
-    BleScanner createScanner({
-      FakeBlePlatform? platform,
-      FakeBlePermissions? permissions,
-    }) {
+    BleScanner createScanner({FakeBlePlatform? platform, FakeBlePermissions? permissions}) {
       final p = platform ?? FakeBlePlatform();
       final perms = permissions ?? FakeBlePermissions();
       final scanner = BleScanner(platform: p, permissions: perms);
@@ -376,24 +373,28 @@ void main() {
     // These tests validate the concept but may not pass with the current FakeClock implementation.
     // In production, device expiry works correctly based on wall clock time.
 
-    test('device expires after 5 seconds without advertisement', () async {
-      final (:scanner, :platform) = createScanner();
-      final device = platform.addDevice('D1', 'Heart Monitor', rssi: -60);
-      device.turnOn();
+    test(
+      'device expires after 5 seconds without advertisement',
+      () async {
+        final (:scanner, :platform) = createScanner();
+        final device = platform.addDevice('D1', 'Heart Monitor', rssi: -60);
+        device.turnOn();
 
-      scanner.startScan();
-      await Future.delayed(const Duration(milliseconds: 200));
+        scanner.startScan();
+        await Future.delayed(const Duration(milliseconds: 200));
 
-      expect(scanner.devices.value, hasLength(1));
+        expect(scanner.devices.value, hasLength(1));
 
-      // Turn off device so it stops advertising
-      device.turnOff();
+        // Turn off device so it stops advertising
+        device.turnOff();
 
-      // Wait real time for expiry (5 seconds + margin)
-      await Future.delayed(const Duration(seconds: 7));
+        // Wait real time for expiry (5 seconds + margin)
+        await Future.delayed(const Duration(seconds: 7));
 
-      expect(scanner.devices.value, isEmpty);
-    }, skip: 'Requires real time delays - takes too long for unit tests');
+        expect(scanner.devices.value, isEmpty);
+      },
+      skip: 'Requires real time delays - takes too long for unit tests',
+    );
 
     test('device does not expire if still advertising', () async {
       final (:scanner, :platform) = createScanner();
@@ -457,32 +458,36 @@ void main() {
       expect(scanner.devices.value, isEmpty);
     }, skip: 'Requires real time delays - takes too long for unit tests');
 
-    test('expired device reappears if it starts advertising again', () async {
-      final (:scanner, :platform) = createScanner();
-      final device = platform.addDevice('D1', 'Heart Monitor', rssi: -60);
-      device.turnOn();
+    test(
+      'expired device reappears if it starts advertising again',
+      () async {
+        final (:scanner, :platform) = createScanner();
+        final device = platform.addDevice('D1', 'Heart Monitor', rssi: -60);
+        device.turnOn();
 
-      scanner.startScan();
-      await Future.delayed(const Duration(milliseconds: 200));
+        scanner.startScan();
+        await Future.delayed(const Duration(milliseconds: 200));
 
-      expect(scanner.devices.value, hasLength(1));
-      final firstSeenTime = scanner.devices.value.first.firstSeen;
+        expect(scanner.devices.value, hasLength(1));
+        final firstSeenTime = scanner.devices.value.first.firstSeen;
 
-      // Device expires
-      device.turnOff();
-      await Future.delayed(const Duration(seconds: 7));
+        // Device expires
+        device.turnOff();
+        await Future.delayed(const Duration(seconds: 7));
 
-      expect(scanner.devices.value, isEmpty);
+        expect(scanner.devices.value, isEmpty);
 
-      // Device comes back
-      device.turnOn();
-      await Future.delayed(const Duration(milliseconds: 200));
+        // Device comes back
+        device.turnOn();
+        await Future.delayed(const Duration(milliseconds: 200));
 
-      expect(scanner.devices.value, hasLength(1));
-      expect(scanner.devices.value.first.deviceId, 'D1');
-      // firstSeen should be newer since it's a new discovery
-      expect(scanner.devices.value.first.firstSeen.isAfter(firstSeenTime), true);
-    }, skip: 'Requires real time delays - takes too long for unit tests');
+        expect(scanner.devices.value, hasLength(1));
+        expect(scanner.devices.value.first.deviceId, 'D1');
+        // firstSeen should be newer since it's a new discovery
+        expect(scanner.devices.value.first.firstSeen.isAfter(firstSeenTime), true);
+      },
+      skip: 'Requires real time delays - takes too long for unit tests',
+    );
   });
 
   group('BleScanner - Bluetooth State', () {
@@ -783,10 +788,7 @@ void main() {
   });
 
   group('BleScanner - Lifecycle Handling', () {
-    BleScanner createScanner({
-      FakeBlePlatform? platform,
-      FakeBlePermissions? permissions,
-    }) {
+    BleScanner createScanner({FakeBlePlatform? platform, FakeBlePermissions? permissions}) {
       final p = platform ?? FakeBlePlatform();
       final perms = permissions ?? FakeBlePermissions();
       final scanner = BleScanner(platform: p, permissions: perms);

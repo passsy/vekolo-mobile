@@ -25,6 +25,7 @@ import 'dart:math';
 import 'package:async/async.dart';
 import 'package:clock/clock.dart';
 import 'package:state_beacon/state_beacon.dart';
+import 'package:vekolo/ble/transport_capabilities.dart';
 import 'package:vekolo/domain/devices/fitness_device.dart';
 import 'package:vekolo/domain/mocks/mock_trainer.dart';
 import 'package:vekolo/domain/models/device_info.dart';
@@ -129,11 +130,7 @@ class DeviceSimulator {
   /// Useful for testing multi-device scenarios where power comes from
   /// a separate sensor rather than the trainer.
   static FitnessDevice createPowerMeter({String name = 'Virtual Power Meter', double variability = 0.03}) {
-    return _MockPowerMeter(
-      id: 'mock-pm-${clock.now().millisecondsSinceEpoch}',
-      name: name,
-      variability: variability,
-    );
+    return _MockPowerMeter(id: 'mock-pm-${clock.now().millisecondsSinceEpoch}', name: name, variability: variability);
   }
 
   /// Creates a cadence sensor that only provides cadence data.
@@ -277,8 +274,16 @@ class _MockPowerMeter extends FitnessDevice {
   bool get supportsErgMode => false;
 
   @override
+  bool get supportsSimulationMode => false;
+
+  @override
   Future<void> setTargetPower(int watts) {
     throw UnsupportedError('Power meters do not support ERG mode');
+  }
+
+  @override
+  Future<void> setSimulationParameters(SimulationParameters parameters) {
+    throw UnsupportedError('Power meters do not support simulation mode');
   }
 
   @override
@@ -385,8 +390,16 @@ class _MockCadenceSensor extends FitnessDevice {
   bool get supportsErgMode => false;
 
   @override
+  bool get supportsSimulationMode => false;
+
+  @override
   Future<void> setTargetPower(int watts) {
     throw UnsupportedError('Cadence sensors do not support ERG mode');
+  }
+
+  @override
+  Future<void> setSimulationParameters(SimulationParameters parameters) {
+    throw UnsupportedError('Cadence sensors do not support simulation mode');
   }
 
   @override
@@ -502,8 +515,16 @@ class _MockHeartRateMonitor extends FitnessDevice {
   bool get supportsErgMode => false;
 
   @override
+  bool get supportsSimulationMode => false;
+
+  @override
   Future<void> setTargetPower(int watts) {
     throw UnsupportedError('Heart rate monitors do not support ERG mode');
+  }
+
+  @override
+  Future<void> setSimulationParameters(SimulationParameters parameters) {
+    throw UnsupportedError('Heart rate monitors do not support simulation mode');
   }
 
   @override

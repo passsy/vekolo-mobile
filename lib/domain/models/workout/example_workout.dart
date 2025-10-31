@@ -93,13 +93,7 @@ WorkoutPlan createVo2maxIntervalWorkout() {
 WorkoutPlan createSweetSpotWorkout() {
   return WorkoutPlan(
     plan: [
-      RampBlock(
-        id: 'warmup02',
-        duration: 300000,
-        powerStart: 0.5,
-        powerEnd: 0.7,
-        description: 'Warm up',
-      ),
+      RampBlock(id: 'warmup02', duration: 300000, powerStart: 0.5, powerEnd: 0.7, description: 'Warm up'),
       WorkoutInterval(
         id: 'sweetspot',
         repeat: 2,
@@ -120,13 +114,7 @@ WorkoutPlan createSweetSpotWorkout() {
           ),
         ],
       ),
-      RampBlock(
-        id: 'cooldown2',
-        duration: 300000,
-        powerStart: 0.7,
-        powerEnd: 0.5,
-        description: 'Cool down',
-      ),
+      RampBlock(id: 'cooldown2', duration: 300000, powerStart: 0.7, powerEnd: 0.5, description: 'Cool down'),
     ],
     events: [
       MessageEvent(

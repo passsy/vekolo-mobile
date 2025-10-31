@@ -2,9 +2,14 @@ import 'dart:async';
 import 'dart:developer' as developer;
 import 'dart:typed_data';
 
-import 'package:async/async.dart';
 import 'package:clock/clock.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart' as fbp;
+import 'package:state_beacon/state_beacon.dart';
+import 'package:vekolo/ble/ble_scanner.dart';
+import 'package:vekolo/ble/ble_transport.dart';
+import 'package:vekolo/ble/transport_capabilities.dart';
+import 'package:vekolo/ble/transport_registry.dart';
+import 'package:vekolo/domain/models/device_info.dart';
 import 'package:vekolo/domain/models/fitness_data.dart';
 
 /// Shadow state representing the desired configuration of an FTMS device.
@@ -69,13 +74,13 @@ class FtmsDeviceState {
 
   /// Creates an idle state (device not under control).
   const FtmsDeviceState.idle()
-      : targetPower = null,
-        targetResistanceLevel = null,
-        targetSpeed = null,
-        targetInclination = null,
-        targetHeartRate = null,
-        targetCadence = null,
-        simulationParams = null;
+    : targetPower = null,
+      targetResistanceLevel = null,
+      targetSpeed = null,
+      targetInclination = null,
+      targetHeartRate = null,
+      targetCadence = null,
+      simulationParams = null;
 
   /// Returns true if any control mode is active.
   bool get hasActiveControl =>
@@ -111,7 +116,8 @@ class FtmsDeviceState {
       simulationParams.hashCode;
 
   @override
-  String toString() => 'FtmsDeviceState('
+  String toString() =>
+      'FtmsDeviceState('
       'power: $targetPower, '
       'resistance: $targetResistanceLevel, '
       'speed: $targetSpeed, '
@@ -122,74 +128,15 @@ class FtmsDeviceState {
       ')';
 }
 
-/// Indoor bike simulation parameters (FTMS Op Code 0x11).
-///
-/// Used for realistic outdoor ride simulation, combining environmental
-/// factors like wind, grade, and rolling resistance.
-class SimulationParameters {
-  /// Creates simulation parameters.
-  ///
-  /// [windSpeed] - Wind speed in m/s (positive = headwind, negative = tailwind)
-  /// [grade] - Grade percentage (positive = uphill, negative = downhill)
-  /// [crr] - Coefficient of rolling resistance (default: 0.004 for asphalt)
-  /// [cw] - Wind resistance coefficient (default: 0.51 for upright position)
-  const SimulationParameters({
-    required this.windSpeed,
-    required this.grade,
-    this.crr = 0.004,
-    this.cw = 0.51,
-  });
-
-  /// Wind speed in meters/second.
-  /// Range: -127.99 to +127.99 m/s
-  /// Resolution: 0.001 m/s
-  /// Positive = headwind, Negative = tailwind
-  final double windSpeed;
-
-  /// Grade (slope) in percentage.
-  /// Range: -200.00% to +200.00%
-  /// Resolution: 0.01%
-  /// Positive = uphill, Negative = downhill
-  final double grade;
-
-  /// Coefficient of Rolling Resistance (Crr).
-  /// Range: 0 to 1
-  /// Resolution: 0.0001
-  /// Examples: 0.004 (asphalt), 0.008 (rough road), 0.012 (gravel)
-  final double crr;
-
-  /// Wind Resistance Coefficient (Cw).
-  /// Range: 0 to 1
-  /// Resolution: 0.01
-  /// Examples: 0.51 (upright), 0.38 (hoods), 0.32 (drops), 0.25 (aero)
-  final double cw;
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is SimulationParameters &&
-          runtimeType == other.runtimeType &&
-          windSpeed == other.windSpeed &&
-          grade == other.grade &&
-          crr == other.crr &&
-          cw == other.cw;
-
-  @override
-  int get hashCode => windSpeed.hashCode ^ grade.hashCode ^ crr.hashCode ^ cw.hashCode;
-
-  @override
-  String toString() => 'SimulationParameters(wind: ${windSpeed}m/s, grade: $grade%, crr: $crr, cw: $cw)';
-}
-
 /// Bluetooth transport layer for FTMS (Fitness Machine Service) protocol.
 ///
 /// Handles low-level BLE communication with FTMS-compliant trainers and bikes.
-/// Exposes data streams for power and cadence, and provides methods for
-/// connection management and ERG mode control.
+/// Provides power, cadence, speed data streams and ERG mode control.
 ///
 /// This is a pure transport layer - no domain logic, just BLE communication
-/// and FTMS protocol parsing. Used by [FtmsDevice] for protocol implementation.
-class FtmsBleTransport {
+/// and FTMS protocol parsing.
+class FtmsBleTransport
+    implements BleTransport, PowerSource, CadenceSource, SpeedSource, ErgModeControl, SimulationModeControl {
   /// Creates an FTMS BLE transport for the specified device.
   FtmsBleTransport({required this.deviceId});
 
@@ -201,18 +148,15 @@ class FtmsBleTransport {
   static final _indoorBikeDataUuid = fbp.Guid('00002AD2-0000-1000-8000-00805f9b34fb');
   static final _controlPointUuid = fbp.Guid('00002AD9-0000-1000-8000-00805f9b34fb');
 
-  // BLE device reference
-  fbp.BluetoothDevice? _device;
-
   static const _bluetoothDebounce = Duration(milliseconds: 250);
 
   // Connection state
   StreamSubscription<fbp.BluetoothConnectionState>? _connectionSubscription;
   StreamSubscription<List<int>>? _indoorBikeDataSubscription;
   StreamSubscription<List<int>>? _controlPointSubscription;
-  Completer<void>? _connectionCompleter;
   fbp.BluetoothCharacteristic? _indoorBikeDataChar;
   fbp.BluetoothCharacteristic? _controlPointChar;
+  ConnectionError? _lastAttachError;
 
   // Device state synchronization
   FtmsDeviceState _desiredState = const FtmsDeviceState.idle(); // What we want the device to be
@@ -222,135 +166,92 @@ class FtmsBleTransport {
   Timer? _syncDebounceTimer; // Debounce timer for sync requests
   DateTime _lastSyncTime = clock.now();
 
-  // Data stream controllers
-  final _powerController = StreamController<PowerData>.broadcast();
-  final _cadenceController = StreamController<CadenceData>.broadcast();
-  final _speedController = StreamController<SpeedData>.broadcast();
-  final _connectionStateController = StreamController<ConnectionState>.broadcast();
+  // Data beacons
+  late final WritableBeacon<PowerData?> _powerBeacon = Beacon.writable(null);
+  late final WritableBeacon<CadenceData?> _cadenceBeacon = Beacon.writable(null);
+  late final WritableBeacon<SpeedData?> _speedBeacon = Beacon.writable(null);
+  late final WritableBeacon<TransportState> _stateBeacon = Beacon.writable(TransportState.detached);
 
-  /// Stream of power data from the trainer.
-  Stream<PowerData> get powerStream => _powerController.stream;
+  // ============================================================================
+  // BleTransport Interface Implementation
+  // ============================================================================
 
-  /// Stream of cadence data from the trainer.
-  Stream<CadenceData> get cadenceStream => _cadenceController.stream;
-
-  /// Stream of speed data from the trainer.
-  Stream<SpeedData> get speedStream => _speedController.stream;
-
-  /// Stream of connection state changes.
-  Stream<ConnectionState> get connectionStateStream => _connectionStateController.stream;
-
-  /// Whether the transport is currently connected.
-  bool get isConnected => _connectionSubscription != null;
-
-  /// Connects to the FTMS device with cancellable operation support.
-  ///
-  /// Returns a [CancelableOperation] that can be cancelled during connection.
-  /// Throws [TimeoutException] if connection takes longer than 15 seconds.
-  CancelableOperation<void> connectCancelable() {
-    return CancelableOperation.fromFuture(
-      connect(),
-      onCancel: () {
-        developer.log('[FtmsBleTransport] Connection cancelled, cleaning up');
-        _connectionSubscription?.cancel();
-        _connectionCompleter?.completeError(Exception('Connection cancelled'));
-        _handleDisconnection();
-      },
-    );
+  @override
+  bool canSupport(DiscoveredDevice device) {
+    // FTMS devices advertise the FTMS service UUID (0x1826)
+    return device.serviceUuids.contains(_ftmsServiceUuid);
   }
 
-  /// Connects to the FTMS device.
+  @override
+  Future<bool> verifyCompatibility({
+    required fbp.BluetoothDevice device,
+    required List<fbp.BluetoothService> services,
+  }) async {
+    // FTMS has standard implementation, no deep check needed
+    // All FTMS devices that advertise the service should work
+    return true;
+  }
+
+  @override
+  ReadableBeacon<TransportState> get state => _stateBeacon;
+
+  @override
+  ConnectionError? get lastAttachError => _lastAttachError;
+
+  @override
+  bool get isAttached => _stateBeacon.value == TransportState.attached;
+
+  // ============================================================================
+  // Capability Interface Implementations
+  // ============================================================================
+
+  // PowerSource
+  @override
+  ReadableBeacon<PowerData?> get powerStream => _powerBeacon;
+
+  // CadenceSource
+  @override
+  ReadableBeacon<CadenceData?> get cadenceStream => _cadenceBeacon;
+
+  // SpeedSource
+  @override
+  ReadableBeacon<SpeedData?> get speedStream => _speedBeacon;
+
+  // ErgModeControl - setTargetPower is implemented below
+  // SimulationModeControl - setSimulationParameters is implemented below
+
+  /// Attaches to the FTMS service on an already-connected device.
   ///
-  /// Establishes BLE connection and subscribes to FTMS characteristics.
-  /// Throws [TimeoutException] if connection takes longer than 15 seconds.
-  Future<void> connect() async {
+  /// The [device] must already be connected and [services] must be discovered
+  /// by BleDevice before calling this method.
+  @override
+  Future<void> attach({required fbp.BluetoothDevice device, required List<fbp.BluetoothService> services}) async {
     try {
-      developer.log('[FtmsBleTransport] Connecting to device: $deviceId');
-      _connectionStateController.add(ConnectionState.connecting);
+      developer.log('[FtmsBleTransport] Attaching to FTMS service on device: $deviceId');
+      _stateBeacon.value = TransportState.attaching;
+      _lastAttachError = null; // Clear any previous error
 
-      // Create a completer to track connection completion
-      final completer = Completer<void>();
-      _connectionCompleter = completer;
-
-      // Get the device from system devices or connected devices
-      final devices = fbp.FlutterBluePlus.connectedDevices;
-      _device = devices.firstWhere(
-        (d) => d.remoteId.str == deviceId,
-        orElse: () => fbp.BluetoothDevice.fromId(deviceId),
-      );
-
-      // Track if we've ever connected to distinguish initial state from disconnection
-      var hasConnected = false;
-
-      // Listen to connection state changes
-      _connectionSubscription = _device!.connectionState.listen(
-        (state) async {
-          developer.log('[FtmsBleTransport] Connection state: $state');
-
-          if (state == fbp.BluetoothConnectionState.connected) {
-            hasConnected = true;
-            _connectionStateController.add(ConnectionState.connected);
-            try {
-              await _setupCharacteristics();
-              // Connection successful, complete the future
-              if (!completer.isCompleted) {
-                developer.log('[FtmsBleTransport] Connection completed successfully');
-                completer.complete();
-              }
-            } catch (e, stackTrace) {
-              print('[FtmsBleTransport] Error setting up characteristics: $e');
-              print(stackTrace);
-              if (!completer.isCompleted) {
-                completer.completeError(e, stackTrace);
-              }
-              _handleDisconnection();
-            }
-          } else if (state == fbp.BluetoothConnectionState.disconnected) {
-            // Only handle disconnection if we had successfully connected before
-            // This prevents initial "disconnected" state from canceling the connection
-            if (hasConnected) {
-              if (!completer.isCompleted) {
-                completer.completeError('Device disconnected unexpectedly');
-              }
-              _handleDisconnection();
-            }
-          }
-        },
-        onError: (Object e, StackTrace stackTrace) {
-          print('[FtmsBleTransport] Connection error: $e');
-          print(stackTrace);
-          if (!completer.isCompleted) {
-            completer.completeError(e, stackTrace);
-          }
-          _handleDisconnection();
-        },
-      );
-
-      // Connect to the device
-      await _device!.connect(timeout: const Duration(seconds: 10));
-
-      // Wait for connection to complete with timeout
-      await completer.future.timeout(
-        const Duration(seconds: 15),
-        onTimeout: () {
-          throw TimeoutException('Connection timed out after 15 seconds');
-        },
-      );
+      await _setupCharacteristics(services: services);
+      _stateBeacon.value = TransportState.attached;
+      developer.log('[FtmsBleTransport] FTMS service attached successfully');
     } catch (e, stackTrace) {
-      print('[FtmsBleTransport] Failed to connect: $e');
+      print('[FtmsBleTransport] Failed to attach to FTMS service: $e');
       print(stackTrace);
+      _lastAttachError = ConnectionError(
+        message: 'Failed to attach to FTMS service: $e',
+        timestamp: clock.now(),
+        error: e,
+        stackTrace: stackTrace,
+      );
       _handleDisconnection();
       rethrow;
     }
   }
 
-  Future<void> _setupCharacteristics() async {
+  Future<void> _setupCharacteristics({required List<fbp.BluetoothService> services}) async {
     try {
       developer.log('[FtmsBleTransport] Setting up characteristics');
-
-      // Discover services
-      final services = await _device!.discoverServices();
-      developer.log('[FtmsBleTransport] Discovered ${services.length} services');
+      developer.log('[FtmsBleTransport] Using ${services.length} services');
 
       // Find FTMS service
       final ftmsService = services.firstWhere(
@@ -409,6 +310,10 @@ class FtmsBleTransport {
   void _parseIndoorBikeData(Uint8List data) {
     if (data.length < 2) return;
 
+    // Log raw data for debugging
+    final hexData = data.map((b) => b.toRadixString(16).padLeft(2, '0')).join(' ');
+    developer.log('[FtmsBleTransport] 📥 Raw Indoor Bike Data: $hexData');
+
     final buffer = data.buffer.asByteData();
     int offset = 0;
 
@@ -435,6 +340,10 @@ class FtmsBleTransport {
     final cadencePresent = (flags & 0x04) != 0;
     final powerPresent = (flags & 0x40) != 0;
 
+    developer.log(
+      '[FtmsBleTransport] Indoor Bike Data - Flags: 0x${flags.toRadixString(16).padLeft(4, '0')} (speed:$speedPresent, cadence:$cadencePresent, power:$powerPresent), Length: ${data.length}',
+    );
+
     try {
       final timestamp = clock.now();
       int? power;
@@ -445,7 +354,14 @@ class FtmsBleTransport {
       if (speedPresent && offset + 2 <= data.length) {
         final rawSpeed = buffer.getUint16(offset, Endian.little);
         speed = rawSpeed * 0.01; // Resolution: 0.01 km/h
+        developer.log('[FtmsBleTransport] 📊 Speed parsed - Raw: $rawSpeed, Calculated: ${speed}km/h');
         offset += 2;
+      } else if (speedPresent) {
+        developer.log(
+          '[FtmsBleTransport] ⚠️ Speed flag present but not enough data (offset: $offset, length: ${data.length})',
+        );
+      } else {
+        developer.log('[FtmsBleTransport] ℹ️ Speed not present in data (flags indicate no speed)');
       }
 
       // Skip average speed if present
@@ -486,15 +402,15 @@ class FtmsBleTransport {
         offset += 2;
       }
 
-      // Emit data to streams
+      // Update beacons with parsed data
       if (power != null) {
-        _powerController.add(PowerData(watts: power, timestamp: timestamp));
+        _powerBeacon.value = PowerData(watts: power, timestamp: timestamp);
       }
       if (cadence != null) {
-        _cadenceController.add(CadenceData(rpm: cadence, timestamp: timestamp));
+        _cadenceBeacon.value = CadenceData(rpm: cadence, timestamp: timestamp);
       }
       if (speed != null) {
-        _speedController.add(SpeedData(kmh: speed, timestamp: timestamp));
+        _speedBeacon.value = SpeedData(kmh: speed, timestamp: timestamp);
       }
     } catch (e, stackTrace) {
       print('[FtmsBleTransport] Error parsing indoor bike data: $e');
@@ -561,7 +477,7 @@ class FtmsBleTransport {
   ///
   /// Implements FTMS Control Point operations (section 4.16.1 of spec).
   Future<void> _syncState() async {
-    if (!isConnected || _isSyncing) return;
+    if (!isAttached || _isSyncing) return;
 
     // Rate limit sync operations
     final timeSinceLastSync = clock.now().difference(_lastSyncTime);
@@ -593,21 +509,25 @@ class FtmsBleTransport {
         if (_desiredState.targetPower != null) {
           final power = _desiredState.targetPower!;
           developer.log('[FtmsBleTransport] 📤 Sending: Set Target Power ${power}W (0x05)');
-          await _controlPointChar!.write(Uint8List.fromList([
-            0x05,
-            power & 0xFF, // Low byte
-            (power >> 8) & 0xFF, // High byte
-          ]));
+          await _controlPointChar!.write(
+            Uint8List.fromList([
+              0x05,
+              power & 0xFF, // Low byte
+              (power >> 8) & 0xFF, // High byte
+            ]),
+          );
         }
         // Target Resistance Level (Op Code 0x04)
         else if (_desiredState.targetResistanceLevel != null) {
           final level = _desiredState.targetResistanceLevel!;
           developer.log('[FtmsBleTransport] 📤 Sending: Set Target Resistance Level $level (0x04)');
-          await _controlPointChar!.write(Uint8List.fromList([
-            0x04,
-            level & 0xFF, // Low byte
-            (level >> 8) & 0xFF, // High byte (signed int16, but resistance is positive)
-          ]));
+          await _controlPointChar!.write(
+            Uint8List.fromList([
+              0x04,
+              level & 0xFF, // Low byte
+              (level >> 8) & 0xFF, // High byte (signed int16, but resistance is positive)
+            ]),
+          );
         }
         // Indoor Bike Simulation (Op Code 0x11)
         else if (_desiredState.simulationParams != null) {
@@ -619,18 +539,20 @@ class FtmsBleTransport {
           // FTMS spec: wind speed (sint16, 0.001 m/s), grade (sint16, 0.01%), crr (uint8, 0.0001), cw (uint8, 0.01)
           final windSpeedRaw = (sim.windSpeed * 1000).round().clamp(-32768, 32767);
           final gradeRaw = (sim.grade * 100).round().clamp(-32768, 32767);
-          final crrRaw = (sim.crr * 10000).round().clamp(0, 255);
-          final cwRaw = (sim.cw * 100).round().clamp(0, 255);
+          final crrRaw = (sim.rollingResistance * 10000).round().clamp(0, 255);
+          final cwRaw = (sim.windResistanceCoefficient * 100).round().clamp(0, 255);
 
-          await _controlPointChar!.write(Uint8List.fromList([
-            0x11, // Op Code
-            windSpeedRaw & 0xFF, // Wind speed low byte
-            (windSpeedRaw >> 8) & 0xFF, // Wind speed high byte
-            gradeRaw & 0xFF, // Grade low byte
-            (gradeRaw >> 8) & 0xFF, // Grade high byte
-            crrRaw, // Coefficient of rolling resistance
-            cwRaw, // Wind resistance coefficient
-          ]));
+          await _controlPointChar!.write(
+            Uint8List.fromList([
+              0x11, // Op Code
+              windSpeedRaw & 0xFF, // Wind speed low byte
+              (windSpeedRaw >> 8) & 0xFF, // Wind speed high byte
+              gradeRaw & 0xFF, // Grade low byte
+              (gradeRaw >> 8) & 0xFF, // Grade high byte
+              crrRaw, // Coefficient of rolling resistance
+              cwRaw, // Wind resistance coefficient
+            ]),
+          );
         }
         // Add more modes here as needed (speed, inclination, HR, cadence, etc.)
         else {
@@ -675,9 +597,7 @@ class FtmsBleTransport {
         : state;
 
     if (clampedState.targetPower != state.targetPower) {
-      developer.log(
-        '[FtmsBleTransport] Power clamped from ${state.targetPower}W to ${clampedState.targetPower}W',
-      );
+      developer.log('[FtmsBleTransport] Power clamped from ${state.targetPower}W to ${clampedState.targetPower}W');
     }
 
     // Update desired state
@@ -709,50 +629,62 @@ class FtmsBleTransport {
     _actualState = const FtmsDeviceState.idle();
     _hasControl = false;
     _isSyncing = false;
-    _connectionCompleter = null;
 
-    // Only add event if stream controller is not closed
-    if (!_connectionStateController.isClosed) {
-      _connectionStateController.add(ConnectionState.disconnected);
-    }
+    // Update transport state beacon
+    _stateBeacon.value = TransportState.detached;
   }
 
-  /// Disconnects from the FTMS device.
+  /// Detaches from the FTMS service.
   ///
-  /// Cancels all subscriptions and resets device state.
-  Future<void> disconnect() async {
-    try {
-      if (_device != null) {
-        await _device!.disconnect();
-      }
-    } finally {
-      _handleDisconnection();
-    }
+  /// Cancels all subscriptions and resets transport state.
+  /// Does not disconnect the physical device.
+  @override
+  Future<void> detach() async {
+    _handleDisconnection();
+  }
+
+  /// Sets the target power for ERG mode.
+  ///
+  /// The transport handles continuous refresh internally as needed.
+  @override
+  Future<void> setTargetPower(int watts) async {
+    syncState(FtmsDeviceState(targetPower: watts));
+  }
+
+  /// Sets simulation parameters for realistic road feel.
+  ///
+  /// The transport handles continuous refresh internally as needed.
+  @override
+  Future<void> setSimulationParameters(SimulationParameters parameters) async {
+    syncState(FtmsDeviceState(simulationParams: parameters));
   }
 
   /// Disposes of all resources.
   ///
   /// Must be called when the transport is no longer needed.
-  void dispose() {
+  @override
+  Future<void> dispose() async {
+    await detach();
     _connectionSubscription?.cancel();
     _indoorBikeDataSubscription?.cancel();
     _controlPointSubscription?.cancel();
     _syncDebounceTimer?.cancel();
-    _powerController.close();
-    _cadenceController.close();
-    _speedController.close();
-    _connectionStateController.close();
+    _powerBeacon.dispose();
+    _cadenceBeacon.dispose();
+    _speedBeacon.dispose();
+    _stateBeacon.dispose();
   }
 }
 
-/// Connection state for BLE transport.
-enum ConnectionState {
-  /// Device is disconnected.
-  disconnected,
+/// Registration for FTMS transport.
+///
+/// Use this to register the FTMS transport with [TransportRegistry]:
+/// ```dart
+/// registry.register(ftmsTransportRegistration);
+/// ```
+final ftmsTransportRegistration = TransportRegistration(name: 'FTMS', factory: _createFtmsTransport);
 
-  /// Device is connecting.
-  connecting,
-
-  /// Device is connected and ready.
-  connected,
+/// Factory function for creating FTMS transport instances.
+BleTransport _createFtmsTransport(String deviceId) {
+  return FtmsBleTransport(deviceId: deviceId);
 }

@@ -25,6 +25,7 @@ import 'dart:math';
 import 'package:async/async.dart';
 import 'package:clock/clock.dart';
 import 'package:state_beacon/state_beacon.dart';
+import 'package:vekolo/ble/transport_capabilities.dart';
 import 'package:vekolo/domain/devices/fitness_device.dart';
 import 'package:vekolo/domain/models/device_info.dart';
 import 'package:vekolo/domain/models/fitness_data.dart';
@@ -171,6 +172,9 @@ class MockTrainer extends FitnessDevice {
   bool get supportsErgMode => true;
 
   @override
+  bool get supportsSimulationMode => false; // Mock trainer doesn't simulate terrain
+
+  @override
   Future<void> setTargetPower(int watts) async {
     if (_disposed) throw StateError('Device has been disposed');
     if (_state != ConnectionState.connected) {
@@ -184,6 +188,12 @@ class MockTrainer extends FitnessDevice {
 
     _targetPower = watts;
     _simulatePowerRamp(watts);
+  }
+
+  @override
+  Future<void> setSimulationParameters(SimulationParameters parameters) {
+    // Mock trainer doesn't support simulation mode
+    throw UnsupportedError('Mock trainer does not support simulation mode');
   }
 
   @override
