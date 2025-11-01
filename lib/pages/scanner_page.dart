@@ -518,10 +518,13 @@ class _DeviceConnectingDialogState extends State<_DeviceConnectingDialog> {
         }
 
         setState(() => _statusMessage = 'Creating device profile...');
+        final blePlatform = Refs.blePlatform.of(context);
         newDevice = BleDevice(
           id: widget.device.deviceId,
           name: widget.device.name ?? 'Unknown Device',
           transports: transports,
+          platform: blePlatform,
+          discoveredDevice: widget.device,
         );
         fitnessDevice = newDevice; // Use temporarily for connection
       }

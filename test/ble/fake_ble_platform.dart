@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:clock/clock.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+import 'package:flutter_blue_plus_platform_interface/flutter_blue_plus_platform_interface.dart';
 import 'package:state_beacon/state_beacon.dart';
 import 'package:vekolo/ble/ble_platform.dart';
 
@@ -32,6 +33,8 @@ class FakeBlePlatform implements BlePlatform {
   final WritableBeacon<List<ScanResult>> _scanResultsBeacon = Beacon.writable(<ScanResult>[]);
 
   final Map<String, FakeDevice> _devices = {};
+  final Map<String, List<BluetoothService>> _deviceServices = {};
+  final Set<String> _connectedDeviceIds = {};
   bool _isScanning = false;
   Timer? _advertisingTimer;
 
@@ -85,6 +88,161 @@ class FakeBlePlatform implements BlePlatform {
       throw Exception('Device not found: $deviceId');
     }
     device._isConnected = true;
+    _connectedDeviceIds.add(deviceId);
+
+    // Create and cache services based on the fake device's advertised service UUIDs
+    // when the device connects, so they're ready when discoverServices() is called
+    _populateServicesForDevice(deviceId);
+
+    // Note: BluetoothCharacteristic.setNotifyValue() and write() will check if the device
+    // is connected via FlutterBluePlus's platform interface. Since we're using real
+    // BluetoothCharacteristic objects created via fromProto, they will try to communicate
+    // with the platform.
+    //
+    // To make this work in tests, we would need to either:
+    // 1. Override FlutterBluePlus's platform interface for tests
+    // 2. Create custom characteristic wrappers that don't call the platform
+    // 3. Ensure the device connection state is properly synchronized
+    //
+    // For now, the characteristics will fail with "device is not connected" errors.
+    // This needs to be addressed by properly mocking the platform or characteristics.
+  }
+
+  /// Populate services for a fake device based on its advertised service UUIDs.
+  void _populateServicesForDevice(String deviceId) {
+    final fakeDevice = _devices[deviceId];
+    if (fakeDevice == null || fakeDevice.services.isEmpty) {
+      return;
+    }
+
+    final device = fakeDevice.bluetoothDevice;
+    final services = <BluetoothService>[];
+
+    for (final serviceUuid in fakeDevice.services) {
+      // Create characteristics based on the service UUID
+      final characteristics = _createCharacteristicsForService(serviceUuid, device.remoteId);
+
+      // Create a BmBluetoothService proto object
+      final bmService = BmBluetoothService(
+        remoteId: device.remoteId,
+        primaryServiceUuid: null, // Primary service
+        serviceUuid: serviceUuid,
+        characteristics: characteristics,
+      );
+
+      // Convert to BluetoothService using fromProto
+      final bluetoothService = BluetoothService.fromProto(bmService);
+
+      // Replace real characteristics with fake ones that don't call the platform
+      final fakeCharacteristics = bluetoothService.characteristics.map((char) {
+        return FakeBluetoothCharacteristic(uuid: char.uuid, properties: char.properties, device: device);
+      }).toList();
+
+      // Create a fake service with fake characteristics
+      final fakeService = FakeBluetoothService(
+        uuid: bluetoothService.uuid,
+        remoteId: device.remoteId,
+        characteristics: fakeCharacteristics,
+      );
+
+      services.add(fakeService);
+    }
+
+    // Cache the services
+    _deviceServices[deviceId] = services;
+  }
+
+  /// Create characteristics for a given service UUID.
+  ///
+  /// Returns a list of BmBluetoothCharacteristic objects that match the
+  /// expected characteristics for common BLE fitness services.
+  List<BmBluetoothCharacteristic> _createCharacteristicsForService(Guid serviceUuid, DeviceIdentifier remoteId) {
+    // FTMS Service UUID: 00001826-0000-1000-8000-00805f9b34fb
+    final ftmsServiceUuid = Guid('00001826-0000-1000-8000-00805f9b34fb');
+    // Indoor Bike Data Characteristic: 00002AD2-0000-1000-8000-00805f9b34fb
+    final indoorBikeDataUuid = Guid('00002AD2-0000-1000-8000-00805f9b34fb');
+    // Control Point Characteristic: 00002AD9-0000-1000-8000-00805f9b34fb
+    final controlPointUuid = Guid('00002AD9-0000-1000-8000-00805f9b34fb');
+
+    // Heart Rate Service UUID: 0000180d-0000-1000-8000-00805f9b34fb
+    final heartRateServiceUuid = Guid('0000180d-0000-1000-8000-00805f9b34fb');
+    // Heart Rate Measurement Characteristic: 00002a37-0000-1000-8000-00805f9b34fb
+    final heartRateMeasurementUuid = Guid('00002a37-0000-1000-8000-00805f9b34fb');
+
+    int instanceIdCounter = 0;
+
+    if (serviceUuid == ftmsServiceUuid) {
+      // FTMS service requires indoor bike data and control point characteristics
+      return [
+        BmBluetoothCharacteristic(
+          remoteId: remoteId,
+          serviceUuid: serviceUuid,
+          characteristicUuid: indoorBikeDataUuid,
+          instanceId: instanceIdCounter++,
+          primaryServiceUuid: serviceUuid,
+          descriptors: [],
+          properties: BmCharacteristicProperties(
+            read: false,
+            write: false,
+            writeWithoutResponse: false,
+            notify: true,
+            indicate: false,
+            authenticatedSignedWrites: false,
+            extendedProperties: false,
+            broadcast: false,
+            notifyEncryptionRequired: false,
+            indicateEncryptionRequired: false,
+          ),
+        ),
+        BmBluetoothCharacteristic(
+          remoteId: remoteId,
+          serviceUuid: serviceUuid,
+          characteristicUuid: controlPointUuid,
+          instanceId: instanceIdCounter++,
+          primaryServiceUuid: serviceUuid,
+          descriptors: [],
+          properties: BmCharacteristicProperties(
+            read: false,
+            write: true,
+            writeWithoutResponse: false,
+            notify: true,
+            indicate: false,
+            authenticatedSignedWrites: false,
+            extendedProperties: false,
+            broadcast: false,
+            notifyEncryptionRequired: false,
+            indicateEncryptionRequired: false,
+          ),
+        ),
+      ];
+    } else if (serviceUuid == heartRateServiceUuid) {
+      // Heart Rate service requires heart rate measurement characteristic
+      return [
+        BmBluetoothCharacteristic(
+          remoteId: remoteId,
+          serviceUuid: serviceUuid,
+          characteristicUuid: heartRateMeasurementUuid,
+          instanceId: instanceIdCounter++,
+          primaryServiceUuid: serviceUuid,
+          descriptors: [],
+          properties: BmCharacteristicProperties(
+            read: false,
+            write: false,
+            writeWithoutResponse: false,
+            notify: true,
+            indicate: false,
+            authenticatedSignedWrites: false,
+            extendedProperties: false,
+            broadcast: false,
+            notifyEncryptionRequired: false,
+            indicateEncryptionRequired: false,
+          ),
+        ),
+      ];
+    }
+
+    // Unknown service - return empty characteristics list
+    return [];
   }
 
   Future<void> Function(String deviceId)? overrideDisconnect;
@@ -101,6 +259,14 @@ class FakeBlePlatform implements BlePlatform {
       return;
     }
     device._isConnected = false;
+    _connectedDeviceIds.remove(deviceId);
+
+    // Disconnect the BluetoothDevice instance
+    try {
+      await device.bluetoothDevice.disconnect();
+    } catch (_) {
+      // Ignore errors during disconnect
+    }
   }
 
   /// Change the Bluetooth adapter state.
@@ -131,6 +297,8 @@ class FakeBlePlatform implements BlePlatform {
   FakeDevice addDevice(String id, String name, {int rssi = -50, List<Guid>? services}) {
     final device = FakeDevice._(id: id, name: name, rssi: rssi, services: services ?? [], platform: this);
     _devices[id] = device;
+    // Initialize services cache - will be populated when discoverServices is called
+    _deviceServices[id] = [];
     return device;
   }
 
@@ -177,9 +345,230 @@ class FakeBlePlatform implements BlePlatform {
   }
 
   @override
+  BluetoothDevice getDevice(String deviceId) {
+    final fakeDevice = _devices[deviceId];
+    if (fakeDevice == null) {
+      throw Exception('Device not found: $deviceId');
+    }
+
+    // Ensure device is marked as connected if we think it's connected
+    if (_connectedDeviceIds.contains(deviceId) && !fakeDevice._isConnected) {
+      fakeDevice._isConnected = true;
+    }
+
+    // Return the BluetoothDevice instance stored in the fake device
+    // This ensures the device object is linked to the fake device and its services
+    return fakeDevice.bluetoothDevice;
+  }
+
+  @override
+  Future<int> requestMtu(String deviceId, {int mtu = 512}) async {
+    // In tests, just return the requested MTU
+    // Real MTU negotiation would happen in production via FlutterBluePlus
+    return mtu;
+  }
+
+  @override
+  Future<List<BluetoothService>> discoverServices(String deviceId) async {
+    final fakeDevice = _devices[deviceId];
+    if (fakeDevice == null) {
+      throw Exception('Device not found: $deviceId');
+    }
+
+    // Return cached services if available (created when device was connected)
+    final cachedServices = _deviceServices[deviceId];
+    if (cachedServices != null && cachedServices.isNotEmpty) {
+      return cachedServices;
+    }
+
+    // Create BluetoothService objects based on the fake device's advertised service UUIDs
+    // We use BluetoothService.fromProto() with BmBluetoothService objects
+    final device = fakeDevice.bluetoothDevice;
+    final services = <BluetoothService>[];
+
+    for (final serviceUuid in fakeDevice.services) {
+      // Create characteristics based on the service UUID
+      final characteristics = _createCharacteristicsForService(serviceUuid, device.remoteId);
+
+      // Create a BmBluetoothService proto object
+      final bmService = BmBluetoothService(
+        remoteId: device.remoteId,
+        primaryServiceUuid: null, // Primary service
+        serviceUuid: serviceUuid,
+        characteristics: characteristics,
+      );
+
+      // Convert to BluetoothService using fromProto
+      final bluetoothService = BluetoothService.fromProto(bmService);
+
+      // Replace real characteristics with fake ones that don't call the platform
+      final fakeCharacteristics = bluetoothService.characteristics.map((char) {
+        return FakeBluetoothCharacteristic(uuid: char.uuid, properties: char.properties, device: device);
+      }).toList();
+
+      // Create a fake service with fake characteristics
+      final fakeService = FakeBluetoothService(
+        uuid: bluetoothService.uuid,
+        remoteId: device.remoteId,
+        characteristics: fakeCharacteristics,
+      );
+
+      services.add(fakeService);
+    }
+
+    // Cache the created services
+    _deviceServices[deviceId] = services;
+    return services;
+  }
+
+  @override
   Future<void> setLogLevel(LogLevel level, {bool color = true}) async {
     //noop
   }
+}
+
+/// Fake implementation of BluetoothCharacteristic for testing.
+///
+/// This class mocks BluetoothCharacteristic methods without calling the
+/// FlutterBluePlus platform, allowing tests to run without real BLE hardware.
+class FakeBluetoothCharacteristic implements BluetoothCharacteristic {
+  FakeBluetoothCharacteristic({required this.uuid, required this.properties, required BluetoothDevice device})
+    : _device = device,
+      _isNotifying = false,
+      _valueController = StreamController<List<int>>.broadcast();
+
+  @override
+  final Guid uuid;
+
+  @override
+  final CharacteristicProperties properties;
+
+  final BluetoothDevice _device;
+  bool _isNotifying;
+  final StreamController<List<int>> _valueController;
+  List<int> _lastValue = [];
+
+  @override
+  Guid get characteristicUuid => uuid;
+
+  @override
+  List<BluetoothDescriptor> get descriptors => [];
+
+  @override
+  BluetoothDevice get device => _device;
+
+  @override
+  DeviceIdentifier get deviceId => _device.remoteId;
+
+  @override
+  int get instanceId => 0;
+
+  @override
+  Stream<List<int>> get onValueChangedStream => _valueController.stream;
+
+  @override
+  Guid? get primaryServiceUuid => null;
+
+  @override
+  DeviceIdentifier get remoteId => _device.remoteId;
+
+  @override
+  Guid get serviceUuid => uuid; // Characteristic belongs to its service
+
+  @override
+  Stream<List<int>> get value => _valueController.stream;
+
+  @override
+  bool get isNotifying => _isNotifying;
+
+  @override
+  Stream<List<int>> get lastValueStream => _valueController.stream;
+
+  @override
+  Stream<List<int>> get onValueReceived => _valueController.stream;
+
+  @override
+  List<int> get lastValue => _lastValue;
+
+  @override
+  Future<List<int>> read({int timeout = 15}) async {
+    // Return the last written value or empty list
+    return List<int>.from(_lastValue);
+  }
+
+  @override
+  Future<void> write(
+    List<int> value, {
+    bool allowLongWrite = false,
+    int timeout = 15,
+    bool withoutResponse = false,
+  }) async {
+    // Store the written value
+    _lastValue = List<int>.from(value);
+    // Emit the value on the stream
+    _valueController.add(_lastValue);
+  }
+
+  @override
+  Future<bool> setNotifyValue(bool notify, {bool forceIndications = false, int timeout = 15}) async {
+    _isNotifying = notify;
+    // In real BLE, notifications would start arriving from the device
+    // For tests, we can simulate this by emitting values if needed
+    return notify;
+  }
+
+  /// Simulate receiving a notification value from the device.
+  ///
+  /// Call this in tests to simulate the device sending data.
+  void simulateValueReceived(List<int> value) {
+    _lastValue = List<int>.from(value);
+    _valueController.add(_lastValue);
+  }
+
+  void dispose() {
+    _valueController.close();
+  }
+}
+
+/// Fake implementation of BluetoothService for testing.
+///
+/// This class wraps BluetoothService functionality but uses fake characteristics
+/// that don't call the FlutterBluePlus platform.
+class FakeBluetoothService implements BluetoothService {
+  FakeBluetoothService({required this.uuid, required DeviceIdentifier remoteId, required this.characteristics})
+    : _remoteId = remoteId;
+
+  @override
+  final Guid uuid;
+
+  @override
+  final List<BluetoothCharacteristic> characteristics;
+
+  final DeviceIdentifier _remoteId;
+
+  @override
+  DeviceIdentifier get deviceId => _remoteId;
+
+  @override
+  List<BluetoothService> get includedServices => [];
+
+  @override
+  bool get isPrimary => true;
+
+  @override
+  bool get isSecondary => false;
+
+  @override
+  BluetoothService? get primaryService => null;
+
+  @override
+  Guid? get primaryServiceUuid => null;
+
+  @override
+  DeviceIdentifier get remoteId => _remoteId;
+
+  @override
+  Guid get serviceUuid => uuid;
 }
 
 /// A simulated BLE device that can be controlled in tests.
@@ -193,6 +582,11 @@ class FakeDevice {
   final List<Guid> services;
   final FakeBlePlatform platform;
 
+  /// The BluetoothDevice instance linked to this fake device.
+  /// This ensures that when getDevice() is called, it returns a device
+  /// that's connected to this fake device and can discover its services.
+  final BluetoothDevice bluetoothDevice;
+
   int _rssi;
   bool _isAdvertising = false;
   bool _isConnected = false;
@@ -204,7 +598,8 @@ class FakeDevice {
     required int rssi,
     required this.services,
     required this.platform,
-  }) : _rssi = rssi;
+  }) : _rssi = rssi,
+       bluetoothDevice = BluetoothDevice(remoteId: DeviceIdentifier(id));
 
   /// Whether this device is currently connected.
   ///
@@ -228,6 +623,7 @@ class FakeDevice {
   /// The device immediately disappears from scan results.
   void turnOff() {
     _isAdvertising = false;
+    _isConnected = false;
     platform._emitScanResults();
   }
 
@@ -258,6 +654,7 @@ class FakeDevice {
   /// Sets [isConnected] to false. Safe to call even if not currently connected.
   Future<void> disconnect() async {
     await platform.disconnect(id);
+    _isConnected = false;
   }
 
   /// Convert this fake device to a FlutterBluePlus ScanResult.

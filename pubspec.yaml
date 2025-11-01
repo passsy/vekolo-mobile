@@ -28,6 +28,7 @@ dependencies:
   shared_preferences: ^2.5.0
 
 dev_dependencies:
+  flutter_blue_plus_platform_interface: ^7.0.0
   flutter_test:
     sdk: flutter
   lint: ^2.8.0

@@ -154,8 +154,7 @@ class FtmsBleTransport
   StreamSubscription<fbp.BluetoothConnectionState>? _connectionSubscription;
   StreamSubscription<List<int>>? _indoorBikeDataSubscription;
   StreamSubscription<List<int>>? _controlPointSubscription;
-  fbp.BluetoothCharacteristic? _indoorBikeDataChar;
-  fbp.BluetoothCharacteristic? _controlPointChar;
+  List<fbp.BluetoothService>? _services;
   ConnectionError? _lastAttachError;
 
   // Device state synchronization
@@ -231,6 +230,7 @@ class FtmsBleTransport
       _stateBeacon.value = TransportState.attaching;
       _lastAttachError = null; // Clear any previous error
 
+      _services = services;
       await _setupCharacteristics(services: services);
       _stateBeacon.value = TransportState.attached;
       developer.log('[FtmsBleTransport] FTMS service attached successfully');
@@ -256,45 +256,78 @@ class FtmsBleTransport
         orElse: () => throw Exception('FTMS service not found'),
       );
 
-      // Find indoor bike data characteristic
-      _indoorBikeDataChar = ftmsService.characteristics.firstWhere(
-        (c) => c.uuid == _indoorBikeDataUuid,
-        orElse: () => throw Exception('Indoor bike data characteristic not found'),
-      );
+      // Find indoor bike data characteristic (optional)
+      final indoorBikeDataChars = ftmsService.characteristics.where((c) => c.uuid == _indoorBikeDataUuid);
+      final indoorBikeDataChar = indoorBikeDataChars.isNotEmpty ? indoorBikeDataChars.first : null;
 
-      // Find control point characteristic
-      _controlPointChar = ftmsService.characteristics.firstWhere(
-        (c) => c.uuid == _controlPointUuid,
-        orElse: () => throw Exception('Control point characteristic not found'),
-      );
+      if (indoorBikeDataChar == null) {
+        developer.log(
+          '[FtmsBleTransport] Indoor bike data characteristic not found - data reading will be unavailable',
+          name: 'FtmsBleTransport',
+        );
+      }
 
-      // Subscribe to indoor bike data
-      await _indoorBikeDataChar!.setNotifyValue(true);
-      _indoorBikeDataSubscription = _indoorBikeDataChar!.lastValueStream.listen(
-        (data) {
-          _parseIndoorBikeData(Uint8List.fromList(data));
-        },
-        onError: (e, stackTrace) {
-          print('[FtmsBleTransport] Indoor bike data error: $e');
-          print(stackTrace);
-        },
-      );
+      // Find control point characteristic (optional)
+      final controlPointChars = ftmsService.characteristics.where((c) => c.uuid == _controlPointUuid);
+      final controlPointChar = controlPointChars.isNotEmpty ? controlPointChars.first : null;
 
-      // Subscribe to control point responses
-      await _controlPointChar!.setNotifyValue(true);
-      _controlPointSubscription = _controlPointChar!.lastValueStream.listen(
-        (data) {
-          _handleControlPointResponse(Uint8List.fromList(data));
-        },
-        onError: (e, stackTrace) {
-          print('[FtmsBleTransport] Control point error: $e');
-          print(stackTrace);
-        },
-      );
+      if (controlPointChar == null) {
+        developer.log(
+          '[FtmsBleTransport] Control point characteristic not found - device control will be unavailable',
+          name: 'FtmsBleTransport',
+        );
+      }
 
+      // Verify at least one characteristic exists
+      if (indoorBikeDataChar == null && controlPointChar == null) {
+        throw Exception(
+          'FTMS service found but no required characteristics available. '
+          'Expected at least one of: indoor bike data (${_indoorBikeDataUuid}) or control point (${_controlPointUuid})',
+        );
+      }
+
+      // Subscribe to indoor bike data if available
+      if (indoorBikeDataChar != null) {
+        await indoorBikeDataChar.setNotifyValue(true);
+        _indoorBikeDataSubscription = indoorBikeDataChar.lastValueStream.listen(
+          (data) {
+            _parseIndoorBikeData(Uint8List.fromList(data));
+          },
+          onError: (e, stackTrace) {
+            developer.log(
+              '[FtmsBleTransport] Indoor bike data error: $e',
+              name: 'FtmsBleTransport',
+              error: e,
+              stackTrace: stackTrace as StackTrace?,
+            );
+          },
+        );
+      }
+
+      // Subscribe to control point responses if available
+      if (controlPointChar != null) {
+        await controlPointChar.setNotifyValue(true);
+        _controlPointSubscription = controlPointChar.lastValueStream.listen(
+          (data) {
+            _handleControlPointResponse(Uint8List.fromList(data));
+          },
+          onError: (e, stackTrace) {
+            developer.log(
+              '[FtmsBleTransport] Control point error: $e',
+              name: 'FtmsBleTransport',
+              error: e,
+              stackTrace: stackTrace as StackTrace?,
+            );
+          },
+        );
+      }
     } catch (e, stackTrace) {
-      print('[FtmsBleTransport] Failed to setup characteristics: $e');
-      print(stackTrace);
+      developer.log(
+        '[FtmsBleTransport] Failed to setup characteristics: $e',
+        name: 'FtmsBleTransport',
+        error: e,
+        stackTrace: stackTrace,
+      );
       rethrow;
     }
   }
@@ -460,11 +493,21 @@ class FtmsBleTransport
     _isSyncing = true;
     _lastSyncTime = clock.now();
 
+    // Find control point characteristic from stored services
+    final controlPointChar = _getControlPointCharacteristic();
+    if (controlPointChar == null) {
+      developer.log(
+        '[FtmsBleTransport] Cannot sync device state - control point characteristic not available',
+        name: 'FtmsBleTransport',
+      );
+      return;
+    }
+
     try {
       // Step 1: Request control if we don't have it and need it
       final needsControl = _desiredState.hasActiveControl;
       if (needsControl && !_hasControl) {
-        await _controlPointChar!.write(Uint8List.fromList([0x00]));
+        await controlPointChar.write(Uint8List.fromList([0x00]));
         await Future.delayed(const Duration(milliseconds: 100)); // Wait for response
       }
 
@@ -479,7 +522,7 @@ class FtmsBleTransport
         // Target Power mode (Op Code 0x05) - ERG mode
         if (_desiredState.targetPower != null) {
           final power = _desiredState.targetPower!;
-          await _controlPointChar!.write(
+          await controlPointChar.write(
             Uint8List.fromList([
               0x05,
               power & 0xFF, // Low byte
@@ -490,7 +533,7 @@ class FtmsBleTransport
         // Target Resistance Level (Op Code 0x04)
         else if (_desiredState.targetResistanceLevel != null) {
           final level = _desiredState.targetResistanceLevel!;
-          await _controlPointChar!.write(
+          await controlPointChar.write(
             Uint8List.fromList([
               0x04,
               level & 0xFF, // Low byte
@@ -508,7 +551,7 @@ class FtmsBleTransport
           final crrRaw = (sim.rollingResistance * 10000).round().clamp(0, 255);
           final cwRaw = (sim.windResistanceCoefficient * 100).round().clamp(0, 255);
 
-          await _controlPointChar!.write(
+          await controlPointChar.write(
             Uint8List.fromList([
               0x11, // Op Code
               windSpeedRaw & 0xFF, // Wind speed low byte
@@ -582,6 +625,7 @@ class FtmsBleTransport
     _indoorBikeDataSubscription = null;
     _controlPointSubscription = null;
     _syncDebounceTimer = null;
+    _services = null;
     _desiredState = const FtmsDeviceState.idle();
     _actualState = const FtmsDeviceState.idle();
     _hasControl = false;
@@ -589,6 +633,22 @@ class FtmsBleTransport
 
     // Update transport state beacon
     _stateBeacon.value = TransportState.detached;
+  }
+
+  /// Gets the control point characteristic from stored services.
+  fbp.BluetoothCharacteristic? _getControlPointCharacteristic() {
+    if (_services == null) {
+      return null;
+    }
+
+    final ftmsServices = _services!.where((s) => s.uuid == _ftmsServiceUuid);
+    if (ftmsServices.isEmpty) {
+      return null;
+    }
+    final ftmsService = ftmsServices.first;
+
+    final controlPointChars = ftmsService.characteristics.where((c) => c.uuid == _controlPointUuid);
+    return controlPointChars.isNotEmpty ? controlPointChars.first : null;
   }
 
   /// Detaches from the FTMS service.

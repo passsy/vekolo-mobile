@@ -5,6 +5,8 @@ import 'package:async/async.dart';
 import 'package:clock/clock.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart' as fbp;
 import 'package:state_beacon/state_beacon.dart';
+import 'package:vekolo/ble/ble_platform.dart';
+import 'package:vekolo/ble/ble_scanner.dart';
 import 'package:vekolo/ble/ble_transport.dart';
 import 'package:vekolo/ble/transport_capabilities.dart';
 import 'package:vekolo/domain/devices/fitness_device.dart';
@@ -28,10 +30,19 @@ class BleDevice extends FitnessDevice {
   /// [id] - BLE device identifier
   /// [name] - Human-readable device name
   /// [transports] - List of compatible transports for this device
-  BleDevice({required String id, required String name, required List<BleTransport> transports})
-    : _id = id,
-      _name = name,
-      _transports = transports {
+  /// [platform] - BLE platform abstraction for connecting/disconnecting
+  /// [discoveredDevice] - Optional original discovered device for Phase 1 compatibility checks
+  BleDevice({
+    required String id,
+    required String name,
+    required List<BleTransport> transports,
+    required BlePlatform platform,
+    DiscoveredDevice? discoveredDevice,
+  }) : _id = id,
+       _name = name,
+       _transports = transports,
+       _platform = platform,
+       _discoveredDevice = discoveredDevice {
     // Set up aggregated connection state
     _setupConnectionStateAggregation();
   }
@@ -39,6 +50,8 @@ class BleDevice extends FitnessDevice {
   final String _id;
   final String _name;
   final List<BleTransport> _transports;
+  final BlePlatform _platform;
+  final DiscoveredDevice? _discoveredDevice;
 
   // Aggregated state
   late final WritableBeacon<ConnectionState> _connectionStateBeacon = Beacon.writable(ConnectionState.disconnected);
@@ -144,18 +157,17 @@ class BleDevice extends FitnessDevice {
     try {
       developer.log('[BleDevice] Connecting device: $name', name: 'BleDevice');
 
-      // Get the physical BLE device
-      final devices = fbp.FlutterBluePlus.connectedDevices;
-      final device = devices.firstWhere((d) => d.remoteId.str == _id, orElse: () => fbp.BluetoothDevice.fromId(_id));
-
-      // Connect to the physical device once
+      // Connect via BlePlatform abstraction (works with FakeBlePlatform in tests)
       developer.log('[BleDevice] Connecting to physical device', name: 'BleDevice');
-      await device.connect(timeout: const Duration(seconds: 15));
+      await _platform.connect(_id, timeout: const Duration(seconds: 15));
       developer.log('[BleDevice] Connected', name: 'BleDevice');
+
+      // Get the device object via platform abstraction
+      final device = _platform.getDevice(_id);
 
       // Request larger MTU for better performance (optional, non-fatal if it fails)
       try {
-        final mtu = await device.requestMtu(512);
+        final mtu = await _platform.requestMtu(_id);
         developer.log('[BleDevice] MTU negotiated: $mtu bytes', name: 'BleDevice');
       } catch (e) {
         // MTU negotiation can fail on some devices or platforms (iOS handles automatically)
@@ -163,34 +175,66 @@ class BleDevice extends FitnessDevice {
         developer.log('[BleDevice] MTU negotiation failed, using default: $e', name: 'BleDevice');
       }
 
-      // Discover services once
+      // Discover services once via platform abstraction
       developer.log('[BleDevice] Discovering services', name: 'BleDevice');
-      final services = await device.discoverServices();
+      final services = await _platform.discoverServices(_id);
       developer.log('[BleDevice] Discovered ${services.length} services', name: 'BleDevice');
 
-      // Phase 2: Verify compatibility for all transports (before attaching)
-      // This allows transports to perform deep checks on the connected device
-      // Process serially to avoid overwhelming the BLE stack
-      developer.log('[BleDevice] Verifying transport compatibility', name: 'BleDevice');
-      final verifiedTransports = <BleTransport>[];
+      // Create DiscoveredDevice for Phase 1 checks if not provided
+      final discoveredDevice = _discoveredDevice ?? _createDiscoveredDeviceFromServices(device, services);
+
+      // Phase 1: Verify canSupport for all transports (fast compatibility check)
+      // This uses advertising data to verify transports can potentially work with the device
+      developer.log('[BleDevice] Verifying Phase 1 transport compatibility (canSupport)', name: 'BleDevice');
+      final phase1VerifiedTransports = <BleTransport>[];
       for (final transport in _transports) {
         try {
-          final isCompatible = await transport.verifyCompatibility(device: device, services: services);
-          if (isCompatible) {
-            verifiedTransports.add(transport);
+          final canSupport = transport.canSupport(discoveredDevice);
+          if (canSupport) {
+            phase1VerifiedTransports.add(transport);
             developer.log(
-              '[BleDevice] Transport ${transport.runtimeType} verified as compatible',
+              '[BleDevice] Transport ${transport.runtimeType} passed Phase 1 (canSupport)',
               name: 'BleDevice',
             );
           } else {
             developer.log(
-              '[BleDevice] Transport ${transport.runtimeType} not compatible',
+              '[BleDevice] Transport ${transport.runtimeType} failed Phase 1 (canSupport)',
               name: 'BleDevice',
             );
           }
         } catch (e, stackTrace) {
           developer.log(
-            '[BleDevice] Transport verification failed for ${transport.runtimeType}: $e',
+            '[BleDevice] Phase 1 verification failed for ${transport.runtimeType}: $e',
+            name: 'BleDevice',
+            error: e,
+            stackTrace: stackTrace,
+          );
+        }
+      }
+
+      // Phase 2: Verify verifyCompatibility for Phase 1 verified transports (deep compatibility check)
+      // This allows transports to perform deep checks on the connected device
+      // Process serially to avoid overwhelming the BLE stack
+      developer.log('[BleDevice] Verifying Phase 2 transport compatibility (verifyCompatibility)', name: 'BleDevice');
+      final verifiedTransports = <BleTransport>[];
+      for (final transport in phase1VerifiedTransports) {
+        try {
+          final isCompatible = await transport.verifyCompatibility(device: device, services: services);
+          if (isCompatible) {
+            verifiedTransports.add(transport);
+            developer.log(
+              '[BleDevice] Transport ${transport.runtimeType} passed Phase 2 (verifyCompatibility)',
+              name: 'BleDevice',
+            );
+          } else {
+            developer.log(
+              '[BleDevice] Transport ${transport.runtimeType} failed Phase 2 (verifyCompatibility)',
+              name: 'BleDevice',
+            );
+          }
+        } catch (e, stackTrace) {
+          developer.log(
+            '[BleDevice] Phase 2 verification failed for ${transport.runtimeType}: $e',
             name: 'BleDevice',
             error: e,
             stackTrace: stackTrace,
@@ -257,6 +301,9 @@ class BleDevice extends FitnessDevice {
 
     // Detach all transports in parallel
     await Future.wait(_transports.map((t) => t.detach()));
+
+    // Disconnect via BlePlatform abstraction
+    await _platform.disconnect(_id);
   }
 
   // ============================================================================
@@ -388,5 +435,35 @@ class BleDevice extends FitnessDevice {
 
     // Dispose beacons
     _connectionStateBeacon.dispose();
+  }
+
+  // ============================================================================
+  // Helper Methods
+  // ============================================================================
+
+  /// Creates a synthetic DiscoveredDevice from discovered services.
+  ///
+  /// Used when the original DiscoveredDevice is not available, allowing
+  /// Phase 1 compatibility checks (canSupport) to still be performed.
+  DiscoveredDevice _createDiscoveredDeviceFromServices(
+    fbp.BluetoothDevice device,
+    List<fbp.BluetoothService> services,
+  ) {
+    final serviceUuids = services.map((s) => s.uuid).toList();
+    final now = clock.now();
+
+    final advertisementData = fbp.AdvertisementData(
+      advName: _name,
+      txPowerLevel: null,
+      appearance: null,
+      connectable: true,
+      manufacturerData: {},
+      serviceUuids: serviceUuids,
+      serviceData: {},
+    );
+
+    final scanResult = fbp.ScanResult(device: device, advertisementData: advertisementData, rssi: 0, timeStamp: now);
+
+    return DiscoveredDevice(scanResult: scanResult, firstSeen: now, lastSeen: now, rssi: null);
   }
 }

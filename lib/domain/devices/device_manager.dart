@@ -51,7 +51,7 @@ class DeviceManager {
   final List<FitnessDevice> _devices = [];
 
   /// Reactive beacon for device list changes.
-  final WritableBeacon<List<FitnessDevice>> _devicesBeacon = Beacon.writable([]);
+  final WritableBeacon<List<FitnessDevice>> _devicesBeacon = Beacon.list([]);
 
   // ============================================================================
   // Device Assignments
@@ -396,7 +396,6 @@ class DeviceManager {
   /// Reactive beacon of heart rate source assignment.
   ReadableBeacon<FitnessDevice?> get heartRateSourceBeacon => _heartRateSourceBeacon;
 
-
   // ============================================================================
   // Helper Methods
   // ============================================================================
@@ -421,7 +420,6 @@ class DeviceManager {
   ///
   /// Call this when the manager is no longer needed to prevent memory leaks.
   void dispose() {
-
     // Dispose aggregated data beacons
     _powerBeacon.dispose();
     _cadenceBeacon.dispose();

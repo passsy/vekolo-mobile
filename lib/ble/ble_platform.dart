@@ -93,6 +93,37 @@ abstract class BlePlatform {
   /// - [deviceId]: The unique identifier for the device (remoteId)
   Future<void> disconnect(String deviceId);
 
+  /// Get the BluetoothDevice object for a connected device.
+  ///
+  /// Returns the device object needed for MTU negotiation, service discovery,
+  /// and passing to transports. The device must be connected via [connect] first.
+  ///
+  /// Parameters:
+  /// - [deviceId]: The unique identifier for the device (remoteId)
+  BluetoothDevice getDevice(String deviceId);
+
+  /// Request a larger MTU size for better performance.
+  ///
+  /// MTU negotiation can fail on some devices or platforms (iOS handles automatically).
+  /// This is optional and non-fatal if it fails.
+  ///
+  /// Parameters:
+  /// - [deviceId]: The unique identifier for the device (remoteId)
+  /// - [mtu]: The requested MTU size (default 512 bytes)
+  ///
+  /// Returns the negotiated MTU size, or throws if negotiation fails.
+  Future<int> requestMtu(String deviceId, {int mtu = 512});
+
+  /// Discover all GATT services on a connected device.
+  ///
+  /// The device must be connected via [connect] first.
+  ///
+  /// Parameters:
+  /// - [deviceId]: The unique identifier for the device (remoteId)
+  ///
+  /// Returns the list of discovered services.
+  Future<List<BluetoothService>> discoverServices(String deviceId);
+
   /// Set the logging level for BLE operations.
   Future<void> setLogLevel(LogLevel level, {bool color = true});
 
@@ -160,6 +191,27 @@ class BlePlatformImpl implements BlePlatform {
   Future<void> disconnect(String deviceId) async {
     final device = BluetoothDevice(remoteId: DeviceIdentifier(deviceId));
     await device.disconnect();
+  }
+
+  @override
+  BluetoothDevice getDevice(String deviceId) {
+    final devices = FlutterBluePlus.connectedDevices;
+    return devices.firstWhere(
+      (d) => d.remoteId.str == deviceId,
+      orElse: () => BluetoothDevice(remoteId: DeviceIdentifier(deviceId)),
+    );
+  }
+
+  @override
+  Future<int> requestMtu(String deviceId, {int mtu = 512}) async {
+    final device = getDevice(deviceId);
+    return await device.requestMtu(mtu);
+  }
+
+  @override
+  Future<List<BluetoothService>> discoverServices(String deviceId) async {
+    final device = getDevice(deviceId);
+    return await device.discoverServices();
   }
 
   @override
