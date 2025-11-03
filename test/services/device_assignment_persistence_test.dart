@@ -6,6 +6,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vekolo/domain/devices/device_manager.dart';
 import 'package:vekolo/domain/mocks/mock_trainer.dart';
 import 'package:vekolo/services/device_assignment_persistence.dart';
+import '../ble/fake_ble_platform.dart';
+import '../ble/fake_ble_permissions.dart';
+import 'package:vekolo/ble/ble_scanner.dart';
+import 'package:vekolo/ble/transport_registry.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -18,8 +22,15 @@ void main() {
 
     group('saveDeviceAssignments', () {
       test('saves no assignments when no devices assigned', () async {
-        final deviceManager = DeviceManager();
-        addTearDown(() => deviceManager.dispose());
+        final platform = FakeBlePlatform();
+        final scanner = BleScanner(platform: platform, permissions: FakeBlePermissions());
+        final transportRegistry = TransportRegistry();
+        final deviceManager = DeviceManager(
+          platform: platform,
+          scanner: scanner,
+          transportRegistry: transportRegistry,
+        );
+        addTearDown(() async => await deviceManager.dispose());
 
         await saveDeviceAssignments(deviceManager);
 
@@ -33,8 +44,15 @@ void main() {
       });
 
       test('saves primary trainer assignment', () async {
-        final deviceManager = DeviceManager();
-        addTearDown(() => deviceManager.dispose());
+        final platform = FakeBlePlatform();
+        final scanner = BleScanner(platform: platform, permissions: FakeBlePermissions());
+        final transportRegistry = TransportRegistry();
+        final deviceManager = DeviceManager(
+          platform: platform,
+          scanner: scanner,
+          transportRegistry: transportRegistry,
+        );
+        addTearDown(() async => await deviceManager.dispose());
 
         final trainer = MockTrainer(id: 'trainer-1', name: 'KICKR CORE');
         await deviceManager.addDevice(trainer);
@@ -58,8 +76,15 @@ void main() {
       });
 
       test('saves multiple role assignments for same device', () async {
-        final deviceManager = DeviceManager();
-        addTearDown(() => deviceManager.dispose());
+        final platform = FakeBlePlatform();
+        final scanner = BleScanner(platform: platform, permissions: FakeBlePermissions());
+        final transportRegistry = TransportRegistry();
+        final deviceManager = DeviceManager(
+          platform: platform,
+          scanner: scanner,
+          transportRegistry: transportRegistry,
+        );
+        addTearDown(() async => await deviceManager.dispose());
 
         final trainer = MockTrainer(id: 'trainer-1', name: 'KICKR CORE');
         await deviceManager.addDevice(trainer);
@@ -82,8 +107,15 @@ void main() {
       });
 
       test('saves all assigned role types', () async {
-        final deviceManager = DeviceManager();
-        addTearDown(() => deviceManager.dispose());
+        final platform = FakeBlePlatform();
+        final scanner = BleScanner(platform: platform, permissions: FakeBlePermissions());
+        final transportRegistry = TransportRegistry();
+        final deviceManager = DeviceManager(
+          platform: platform,
+          scanner: scanner,
+          transportRegistry: transportRegistry,
+        );
+        addTearDown(() async => await deviceManager.dispose());
 
         final trainer = MockTrainer(id: 'trainer-1', name: 'KICKR');
 
@@ -288,8 +320,15 @@ void main() {
 
     group('Round-trip', () {
       test('save and load preserves assignments', () async {
-        final deviceManager = DeviceManager();
-        addTearDown(() => deviceManager.dispose());
+        final platform = FakeBlePlatform();
+        final scanner = BleScanner(platform: platform, permissions: FakeBlePermissions());
+        final transportRegistry = TransportRegistry();
+        final deviceManager = DeviceManager(
+          platform: platform,
+          scanner: scanner,
+          transportRegistry: transportRegistry,
+        );
+        addTearDown(() async => await deviceManager.dispose());
 
         final trainer = MockTrainer(id: 'trainer-1', name: 'KICKR CORE');
         await deviceManager.addDevice(trainer);

@@ -17,6 +17,10 @@ import 'package:vekolo/domain/devices/device_manager.dart';
 import 'package:vekolo/domain/mocks/device_simulator.dart';
 import 'package:vekolo/domain/models/erg_command.dart';
 import 'package:vekolo/services/workout_sync_service.dart';
+import '../ble/fake_ble_platform.dart';
+import '../ble/fake_ble_permissions.dart';
+import 'package:vekolo/ble/ble_scanner.dart';
+import 'package:vekolo/ble/transport_registry.dart';
 
 void main() {
   group('Full Workflow Integration', () {
@@ -28,12 +32,19 @@ void main() {
       WorkoutSyncService syncService,
     })
     createTestEnvironment() {
-      final deviceManager = DeviceManager();
+      final blePlatform = FakeBlePlatform();
+      final scanner = BleScanner(platform: blePlatform, permissions: FakeBlePermissions());
+      final transportRegistry = TransportRegistry();
+      final deviceManager = DeviceManager(
+        platform: blePlatform,
+        scanner: scanner,
+        transportRegistry: transportRegistry,
+      );
       final syncService = WorkoutSyncService(deviceManager);
 
-      addTearDown(() {
+      addTearDown(() async {
         syncService.dispose();
-        deviceManager.dispose();
+        await deviceManager.dispose();
       });
 
       return (
@@ -92,10 +103,10 @@ void main() {
       // Phase 3: Device Connection
       // =====================================================================
 
-      // Connect all devices
-      await trainer.connect().value;
-      await powerMeter.connect().value;
-      await hrMonitor.connect().value;
+      // Connect all devices via DeviceManager
+      await deviceManager.connectDevice(trainer.id).value;
+      await deviceManager.connectDevice(powerMeter.id).value;
+      await deviceManager.connectDevice(hrMonitor.id).value;
 
       // Start trainer in ERG mode
       await trainer.setTargetPower(150);
@@ -214,7 +225,7 @@ void main() {
 
       await deviceManager.addDevice(trainer);
       deviceManager.assignPrimaryTrainer(trainer.id);
-      await trainer.connect().value;
+      await deviceManager.connectDevice(trainer.id).value;
 
       // Start syncing
       syncService.startSync();
@@ -246,7 +257,7 @@ void main() {
 
       await deviceManager.addDevice(trainer1);
       deviceManager.assignPrimaryTrainer(trainer1.id);
-      await trainer1.connect().value;
+      await deviceManager.connectDevice(trainer1.id).value;
       await trainer1.setTargetPower(150);
 
       await Future<void>.delayed(const Duration(milliseconds: 600));
@@ -258,7 +269,7 @@ void main() {
       final powerMeter = DeviceSimulator.createPowerMeter(name: 'Power Meter');
 
       await deviceManager.addDevice(powerMeter);
-      await powerMeter.connect().value;
+      await deviceManager.connectDevice(powerMeter.id).value;
 
       // Wait for initial data from power meter
       await Future<void>.delayed(const Duration(milliseconds: 600));
@@ -293,8 +304,8 @@ void main() {
       deviceManager.assignHeartRateSource(hrMonitor.id);
 
       // Connect all
-      await trainer.connect().value;
-      await hrMonitor.connect().value;
+      await deviceManager.connectDevice(trainer.id).value;
+      await deviceManager.connectDevice(hrMonitor.id).value;
       await trainer.setTargetPower(200);
 
       // Collect data from multiple streams simultaneously
@@ -337,7 +348,7 @@ void main() {
 
       await deviceManager.addDevice(trainer);
       deviceManager.assignPrimaryTrainer(trainer.id);
-      await trainer.connect().value;
+      await deviceManager.connectDevice(trainer.id).value;
 
       syncService.startSync();
 

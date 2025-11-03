@@ -2,12 +2,23 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:vekolo/domain/devices/device_manager.dart';
 import 'package:vekolo/domain/models/workout/workout_models.dart';
 import 'package:vekolo/services/workout_player_service.dart';
+import '../ble/fake_ble_platform.dart';
+import '../ble/fake_ble_permissions.dart';
+import 'package:vekolo/ble/ble_scanner.dart';
+import 'package:vekolo/ble/transport_registry.dart';
 
 void main() {
   group('WorkoutPlayerService', () {
     DeviceManager createDeviceManager() {
-      final deviceManager = DeviceManager();
-      addTearDown(() => deviceManager.dispose());
+      final platform = FakeBlePlatform();
+      final scanner = BleScanner(platform: platform, permissions: FakeBlePermissions());
+      final transportRegistry = TransportRegistry();
+      final deviceManager = DeviceManager(
+        platform: platform,
+        scanner: scanner,
+        transportRegistry: transportRegistry,
+      );
+      addTearDown(() async => await deviceManager.dispose());
       return deviceManager;
     }
 

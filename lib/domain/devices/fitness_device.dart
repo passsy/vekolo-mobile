@@ -84,6 +84,9 @@ abstract class FitnessDevice {
 
   /// Initiates connection to the device.
   ///
+  /// **Internal use only** - This method should only be called by [DeviceManager].
+  /// Use [DeviceManager.connectDevice] instead.
+  ///
   /// This method handles protocol-specific connection setup but delegates
   /// actual Bluetooth operations to the transport layer.
   ///

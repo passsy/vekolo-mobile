@@ -1,4 +1,4 @@
-import 'dart:developer' as devloper;
+import 'dart:developer' as developer;
 
 import 'package:context_plus/context_plus.dart';
 import 'package:flutter/material.dart';
@@ -17,6 +17,7 @@ import 'package:vekolo/app/router.dart';
 import 'package:vekolo/services/auth_service.dart';
 import 'package:vekolo/services/fresh_auth.dart';
 import 'package:vekolo/services/workout_sync_service.dart';
+import 'package:vekolo/widgets/initialization_error_screen.dart';
 import 'package:vekolo/widgets/splash_screen.dart';
 
 class VekoloApp extends StatefulWidget {
@@ -28,46 +29,85 @@ class VekoloApp extends StatefulWidget {
 
 class _VekoloAppState extends State<VekoloApp> {
   bool _initialized = false;
+  String? _initializationError;
+  String? _initializationStackTrace;
 
   /// Perform async initialization of services before mounting the main app / drawing the first frame
   Future<void> _initialize(BuildContext context) async {
-    // Disable verbose flutter_blue_plus logging
-    Refs.blePlatform.of(context).setLogLevel(LogLevel.none);
-
-    // State holders are already initialized above via Refs
-    devloper.log('[VekoloApp] State holders initialized');
-
-    // Run async initialization (load user from secure storage)
-    final authService = Refs.authService.of(context);
-    await authService.initialize();
+    print('_initialize starting');
+    if (!mounted) return;
     try {
-      await authService.refreshAccessToken();
-    } catch (e, stack) {
-      devloper.log('[VekoloApp] No valid refresh token found during initialization', error: e, stackTrace: stack);
-    }
+      // Disable verbose flutter_blue_plus logging
+      Refs.blePlatform.of(context).setLogLevel(LogLevel.none);
 
-    // Mark initialization as complete
-    if (mounted) {
-      setState(() => _initialized = true);
+      // State holders are already initialized above via Refs
+      developer.log('[VekoloApp] State holders initialized');
+
+      // Initialize DeviceManager auto-connect
+      try {
+        await Refs.deviceManager.of(context).initialize();
+      } catch (e, stackTrace) {
+        developer.log(
+          '[VekoloApp] Failed to initialize DeviceManager auto-connect: $e',
+          error: e,
+          stackTrace: stackTrace,
+        );
+      }
+
+      // Run async initialization (load user from secure storage)
+      final authService = Refs.authService.of(context);
+      await authService.initialize();
+      try {
+        await authService.refreshAccessToken();
+      } catch (e, stack) {
+        developer.log('[VekoloApp] No valid refresh token found during initialization', error: e, stackTrace: stack);
+      }
+
+      // Mark initialization as complete
+      if (mounted) {
+        print("_initialized = true;");
+        setState(() {
+          _initialized = true;
+          _initializationError = null;
+          _initializationStackTrace = null;
+        });
+      }
+    } catch (e, stack) {
+      developer.log('[VekoloApp] Initialization failed: $e', error: e, stackTrace: stack);
+      if (mounted) {
+        setState(() {
+          _initializationError = e.toString();
+          _initializationStackTrace = stack.toString();
+        });
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return ContextRef.root(
-      child: Builder(
+    print('build: initialized=$_initialized');
+    return ContextPlus.root(
+      child: AppRestart(
+        onStop: () {
+          setState(() {
+            print("reset _initialized");
+            _initialized = false;
+          });
+        },
         builder: (context) {
           // Bind all services on every build (required by ContextRef)
           late final VekoloApiClient apiClient;
+          final VekoloApiClient Function() apiClientProvider = () => apiClient;
 
           // Create Fresh with lazy apiClient access
-          final fresh = createFreshAuth(apiClient: () => apiClient);
+          final fresh = createFreshAuth(apiClient: apiClientProvider);
           final authService = Refs.authService.bindWhenUnbound(
             context,
-            () => AuthService(fresh: fresh, apiClient: () => apiClient),
+            () => AuthService(fresh: fresh, apiClient: apiClientProvider),
+            key: (apiClientProvider,),
           );
 
-          apiClient = Refs.apiClient.bindWhenUnbound(
+          final apiClientRef = Refs.apiClient.bindWhenUnbound(
             context,
             () => VekoloApiClient(
               baseUrl: ApiConfig.baseUrl,
@@ -76,13 +116,19 @@ class _VekoloAppState extends State<VekoloApp> {
                 authService.apiInterceptor,
               ],
             ),
+            key: (authService,),
           );
+          apiClient = apiClientRef;
 
-          final blePlatform = Refs.blePlatform.bindWhenUnbound(context, () => BlePlatformImpl());
+          final blePlatform = Refs.blePlatform.bindWhenUnbound(
+            context,
+            () => BlePlatformImpl(),
+            dispose: (platform) => platform.dispose(),
+          );
           final blePermissions = Refs.blePermissions.bindWhenUnbound(context, () => BlePermissionsImpl());
 
           // Initialize transport registry and register available transports
-          Refs.transportRegistry.bindWhenUnbound(context, () {
+          final transportRegistry = Refs.transportRegistry.bindWhenUnbound(context, () {
             final registry = TransportRegistry();
             // Register transport implementations
             registry.register(ftmsTransportRegistration);
@@ -91,36 +137,111 @@ class _VekoloAppState extends State<VekoloApp> {
           });
 
           // Initialize BLE services
-          Refs.bleScanner.bindWhenUnbound(context, () {
-            final scanner = BleScanner(platform: blePlatform, permissions: blePermissions);
-            scanner.initialize();
-            return scanner;
-          });
+          final scanner = Refs.bleScanner.bindWhenUnbound(
+            context,
+            () {
+              final scanner = BleScanner(platform: blePlatform, permissions: blePermissions);
+              scanner.initialize();
+              return scanner;
+            },
+            dispose: (scanner) => scanner.dispose(),
+            key: (blePlatform, blePermissions),
+          );
 
           // Initialize DeviceManager
-          Refs.deviceManager.bindWhenUnbound(context, () => DeviceManager());
+          final deviceManager = Refs.deviceManager.bindWhenUnbound(
+            context,
+            () => DeviceManager(platform: blePlatform, scanner: scanner, transportRegistry: transportRegistry),
+            dispose: (manager) => manager.dispose(),
+            key: (blePlatform, scanner, transportRegistry),
+          );
 
           // Initialize WorkoutSyncService with DeviceManager dependency
-          Refs.workoutSyncService.bindWhenUnbound(context, () => WorkoutSyncService(Refs.deviceManager.of(context)));
-
-
+          Refs.workoutSyncService.bindWhenUnbound(
+            context,
+            () => WorkoutSyncService(deviceManager),
+            dispose: (service) => service.dispose(),
+            key: (deviceManager,),
+          );
 
           // Show splash screen during initialization
           if (!_initialized) {
-            _initialize(context); // Fire and forget - setState will rebuild
+            // TODO handle when dependencies change to eventually call it again. Not required yet, but possible in the future
+            if (_initializationError == null) {
+              _initialize(context); // Fire and forget - setState will rebuild
+            }
 
-            return MaterialApp(debugShowCheckedModeBanner: false, title: 'Vekolo', home: SplashScreen());
+            return MaterialApp(
+              debugShowCheckedModeBanner: false,
+              title: 'Vekolo',
+              home: _initializationError != null
+                  ? InitializationErrorScreen(
+                      error: _initializationError!,
+                      stackTrace: _initializationStackTrace,
+                      onRetry: () {
+                        setState(() {
+                          _initializationError = null;
+                          _initializationStackTrace = null;
+                        });
+                        _initialize(context);
+                      },
+                    )
+                  : const SplashScreen(),
+            );
           }
 
           // After initialization, render main app
-          return MaterialApp.router(
-            title: 'Vekolo',
-            theme: ThemeData(colorScheme: ColorScheme.fromSeed(seedColor: Colors.orange)),
-            debugShowCheckedModeBanner: false,
-            routerConfig: router,
+          return VekoloRouter(
+            builder: (context) {
+              return MaterialApp.router(
+                title: 'Vekolo',
+                theme: ThemeData(colorScheme: ColorScheme.fromSeed(seedColor: Colors.orange)),
+                debugShowCheckedModeBanner: false,
+                routerConfig: Refs.router.of(context),
+              );
+            },
           );
         },
       ),
     );
+  }
+}
+
+class AppRestart extends StatefulWidget {
+  const AppRestart({super.key, required this.builder, this.onStop});
+
+  final Widget Function(BuildContext context) builder;
+
+  final void Function()? onStop;
+
+  @override
+  State<AppRestart> createState() => AppRestartState();
+}
+
+class AppRestartState extends State<AppRestart> {
+  Key _key = UniqueKey();
+  bool _isAppRunning = true;
+
+  /// Forces the [widget.builder] to rebuild and lose all of its state
+  void relaunch() {
+    widget.onStop?.call();
+    setState(() => _key = UniqueKey());
+  }
+
+  void stopApp() {
+    widget.onStop?.call();
+    setState(() => _isAppRunning = false);
+  }
+
+  void startApp() {
+    setState(() => _isAppRunning = true);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_isAppRunning) {
+      return const SizedBox.shrink();
+    }
+    return Builder(key: _key, builder: widget.builder);
   }
 }

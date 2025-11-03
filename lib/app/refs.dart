@@ -1,5 +1,6 @@
 import 'package:context_plus/context_plus.dart';
 import 'package:flutter/widgets.dart';
+import 'package:go_router/go_router.dart';
 import 'package:vekolo/api/vekolo_api_client.dart';
 import 'package:vekolo/ble/ble_permissions.dart';
 import 'package:vekolo/ble/ble_platform.dart';
@@ -20,10 +21,13 @@ abstract final class Refs {
   static final transportRegistry = Ref<TransportRegistry>();
   static final deviceManager = Ref<DeviceManager>();
   static final workoutSyncService = Ref<WorkoutSyncService>();
+  static final router = Ref<GoRouter>();
 }
 
 extension BindUnboundRef<T> on Ref<T> {
   /// Binds the Ref if it is not already bound to [context], otherwise returns the existing value from [context].
+  ///
+  /// Always calls [bind] to ensure the [dispose] callback is set/updated, even if the ref is already bound.
   T bindWhenUnbound(BuildContext context, T Function() create, {void Function(T value)? dispose, Object? key}) {
     final T? found = maybeOf(context);
     if (found == null) {

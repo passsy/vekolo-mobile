@@ -531,17 +531,19 @@ class _DeviceConnectingDialogState extends State<_DeviceConnectingDialog> {
 
       if (!mounted) return;
 
-      setState(() => _statusMessage = 'Establishing Bluetooth connection...');
-      developer.log(
-        '[DeviceConnectingDialog] ${isReconnect ? 'Reconnecting' : 'Connecting'} device: ${fitnessDevice.name}',
-      );
-      await fitnessDevice.connect().value;
-
-      // Only add to manager AFTER successful connection
+      // Add device to manager first (for new devices)
       if (!isReconnect && newDevice != null) {
         setState(() => _statusMessage = 'Registering device...');
         fitnessDevice = await deviceManager.addOrGetExistingDevice(newDevice);
       }
+
+      if (!mounted) return;
+
+      setState(() => _statusMessage = 'Establishing Bluetooth connection...');
+      developer.log(
+        '[DeviceConnectingDialog] ${isReconnect ? 'Reconnecting' : 'Connecting'} device: ${fitnessDevice.name}',
+      );
+      await deviceManager.connectDevice(fitnessDevice.id).value;
 
       if (!mounted) return;
 

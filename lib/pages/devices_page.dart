@@ -382,8 +382,9 @@ class DevicesPage extends StatelessWidget {
   // ============================================================================
 
   Future<void> _handleConnect(BuildContext context, FitnessDevice device) async {
+    final deviceManager = Refs.deviceManager.of(context);
     try {
-      await device.connect().value;
+      await deviceManager.connectDevice(device.id).value;
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${device.name} connected')));
     } catch (e, stackTrace) {
@@ -396,8 +397,9 @@ class DevicesPage extends StatelessWidget {
   }
 
   Future<void> _handleDisconnect(BuildContext context, FitnessDevice device) async {
+    final deviceManager = Refs.deviceManager.of(context);
     try {
-      await device.disconnect();
+      await deviceManager.disconnectDevice(device.id);
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${device.name} disconnected')));
     } catch (e, stackTrace) {
@@ -412,7 +414,6 @@ class DevicesPage extends StatelessWidget {
   Future<void> _handleRemove(BuildContext context, FitnessDevice device) async {
     final deviceManager = Refs.deviceManager.of(context);
     try {
-      await device.disconnect();
       await deviceManager.removeDevice(device.id);
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${device.name} removed')));

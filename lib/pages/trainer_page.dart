@@ -67,7 +67,7 @@ class _TrainerPageState extends State<TrainerPage> {
     _speedSubscription?.call();
     final device = _device;
     if (device != null) {
-      unawaited(device.disconnect());
+      unawaited(_deviceManager.disconnectDevice(device.id));
     }
     super.dispose();
   }
@@ -84,7 +84,8 @@ class _TrainerPageState extends State<TrainerPage> {
       _subscribeToDevice(device);
 
       if (device.connectionState.value != device_info.ConnectionState.connected) {
-        _connectionOperation = device.connect();
+        final deviceManager = Refs.deviceManager.of(context);
+        _connectionOperation = deviceManager.connectDevice(device.id);
         await _connectionOperation!.value;
       }
 

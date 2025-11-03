@@ -8,6 +8,9 @@ import 'package:vekolo/models/user.dart';
 import 'package:vekolo/services/auth_service.dart';
 import 'package:vekolo/services/fresh_auth.dart';
 
+/// No-op interceptor for fake auth service
+class _FakeAuthInterceptor extends Interceptor {}
+
 /// In-memory fake implementation of [AuthService] for testing
 ///
 /// This fake maintains in-memory state that can be inspected during debugging,
@@ -34,6 +37,9 @@ class FakeAuthService implements AuthService {
 
   // Call tracking (optional, but useful for verifying behavior in tests)
   final List<String> methodCalls = [];
+
+  // Cached no-op interceptor instance
+  late final _apiInterceptor = _FakeAuthInterceptor();
 
   @override
   WritableBeacon<User?> get currentUser => _currentUser;
@@ -151,7 +157,7 @@ class FakeAuthService implements AuthService {
   VekoloApiClient Function() get apiClient => throw UnimplementedError('apiClient not implemented in FakeAuthService');
 
   @override
-  Interceptor get apiInterceptor => throw UnimplementedError('apiInterceptor not implemented in FakeAuthService');
+  Interceptor get apiInterceptor => _apiInterceptor;
 
   @override
   Fresh<VekoloToken> get fresh => throw UnimplementedError('fresh not implemented in FakeAuthService');

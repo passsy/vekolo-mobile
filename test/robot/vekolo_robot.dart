@@ -13,6 +13,7 @@ import 'package:vekolo/domain/models/device_info.dart';
 import '../ble/fake_ble_platform.dart';
 import '../fake/fake_auth_service.dart';
 import '../fake/fake_vekolo_api_client.dart';
+import 'robot_test_fn.dart';
 
 // Cache for robot instances by WidgetTester identity
 final Map<WidgetTester, VekoloRobot> _robotCache = <WidgetTester, VekoloRobot>{};
@@ -24,7 +25,11 @@ extension RobotExtensions on WidgetTester {
 }
 
 class VekoloRobot {
-  VekoloRobot({required this.tester});
+  VekoloRobot({required this.tester}) {
+    addFlutterTearDown(() {
+      _blePlatform.dispose();
+    });
+  }
 
   final WidgetTester tester;
 
@@ -88,8 +93,20 @@ class VekoloRobot {
   }
 
   Future<void> closeApp() async {
-    await tester.pumpWidget(const SizedBox.shrink());
-    await idle(1000);
+    final state = spot<AppRestart>().snapshotState<AppRestartState>();
+    state.stopApp();
+    await idle();
+    await idle();
+    await idle();
+    await idle();
+    await idle();
+    await idle();
+  }
+
+  Future<void> startApp() async {
+    final state = spot<AppRestart>().snapshotState<AppRestartState>();
+    state.startApp();
+    await idle();
   }
 
   Future<void> openManageDevicesPage() async {
@@ -114,6 +131,8 @@ class VekoloRobot {
     await tester.verify.waitUntilExistsAtLeastOnce(connected);
     // wait another 1s for the dialog to disappear
     await idle(1000);
+    await idle();
+    connected.doesNotExist();
   }
 }
 
