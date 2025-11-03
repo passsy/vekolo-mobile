@@ -9,6 +9,8 @@ import 'package:spot/spot.dart';
 import 'package:vekolo/app/app.dart';
 import 'package:vekolo/app/refs.dart';
 import 'package:vekolo/domain/models/device_info.dart';
+import 'package:vekolo/pages/devices_page.dart';
+import 'package:vekolo/pages/scanner_page.dart';
 
 import '../ble/fake_ble_platform.dart';
 import '../fake/fake_auth_service.dart';
@@ -37,17 +39,25 @@ class VekoloRobot {
 
   final _blePlatform = FakeBlePlatform();
 
-  Future<void> launchApp({bool loggedIn = false}) async {
+  bool _isSetup = false;
+
+  Future<void> _setup() async {
     TestWidgetsFlutterBinding.ensureInitialized();
-    tester.view.physicalSize = const Size(1179 / 3, 2556 / 3); // iPhone 15″
-    addTearDown(tester.view.resetPhysicalSize);
-    tester.view.devicePixelRatio = 1.0;
-    addTearDown(tester.view.resetDevicePixelRatio);
     await loadAppFonts();
 
     // Setup mock SharedPreferences and SecureStorage
     SharedPreferences.setMockInitialValues({});
     FlutterSecureStorage.setMockInitialValues({});
+
+    _isSetup = true;
+  }
+
+  Future<void> launchApp({bool loggedIn = false}) async {
+    await _setup();
+    tester.view.physicalSize = const Size(1179 / 3, 2556 / 3); // iPhone 15″
+    addTearDown(tester.view.resetPhysicalSize);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetDevicePixelRatio);
 
     final fakeAuthService = FakeAuthService();
     final fakeApiClient = FakeVekoloApiClient();
@@ -93,19 +103,7 @@ class VekoloRobot {
   }
 
   Future<void> closeApp() async {
-    final state = spot<AppRestart>().snapshotState<AppRestartState>();
-    state.stopApp();
-    await idle();
-    await idle();
-    await idle();
-    await idle();
-    await idle();
-    await idle();
-  }
-
-  Future<void> startApp() async {
-    final state = spot<AppRestart>().snapshotState<AppRestartState>();
-    state.startApp();
+    await tester.pumpWidget(const SizedBox.shrink());
     await idle();
   }
 
@@ -113,11 +111,13 @@ class VekoloRobot {
     final button = spot<IconButton>().withChild(spotIcon(Icons.devices));
     await act.tap(button);
     await idle(500);
+    spot<DevicesPage>().existsOnce();
   }
 
   Future<void> openScanner() async {
     await act.tap(spotText('Scan'));
     await idle(500);
+    spot<ScannerPage>().existsOnce();
   }
 
   Future<void> selectDeviceInScanner(String name) async {

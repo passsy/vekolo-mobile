@@ -46,6 +46,7 @@ void robotTest(
           // Unmount any remaining widgets.
           runApp(Container(key: UniqueKey(), child: _postTestErrorMessage(e)));
           await tester.pump();
+          rethrow;
         } finally {
           await Invoker.current!.runTearDowns(flutterTearDowns);
           flutterTearDowns.clear();
