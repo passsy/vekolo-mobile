@@ -1,8 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:spot/spot.dart';
 import 'package:vekolo/domain/models/device_info.dart';
-import 'package:vekolo/pages/home_page.dart';
-import 'package:vekolo/widgets/splash_screen.dart';
 
 import '../robot/robot_test_fn.dart';
 

@@ -1,4 +1,4 @@
-import 'dart:developer' as developer;
+import 'package:vekolo/app/logger.dart';
 
 import 'package:context_plus/context_plus.dart';
 import 'package:flutter/material.dart';
@@ -388,7 +388,7 @@ class DevicesPage extends StatelessWidget {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${device.name} connected')));
     } catch (e, stackTrace) {
-      developer.log('Error connecting to ${device.name}', name: 'DevicesPage', error: e, stackTrace: stackTrace);
+      talker.error('Error connecting to ${device.name}', e, stackTrace);
       if (!context.mounted) return;
       ScaffoldMessenger.of(
         context,
@@ -403,7 +403,7 @@ class DevicesPage extends StatelessWidget {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${device.name} disconnected')));
     } catch (e, stackTrace) {
-      developer.log('Error disconnecting from ${device.name}', name: 'DevicesPage', error: e, stackTrace: stackTrace);
+      talker.error('Error disconnecting from ${device.name}', e, stackTrace);
       if (!context.mounted) return;
       ScaffoldMessenger.of(
         context,
@@ -418,7 +418,7 @@ class DevicesPage extends StatelessWidget {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${device.name} removed')));
     } catch (e, stackTrace) {
-      developer.log('Error removing ${device.name}', name: 'DevicesPage', error: e, stackTrace: stackTrace);
+      talker.error('Error removing ${device.name}', e, stackTrace);
       if (!context.mounted) return;
       ScaffoldMessenger.of(
         context,
@@ -432,7 +432,7 @@ class DevicesPage extends StatelessWidget {
       deviceManager.assignPowerSource(device.id);
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${device.name} assigned as power source')));
     } catch (e, stackTrace) {
-      developer.log('Error assigning power source', name: 'DevicesPage', error: e, stackTrace: stackTrace);
+      talker.error('Error assigning power source', e, stackTrace);
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Failed to assign: $e'), backgroundColor: Colors.red));
@@ -445,7 +445,7 @@ class DevicesPage extends StatelessWidget {
       deviceManager.assignCadenceSource(device.id);
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${device.name} assigned as cadence source')));
     } catch (e, stackTrace) {
-      developer.log('Error assigning cadence source', name: 'DevicesPage', error: e, stackTrace: stackTrace);
+      talker.error('Error assigning cadence source', e, stackTrace);
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Failed to assign: $e'), backgroundColor: Colors.red));
@@ -460,7 +460,7 @@ class DevicesPage extends StatelessWidget {
         context,
       ).showSnackBar(SnackBar(content: Text('${device.name} assigned as heart rate source')));
     } catch (e, stackTrace) {
-      developer.log('Error assigning heart rate source', name: 'DevicesPage', error: e, stackTrace: stackTrace);
+      talker.error('Error assigning heart rate source', e, stackTrace);
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Failed to assign: $e'), backgroundColor: Colors.red));
@@ -473,7 +473,7 @@ class DevicesPage extends StatelessWidget {
       deviceManager.assignSpeedSource(device.id);
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${device.name} assigned as speed source')));
     } catch (e, stackTrace) {
-      developer.log('Error assigning speed source', name: 'DevicesPage', error: e, stackTrace: stackTrace);
+      talker.error('Error assigning speed source', e, stackTrace);
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Failed to assign: $e'), backgroundColor: Colors.red));
@@ -498,7 +498,7 @@ class DevicesPage extends StatelessWidget {
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Speed source unassigned')));
       }
     } catch (e, stackTrace) {
-      developer.log('Error unassigning data source', name: 'DevicesPage', error: e, stackTrace: stackTrace);
+      talker.error('Error unassigning data source', e, stackTrace);
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Failed to unassign: $e'), backgroundColor: Colors.red));
@@ -599,7 +599,7 @@ class DevicesPage extends StatelessWidget {
           _handleAssignHeartRate(context, device);
       }
     } catch (e, stackTrace) {
-      developer.log('Error assigning device', name: 'DevicesPage', error: e, stackTrace: stackTrace);
+      talker.error('Error assigning device', e, stackTrace);
       if (context.mounted) {
         ScaffoldMessenger.of(
           context,

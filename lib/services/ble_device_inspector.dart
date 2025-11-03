@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'dart:developer' as developer;
+import 'package:vekolo/app/logger.dart';
 
 import 'package:clock/clock.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart' as fbp;
@@ -65,7 +65,7 @@ class BleDeviceInspector {
     _rssi = rssi;
     _services.clear();
 
-    developer.log('[BleDeviceInspector] Starting inspection of device: $deviceId');
+    talker.info('[BleDeviceInspector] Starting inspection of device: $deviceId');
 
     try {
       // Step 1: Connect to device
@@ -82,7 +82,7 @@ class BleDeviceInspector {
       // Step 4: Generate report
       return _generateReport();
     } catch (e, stackTrace) {
-      developer.log('[BleDeviceInspector] Inspection failed: $e', error: e, stackTrace: stackTrace);
+      talker.error('[BleDeviceInspector] Inspection failed: $e', e, stackTrace);
       await _disconnect();
       _inspectionEndTime = clock.now();
       return _generateReport(error: e.toString());
@@ -91,7 +91,7 @@ class BleDeviceInspector {
 
   /// Connects to the BLE device with timeout.
   Future<void> _connectToDevice(String deviceId) async {
-    developer.log('[BleDeviceInspector] Connecting to device: $deviceId');
+    talker.info('[BleDeviceInspector] Connecting to device: $deviceId');
 
     final completer = Completer<void>();
 
@@ -101,11 +101,11 @@ class BleDeviceInspector {
 
     _connectionSubscription = _device!.connectionState.listen(
       (state) {
-        developer.log('[BleDeviceInspector] Connection state: $state');
+        talker.info('[BleDeviceInspector] Connection state: $state');
 
         if (state == fbp.BluetoothConnectionState.connected) {
           if (!completer.isCompleted) {
-            developer.log('[BleDeviceInspector] Connected successfully');
+            talker.info('[BleDeviceInspector] Connected successfully');
             completer.complete();
           }
         } else if (state == fbp.BluetoothConnectionState.disconnected) {
@@ -115,7 +115,7 @@ class BleDeviceInspector {
         }
       },
       onError: (Object e, StackTrace stackTrace) {
-        developer.log('[BleDeviceInspector] Connection error: $e', error: e, stackTrace: stackTrace);
+        talker.error('[BleDeviceInspector] Connection error: $e', e, stackTrace);
         if (!completer.isCompleted) {
           completer.completeError(e, stackTrace);
         }
@@ -135,20 +135,20 @@ class BleDeviceInspector {
 
   /// Discovers all GATT services and collects data.
   Future<void> _discoverServices(String deviceId) async {
-    developer.log('[BleDeviceInspector] Discovering services...');
+    talker.info('[BleDeviceInspector] Discovering services...');
 
     try {
       final services = await _device!.discoverServices();
-      developer.log('[BleDeviceInspector] Found ${services.length} service(s)');
+      talker.info('[BleDeviceInspector] Found ${services.length} service(s)');
 
       for (final service in services) {
-        developer.log('[BleDeviceInspector] Processing service: ${service.uuid}');
+        talker.info('[BleDeviceInspector] Processing service: ${service.uuid}');
 
         final characteristics = <_CharacteristicInfo>[];
 
         // Process each characteristic
         for (final characteristic in service.characteristics) {
-          developer.log('[BleDeviceInspector] Processing characteristic: ${characteristic.uuid}');
+          talker.info('[BleDeviceInspector] Processing characteristic: ${characteristic.uuid}');
 
           // Try to read characteristic value if readable
           List<int>? charValue;
@@ -158,13 +158,13 @@ class BleDeviceInspector {
             charValue = readResult.value;
             charReadError = readResult.error;
           } else {
-            developer.log('[BleDeviceInspector] Characteristic ${characteristic.uuid} is not readable');
+            talker.info('[BleDeviceInspector] Characteristic ${characteristic.uuid} is not readable');
           }
 
           // Process descriptors
           final descriptors = <_DescriptorInfo>[];
           for (final descriptor in characteristic.descriptors) {
-            developer.log('[BleDeviceInspector] Processing descriptor: ${descriptor.uuid}');
+            talker.info('[BleDeviceInspector] Processing descriptor: ${descriptor.uuid}');
 
             List<int>? descriptorValue;
             String? descriptorReadError;
@@ -173,20 +173,20 @@ class BleDeviceInspector {
               final value = await descriptor.read().timeout(
                 _characteristicReadTimeout,
                 onTimeout: () {
-                  developer.log('[BleDeviceInspector] Read timeout for descriptor ${descriptor.uuid}');
+                  talker.info('[BleDeviceInspector] Read timeout for descriptor ${descriptor.uuid}');
                   return <int>[];
                 },
               );
 
               if (value.isNotEmpty) {
                 descriptorValue = value;
-                developer.log('[BleDeviceInspector] Read ${value.length} byte(s) from descriptor ${descriptor.uuid}');
+                talker.info('[BleDeviceInspector] Read ${value.length} byte(s) from descriptor ${descriptor.uuid}');
               }
             } catch (e, stackTrace) {
-              developer.log(
+              talker.error(
                 '[BleDeviceInspector] Failed to read descriptor ${descriptor.uuid}: $e',
-                error: e,
-                stackTrace: stackTrace,
+                e,
+                stackTrace,
               );
               descriptorReadError = e.toString();
             }
@@ -214,9 +214,9 @@ class BleDeviceInspector {
         _services.add(_ServiceInfo(uuid: service.uuid, isPrimary: service.isPrimary, characteristics: characteristics));
       }
 
-      developer.log('[BleDeviceInspector] Service discovery completed');
+      talker.info('[BleDeviceInspector] Service discovery completed');
     } catch (e, stackTrace) {
-      developer.log('[BleDeviceInspector] Error during service discovery: $e', error: e, stackTrace: stackTrace);
+      talker.error('[BleDeviceInspector] Error during service discovery: $e', e, stackTrace);
       rethrow;
     }
   }
@@ -227,21 +227,21 @@ class BleDeviceInspector {
       final value = await characteristic.read().timeout(
         _characteristicReadTimeout,
         onTimeout: () {
-          developer.log('[BleDeviceInspector] Read timeout for characteristic ${characteristic.uuid}');
+          talker.info('[BleDeviceInspector] Read timeout for characteristic ${characteristic.uuid}');
           return <int>[];
         },
       );
 
       if (value.isNotEmpty) {
-        developer.log('[BleDeviceInspector] Read ${value.length} byte(s) from ${characteristic.uuid}');
+        talker.info('[BleDeviceInspector] Read ${value.length} byte(s) from ${characteristic.uuid}');
         return (value: value, error: null);
       }
       return (value: null, error: null);
     } catch (e, stackTrace) {
-      developer.log(
+      talker.error(
         '[BleDeviceInspector] Failed to read characteristic ${characteristic.uuid}: $e',
-        error: e,
-        stackTrace: stackTrace,
+        e,
+        stackTrace,
       );
       return (value: null, error: e.toString());
     }
@@ -249,7 +249,7 @@ class BleDeviceInspector {
 
   /// Disconnects from the device.
   Future<void> _disconnect() async {
-    developer.log('[BleDeviceInspector] Disconnecting');
+    talker.info('[BleDeviceInspector] Disconnecting');
     await _connectionSubscription?.cancel();
     _connectionSubscription = null;
     if (_device != null) {

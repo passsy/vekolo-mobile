@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'dart:developer' as developer;
+import 'package:vekolo/app/logger.dart';
 import 'dart:typed_data';
 
 import 'package:clock/clock.dart';
@@ -226,14 +226,14 @@ class FtmsBleTransport
   @override
   Future<void> attach({required fbp.BluetoothDevice device, required List<fbp.BluetoothService> services}) async {
     try {
-      developer.log('[FtmsBleTransport] Attaching to FTMS service on device: $deviceId');
+      talker.info('[FtmsBleTransport] Attaching to FTMS service on device: $deviceId');
       _stateBeacon.value = TransportState.attaching;
       _lastAttachError = null; // Clear any previous error
 
       _services = services;
       await _setupCharacteristics(services: services);
       _stateBeacon.value = TransportState.attached;
-      developer.log('[FtmsBleTransport] FTMS service attached successfully');
+      talker.info('[FtmsBleTransport] FTMS service attached successfully');
     } catch (e, stackTrace) {
       print('[FtmsBleTransport] Failed to attach to FTMS service: $e');
       print(stackTrace);
@@ -261,9 +261,8 @@ class FtmsBleTransport
       final indoorBikeDataChar = indoorBikeDataChars.isNotEmpty ? indoorBikeDataChars.first : null;
 
       if (indoorBikeDataChar == null) {
-        developer.log(
+        talker.info(
           '[FtmsBleTransport] Indoor bike data characteristic not found - data reading will be unavailable',
-          name: 'FtmsBleTransport',
         );
       }
 
@@ -272,9 +271,8 @@ class FtmsBleTransport
       final controlPointChar = controlPointChars.isNotEmpty ? controlPointChars.first : null;
 
       if (controlPointChar == null) {
-        developer.log(
+        talker.info(
           '[FtmsBleTransport] Control point characteristic not found - device control will be unavailable',
-          name: 'FtmsBleTransport',
         );
       }
 
@@ -294,11 +292,10 @@ class FtmsBleTransport
             _parseIndoorBikeData(Uint8List.fromList(data));
           },
           onError: (e, stackTrace) {
-            developer.log(
+            talker.info(
               '[FtmsBleTransport] Indoor bike data error: $e',
-              name: 'FtmsBleTransport',
-              error: e,
-              stackTrace: stackTrace as StackTrace?,
+              e,
+              stackTrace as StackTrace?,
             );
           },
         );
@@ -312,21 +309,19 @@ class FtmsBleTransport
             _handleControlPointResponse(Uint8List.fromList(data));
           },
           onError: (e, stackTrace) {
-            developer.log(
+            talker.info(
               '[FtmsBleTransport] Control point error: $e',
-              name: 'FtmsBleTransport',
-              error: e,
-              stackTrace: stackTrace as StackTrace?,
+              e,
+              stackTrace as StackTrace?,
             );
           },
         );
       }
     } catch (e, stackTrace) {
-      developer.log(
+      talker.info(
         '[FtmsBleTransport] Failed to setup characteristics: $e',
-        name: 'FtmsBleTransport',
-        error: e,
-        stackTrace: stackTrace,
+        e,
+        stackTrace,
       );
       rethrow;
     }
@@ -496,9 +491,8 @@ class FtmsBleTransport
     // Find control point characteristic from stored services
     final controlPointChar = _getControlPointCharacteristic();
     if (controlPointChar == null) {
-      developer.log(
+      talker.info(
         '[FtmsBleTransport] Cannot sync device state - control point characteristic not available',
-        name: 'FtmsBleTransport',
       );
       return;
     }
@@ -602,7 +596,7 @@ class FtmsBleTransport
         : state;
 
     if (clampedState.targetPower != state.targetPower) {
-      developer.log('[FtmsBleTransport] Power clamped from ${state.targetPower}W to ${clampedState.targetPower}W');
+      talker.info('[FtmsBleTransport] Power clamped from ${state.targetPower}W to ${clampedState.targetPower}W');
     }
 
     // Update desired state
@@ -616,7 +610,7 @@ class FtmsBleTransport
   }
 
   void _handleDisconnection() {
-    developer.log('[FtmsBleTransport] Device disconnected');
+    talker.info('[FtmsBleTransport] Device disconnected');
     _connectionSubscription?.cancel();
     _indoorBikeDataSubscription?.cancel();
     _controlPointSubscription?.cancel();
@@ -699,7 +693,10 @@ class FtmsBleTransport
 /// ```dart
 /// registry.register(ftmsTransportRegistration);
 /// ```
-final ftmsTransportRegistration = TransportRegistration(name: 'FTMS', factory: _createFtmsTransport);
+final ftmsTransportRegistration = TransportRegistration(
+  name: 'FTMS',
+  factory: _createFtmsTransport,
+);
 
 /// Factory function for creating FTMS transport instances.
 BleTransport _createFtmsTransport(String deviceId) {

@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'dart:developer' as developer;
+import 'package:vekolo/app/logger.dart';
 
 import 'package:deep_pick/deep_pick.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -79,9 +79,8 @@ Future<void> saveDeviceAssignments(DeviceManager deviceManager) async {
   final json = jsonEncode(data);
   await prefs.setString(_storageKey, json);
 
-  developer.log(
+  talker.info(
     '[DeviceAssignments] Saved ${assignments.length} assignment(s)',
-    name: 'DeviceAssignments',
   );
 }
 
@@ -93,7 +92,7 @@ Future<Map<String, Set<String>>> loadDeviceAssignments() async {
   final prefs = await SharedPreferences.getInstance();
   final json = prefs.getString(_storageKey);
   if (json == null) {
-    developer.log('[DeviceAssignments] No saved assignments found', name: 'DeviceAssignments');
+    talker.info('[DeviceAssignments] No saved assignments found');
     return {};
   }
 
@@ -103,14 +102,13 @@ Future<Map<String, Set<String>>> loadDeviceAssignments() async {
     // Check version
     final version = pick(data, 'version').asIntOrNull();
     if (version == null) {
-      developer.log('[DeviceAssignments] No version field, ignoring', name: 'DeviceAssignments');
+      talker.info('[DeviceAssignments] No version field, ignoring');
       return {};
     }
 
     if (version != _currentVersion) {
-      developer.log(
+      talker.info(
         '[DeviceAssignments] Unknown version $version (expected $_currentVersion), ignoring',
-        name: 'DeviceAssignments',
       );
       // Future: handle version migration here if needed
       return {};
@@ -119,7 +117,7 @@ Future<Map<String, Set<String>>> loadDeviceAssignments() async {
     // Parse assignments list
     final assignmentsList = pick(data, 'assignments').asListOrNull<dynamic>((p) => p.value);
     if (assignmentsList == null) {
-      developer.log('[DeviceAssignments] No assignments list found', name: 'DeviceAssignments');
+      talker.info('[DeviceAssignments] No assignments list found');
       return {};
     }
 
@@ -135,7 +133,7 @@ Future<Map<String, Set<String>>> loadDeviceAssignments() async {
         ));
       } catch (e) {
         // Skip invalid assignments
-        developer.log('[DeviceAssignments] Skipping invalid assignment: $e', name: 'DeviceAssignments');
+        talker.info('[DeviceAssignments] Skipping invalid assignment: $e');
       }
     }
 
@@ -145,18 +143,16 @@ Future<Map<String, Set<String>>> loadDeviceAssignments() async {
       result.putIfAbsent(assignment.deviceId, () => {}).add(assignment.role);
     }
 
-    developer.log(
+    talker.info(
       '[DeviceAssignments] Loaded ${assignments.length} assignment(s) for ${result.length} device(s)',
-      name: 'DeviceAssignments',
     );
 
     return result;
   } catch (e, stackTrace) {
-    developer.log(
+    talker.error(
       '[DeviceAssignments] Failed to load assignments, resetting',
-      name: 'DeviceAssignments',
-      error: e,
-      stackTrace: stackTrace,
+      e,
+      stackTrace,
     );
     return {};
   }
@@ -168,5 +164,5 @@ Future<Map<String, Set<String>>> loadDeviceAssignments() async {
 Future<void> clearDeviceAssignments() async {
   final prefs = await SharedPreferences.getInstance();
   await prefs.remove(_storageKey);
-  developer.log('[DeviceAssignments] Cleared all assignments', name: 'DeviceAssignments');
+  talker.info('[DeviceAssignments] Cleared all assignments');
 }

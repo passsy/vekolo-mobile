@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'dart:developer' as developer;
+import 'package:vekolo/app/logger.dart';
 
 import 'package:async/async.dart';
 import 'package:context_plus/context_plus.dart';
@@ -84,12 +84,13 @@ class _TrainerPageState extends State<TrainerPage> {
       _subscribeToDevice(device);
 
       if (device.connectionState.value != device_info.ConnectionState.connected) {
+        if (!mounted) return;
         final deviceManager = Refs.deviceManager.of(context);
         _connectionOperation = deviceManager.connectDevice(device.id);
         await _connectionOperation!.value;
       }
 
-      developer.log('[TrainerPage] Device connected successfully, starting power updates');
+      talker.info('[TrainerPage] Device connected successfully, starting power updates');
 
       final supportsErgMode = device.supportsErgMode;
 
@@ -102,7 +103,7 @@ class _TrainerPageState extends State<TrainerPage> {
         _sendTargetPower();
       }
     } catch (e, stackTrace) {
-      developer.log('[TrainerPage] Connection failed: $e');
+      talker.info('[TrainerPage] Connection failed: $e');
       print(stackTrace);
       if (mounted) {
         setState(() {
@@ -177,10 +178,10 @@ class _TrainerPageState extends State<TrainerPage> {
   }
 
   void _sendTargetPower() {
-    developer.log('[TrainerPage] Initial target power: ${_targetPower}W');
+    talker.info('[TrainerPage] Initial target power: ${_targetPower}W');
     unawaited(
       _device?.setTargetPower(_targetPower).catchError((Object error, StackTrace stackTrace) {
-        developer.log('[TrainerPage] Failed to set target power: $error', error: error, stackTrace: stackTrace);
+        talker.error('[TrainerPage] Failed to set target power', error, stackTrace);
         if (!mounted) return;
         setState(() {
           _errorMessage = 'Failed to set target power: $error';
@@ -193,13 +194,13 @@ class _TrainerPageState extends State<TrainerPage> {
     setState(() {
       _targetPower = power.round();
     });
-    developer.log('[TrainerPage] Setting target power to ${_targetPower}W');
+    talker.info('[TrainerPage] Setting target power to ${_targetPower}W');
     if (!_supportsErgMode) {
       return;
     }
     unawaited(
       _device?.setTargetPower(_targetPower).catchError((Object error, StackTrace stackTrace) {
-        developer.log('[TrainerPage] Failed to set target power: $error', error: error, stackTrace: stackTrace);
+        talker.error('[TrainerPage] Failed to set target power', error, stackTrace);
         if (!mounted) return;
         setState(() {
           _errorMessage = 'Failed to set target power: $error';

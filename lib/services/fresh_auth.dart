@@ -1,4 +1,4 @@
-import 'dart:developer' as developer;
+import 'package:vekolo/app/logger.dart';
 
 import 'package:clock/clock.dart';
 import 'package:deep_pick/deep_pick.dart';
@@ -42,7 +42,7 @@ Fresh<VekoloToken> createFreshAuth({required VekoloApiClient Function() apiClien
           }
         }
       } catch (e) {
-        developer.log('[Fresh] Error checking shouldRefresh: $e');
+        talker.info('[Fresh] Error checking shouldRefresh: $e');
       }
       return false;
     },

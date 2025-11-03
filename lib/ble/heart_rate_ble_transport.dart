@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'dart:developer' as developer;
+import 'package:vekolo/app/logger.dart';
 
 import 'package:clock/clock.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart' as fbp;
@@ -79,9 +79,8 @@ class HeartRateBleTransport implements BleTransport, HeartRateSource {
     try {
       _stateBeacon.value = TransportState.attaching;
       _lastAttachError = null; // Clear any previous error
-      developer.log(
+      talker.info(
         '[HeartRateBleTransport] Attaching to Heart Rate service on $deviceId',
-        name: 'HeartRateBleTransport',
       );
 
       // Find Heart Rate Service
@@ -90,7 +89,7 @@ class HeartRateBleTransport implements BleTransport, HeartRateSource {
         orElse: () => throw Exception('Heart Rate Service not found'),
       );
 
-      developer.log('[HeartRateBleTransport] Found Heart Rate Service', name: 'HeartRateBleTransport');
+      talker.info('[HeartRateBleTransport] Found Heart Rate Service');
 
       // Find Heart Rate Measurement characteristic
       final hrMeasurementChar = hrService.characteristics.firstWhere(
@@ -98,24 +97,22 @@ class HeartRateBleTransport implements BleTransport, HeartRateSource {
         orElse: () => throw Exception('Heart Rate Measurement characteristic not found'),
       );
 
-      developer.log(
+      talker.info(
         '[HeartRateBleTransport] Found Heart Rate Measurement characteristic',
-        name: 'HeartRateBleTransport',
       );
 
       // Subscribe to heart rate notifications
       await hrMeasurementChar.setNotifyValue(true);
       _heartRateSubscription = hrMeasurementChar.onValueReceived.listen(_parseHeartRateMeasurement);
 
-      developer.log('[HeartRateBleTransport] Subscribed to heart rate notifications', name: 'HeartRateBleTransport');
+      talker.info('[HeartRateBleTransport] Subscribed to heart rate notifications');
 
       _stateBeacon.value = TransportState.attached;
     } catch (e, stackTrace) {
-      developer.log(
+      talker.info(
         '[HeartRateBleTransport] Failed to attach to Heart Rate service: $e',
-        name: 'HeartRateBleTransport',
-        error: e,
-        stackTrace: stackTrace,
+        e,
+        stackTrace,
       );
       _lastAttachError = ConnectionError(
         message: 'Failed to attach to Heart Rate service: $e',
@@ -132,9 +129,8 @@ class HeartRateBleTransport implements BleTransport, HeartRateSource {
   @override
   Future<void> detach() async {
     try {
-      developer.log(
+      talker.info(
         '[HeartRateBleTransport] Detaching from Heart Rate service on $deviceId',
-        name: 'HeartRateBleTransport',
       );
 
       // Cancel subscriptions
@@ -143,11 +139,10 @@ class HeartRateBleTransport implements BleTransport, HeartRateSource {
 
       _stateBeacon.value = TransportState.detached;
     } catch (e, stackTrace) {
-      developer.log(
+      talker.info(
         '[HeartRateBleTransport] Detach failed: $e',
-        name: 'HeartRateBleTransport',
-        error: e,
-        stackTrace: stackTrace,
+        e,
+        stackTrace,
       );
       _stateBeacon.value = TransportState.detached;
     }
@@ -185,11 +180,10 @@ class HeartRateBleTransport implements BleTransport, HeartRateSource {
       final data = HeartRateData(bpm: bpm, timestamp: clock.now());
       _heartRateBeacon.value = data;
     } catch (e, stackTrace) {
-      developer.log(
+      talker.info(
         '[HeartRateBleTransport] Failed to parse heart rate: $e',
-        name: 'HeartRateBleTransport',
-        error: e,
-        stackTrace: stackTrace,
+        e,
+        stackTrace,
       );
     }
   }

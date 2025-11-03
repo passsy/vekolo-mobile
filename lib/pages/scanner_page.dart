@@ -1,4 +1,4 @@
-import 'dart:developer' as developer;
+import 'package:vekolo/app/logger.dart';
 
 import 'package:context_plus/context_plus.dart';
 import 'package:flutter/material.dart';
@@ -44,7 +44,7 @@ class _ScannerPageState extends State<ScannerPage> {
   @override
   void initState() {
     super.initState();
-    developer.log('[ScannerPage] Initializing scanner page');
+    talker.info('[ScannerPage] Initializing scanner page');
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _setupListeners();
@@ -59,7 +59,7 @@ class _ScannerPageState extends State<ScannerPage> {
       });
 
       if (state.canScan && !_isScanning && _scanToken == null) {
-        developer.log('[ScannerPage] Ready to scan, auto-starting');
+        talker.info('[ScannerPage] Ready to scan, auto-starting');
         _startScan();
       }
     });
@@ -86,7 +86,7 @@ class _ScannerPageState extends State<ScannerPage> {
 
   @override
   void dispose() {
-    developer.log('[ScannerPage] Disposing scanner page');
+    talker.info('[ScannerPage] Disposing scanner page');
     if (_scanToken != null) {
       _scanner.stopScan(_scanToken!);
     }
@@ -111,12 +111,12 @@ class _ScannerPageState extends State<ScannerPage> {
     if (!mounted) return;
 
     if (info.visibleFraction == 0) {
-      developer.log('[ScannerPage] Page hidden, stopping scan');
+      talker.info('[ScannerPage] Page hidden, stopping scan');
       _stopScan();
     } else if (info.visibleFraction > 0) {
       final bluetoothState = _bluetoothState;
       if (bluetoothState != null && bluetoothState.canScan && !_isScanning && _scanToken == null) {
-        developer.log('[ScannerPage] Page visible again, restarting scan');
+        talker.info('[ScannerPage] Page visible again, restarting scan');
         _startScan();
       }
     }
@@ -172,7 +172,7 @@ class _ScannerPageState extends State<ScannerPage> {
 
       return capabilities;
     } catch (e) {
-      developer.log('Error detecting capabilities: $e', name: 'ScannerPage');
+      talker.info('Error detecting capabilities: $e');
       return {};
     }
   }
@@ -268,7 +268,7 @@ class _ScannerPageState extends State<ScannerPage> {
                               capabilities: capabilities,
                               connectMode: widget.connectMode,
                               onTap: () async {
-                                developer.log(
+                                talker.info(
                                   '[ScannerPage] ✅ Selected device: ${device.name?.isEmpty ?? true ? "Unknown" : device.name} '
                                   '(ID: ${device.deviceId}, RSSI: ${device.rssi ?? "unknown"})',
                                 );
@@ -301,7 +301,7 @@ class _ScannerPageState extends State<ScannerPage> {
               padding: const EdgeInsets.all(16.0),
               child: OutlinedButton.icon(
                 onPressed: () {
-                  developer.log('[ScannerPage] Navigating to unknown device report page');
+                  talker.info('[ScannerPage] Navigating to unknown device report page');
                   context.push('/unknown-device');
                 },
                 icon: const Icon(Icons.help_outline),
@@ -415,10 +415,9 @@ class _DeviceListTile extends StatelessWidget {
           Text(label, style: const TextStyle(fontSize: 11)),
         ],
       ),
-      padding: EdgeInsets.zero,
       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
       visualDensity: VisualDensity.compact,
-      labelPadding: const EdgeInsets.symmetric(horizontal: 6, vertical: 0),
+      labelPadding: const EdgeInsets.symmetric(horizontal: 6),
     );
   }
 
@@ -494,7 +493,7 @@ class _DeviceConnectingDialogState extends State<_DeviceConnectingDialog> {
       BleDevice? newDevice; // Only created for new devices, before adding to manager
 
       if (isReconnect) {
-        developer.log('[DeviceConnectingDialog] Device already exists in manager, reconnecting');
+        talker.info('[DeviceConnectingDialog] Device already exists in manager, reconnecting');
         fitnessDevice = existingDevice;
       } else {
         setState(() => _statusMessage = 'Detecting device type...');
@@ -505,9 +504,8 @@ class _DeviceConnectingDialogState extends State<_DeviceConnectingDialog> {
           deviceId: widget.device.deviceId,
         );
 
-        developer.log(
+        talker.info(
           '[DeviceConnectingDialog] Found ${transports.length} compatible transport(s)',
-          name: 'DeviceConnectingDialog',
         );
 
         if (transports.isEmpty) {
@@ -540,7 +538,7 @@ class _DeviceConnectingDialogState extends State<_DeviceConnectingDialog> {
       if (!mounted) return;
 
       setState(() => _statusMessage = 'Establishing Bluetooth connection...');
-      developer.log(
+      talker.info(
         '[DeviceConnectingDialog] ${isReconnect ? 'Reconnecting' : 'Connecting'} device: ${fitnessDevice.name}',
       );
       await deviceManager.connectDevice(fitnessDevice.id).value;
@@ -594,7 +592,7 @@ class _DeviceConnectingDialogState extends State<_DeviceConnectingDialog> {
 
       widget.onConnect(fitnessDevice, autoAssignments, isReconnect);
     } catch (e, stackTrace) {
-      developer.log('Error connecting to device', name: 'DeviceConnectingDialog', error: e, stackTrace: stackTrace);
+      talker.error('Error connecting to device', e, stackTrace);
 
       if (!mounted) return;
 

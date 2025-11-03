@@ -1,14 +1,14 @@
 import 'dart:io';
 import 'package:permission_handler/permission_handler.dart';
-import 'dart:developer' as developer;
+import 'package:vekolo/app/logger.dart';
 
 class BlePermissions {
   /// Request all necessary BLE permissions based on Android version
   static Future<bool> requestPermissions() async {
-    developer.log('[BlePermissions] Requesting BLE permissions');
+    talker.info('[BlePermissions] Requesting BLE permissions');
 
     if (!Platform.isAndroid) {
-      developer.log('[BlePermissions] Not Android, no permission request needed');
+      talker.info('[BlePermissions] Not Android, no permission request needed');
       return true;
     }
 
@@ -20,12 +20,12 @@ class BlePermissions {
 
     // For Android 12+ (API 31+)
     if (await _isAndroid12OrHigher()) {
-      developer.log('[BlePermissions] Android 12+, requesting BLUETOOTH_SCAN and BLUETOOTH_CONNECT');
+      talker.info('[BlePermissions] Android 12+, requesting BLUETOOTH_SCAN and BLUETOOTH_CONNECT');
       permissionsToRequest.add(Permission.bluetoothScan);
       permissionsToRequest.add(Permission.bluetoothConnect);
     } else {
       // For Android 11 and below
-      developer.log('[BlePermissions] Android 11 or below, requesting LOCATION permissions');
+      talker.info('[BlePermissions] Android 11 or below, requesting LOCATION permissions');
       permissionsToRequest.add(Permission.locationWhenInUse);
     }
 
@@ -37,20 +37,20 @@ class BlePermissions {
     for (final entry in statuses.entries) {
       final permission = entry.key;
       final status = entry.value;
-      developer.log('[BlePermissions] $permission: $status');
+      talker.info('[BlePermissions] $permission: $status');
 
       if (!status.isGranted) {
         allGranted = false;
         if (status.isPermanentlyDenied) {
-          developer.log('[BlePermissions] $permission is permanently denied');
+          talker.info('[BlePermissions] $permission is permanently denied');
         }
       }
     }
 
     if (allGranted) {
-      developer.log('[BlePermissions] All permissions granted ✅');
+      talker.info('[BlePermissions] All permissions granted ✅');
     } else {
-      developer.log('[BlePermissions] Some permissions denied ❌');
+      talker.info('[BlePermissions] Some permissions denied ❌');
     }
 
     return allGranted;
@@ -100,7 +100,7 @@ class BlePermissions {
 
   /// Open app settings for manual permission grant
   static Future<void> openSettings() async {
-    developer.log('[BlePermissions] Opening app settings');
+    talker.info('[BlePermissions] Opening app settings');
     await openAppSettings();
   }
 }

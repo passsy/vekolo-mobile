@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'dart:developer' as developer;
+import 'package:vekolo/app/logger.dart';
 
 import 'package:context_plus/context_plus.dart';
 import 'package:flutter/material.dart';
@@ -48,7 +48,7 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
 
   Future<void> _loadWorkout() async {
     try {
-      developer.log('Loading workout from save.json', name: 'WorkoutPlayerPage');
+      talker.info('[WorkoutPlayerPage] Loading workout from save.json');
 
       // Load workout JSON from assets
       final jsonString = await rootBundle.loadString('save.json');
@@ -57,9 +57,8 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
       // Parse workout plan
       final workoutPlan = WorkoutPlan.fromJson(jsonData);
 
-      developer.log(
-        'Loaded workout: ${workoutPlan.plan.length} items, ${workoutPlan.events.length} events',
-        name: 'WorkoutPlayerPage',
+      talker.info(
+        '[WorkoutPlayerPage] Loaded workout: ${workoutPlan.plan.length} items, ${workoutPlan.events.length} events',
       );
 
       // Initialize player service
@@ -83,9 +82,9 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
         _isLoading = false;
       });
 
-      developer.log('Workout player initialized', name: 'WorkoutPlayerPage');
+      talker.info('[WorkoutPlayerPage] Workout player initialized');
     } catch (e, stackTrace) {
-      developer.log('Error loading workout', name: 'WorkoutPlayerPage', error: e, stackTrace: stackTrace);
+      talker.error('[WorkoutPlayerPage] Error loading workout', e, stackTrace);
       setState(() {
         _loadError = e.toString();
         _isLoading = false;

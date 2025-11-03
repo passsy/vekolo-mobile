@@ -45,7 +45,7 @@
 library;
 
 import 'dart:async';
-import 'dart:developer' as developer;
+import 'package:vekolo/app/logger.dart';
 
 import 'package:clock/clock.dart';
 import 'package:state_beacon/state_beacon.dart';
@@ -87,10 +87,9 @@ class WorkoutPlayerService {
     _updateCurrentAndNextBlock();
     _updateProgress();
 
-    developer.log(
+    talker.info(
       'WorkoutPlayerService initialized: ${_flattenedPlan.length} blocks, '
       '${_totalDuration}ms duration, FTP ${_ftp}W',
-      name: 'WorkoutPlayerService',
     );
   }
 
@@ -247,16 +246,16 @@ class WorkoutPlayerService {
     }
 
     if (isComplete.value) {
-      developer.log('Cannot start: workout is already complete', name: 'WorkoutPlayerService');
+      talker.debug('[WorkoutPlayerService] Cannot start: workout is already complete');
       return;
     }
 
     if (_currentBlockIndex >= _flattenedPlan.length) {
-      developer.log('Cannot start: no blocks remaining', name: 'WorkoutPlayerService');
+      talker.debug('[WorkoutPlayerService] Cannot start: no blocks remaining');
       return;
     }
 
-    developer.log('Starting workout', name: 'WorkoutPlayerService');
+    talker.debug('[WorkoutPlayerService] Starting workout');
 
     // Mark as resumed
     _lastResumeTime = clock.now();
@@ -280,7 +279,7 @@ class WorkoutPlayerService {
       return; // Already paused
     }
 
-    developer.log('Pausing workout', name: 'WorkoutPlayerService');
+    talker.debug('[WorkoutPlayerService] Pausing workout');
 
     // Update elapsed time before pausing
     _updateGlobalElapsedTime();
@@ -306,11 +305,11 @@ class WorkoutPlayerService {
   void skip() {
     final currentBlock = currentBlock$.value;
     if (currentBlock == null) {
-      developer.log('Cannot skip: no current block', name: 'WorkoutPlayerService');
+      talker.debug('[WorkoutPlayerService] Cannot skip: no current block');
       return;
     }
 
-    developer.log('Skipping block ${_currentBlockIndex}', name: 'WorkoutPlayerService');
+    talker.debug('[WorkoutPlayerService] Skipping block $_currentBlockIndex');
 
     // Calculate how much time to add (remaining time in current block)
     final elapsedUntilCurrentBlock = _getWorkoutElapsedUntilCurrentBlock();
@@ -346,7 +345,7 @@ class WorkoutPlayerService {
   void setPowerScaleFactor(double factor) {
     final clampedFactor = factor.clamp(0.1, 5.0);
 
-    developer.log('Setting power scale factor: ${clampedFactor.toStringAsFixed(2)}', name: 'WorkoutPlayerService');
+    talker.debug('[WorkoutPlayerService] Setting power scale factor: ${clampedFactor.toStringAsFixed(2)}');
 
     powerScaleFactor.value = clampedFactor;
 
@@ -366,7 +365,7 @@ class WorkoutPlayerService {
   /// Use this when the user manually ends the workout before finishing
   /// all blocks.
   void completeEarly() {
-    developer.log('Completing workout early at ${_workoutElapsedTime}ms', name: 'WorkoutPlayerService');
+    talker.debug('[WorkoutPlayerService] Completing workout early at ${_workoutElapsedTime}ms');
 
     _updateGlobalElapsedTime();
     _completeWorkout();
@@ -377,7 +376,7 @@ class WorkoutPlayerService {
   /// Stops the timer, disposes all beacons, and cleans up the sync service.
   /// After calling this, the service should not be used anymore.
   void dispose() {
-    developer.log('Disposing WorkoutPlayerService', name: 'WorkoutPlayerService');
+    talker.debug('[WorkoutPlayerService] Disposing WorkoutPlayerService');
 
     _stopTimer();
     _syncService.dispose();
@@ -559,7 +558,7 @@ class WorkoutPlayerService {
         _triggeredEventController.add(flattenedEvent);
         _triggeredEventIds.add(eventId);
 
-        developer.log('Triggered event: $eventId at ${globalElapsedTime}ms', name: 'WorkoutPlayerService');
+        talker.debug('[WorkoutPlayerService] Triggered event: $eventId at ${globalElapsedTime}ms');
       }
     }
   }
@@ -614,7 +613,7 @@ class WorkoutPlayerService {
 
   /// Completes the workout.
   void _completeWorkout() {
-    developer.log('Workout complete at ${_workoutElapsedTime}ms', name: 'WorkoutPlayerService');
+    talker.debug('[WorkoutPlayerService] Workout complete at ${_workoutElapsedTime}ms');
 
     isPaused.value = true;
     isComplete.value = true;

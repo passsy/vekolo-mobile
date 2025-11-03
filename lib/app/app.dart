@@ -1,4 +1,4 @@
-import 'dart:developer' as developer;
+import 'package:vekolo/app/logger.dart';
 
 import 'package:context_plus/context_plus.dart';
 import 'package:flutter/material.dart';
@@ -41,26 +41,29 @@ class _VekoloAppState extends State<VekoloApp> {
       Refs.blePlatform.of(context).setLogLevel(LogLevel.none);
 
       // State holders are already initialized above via Refs
-      developer.log('[VekoloApp] State holders initialized');
+      talker.info('[VekoloApp] State holders initialized');
+
+      // Capture references before async operations
+      final deviceManager = Refs.deviceManager.of(context);
+      final authService = Refs.authService.of(context);
 
       // Initialize DeviceManager auto-connect
       try {
-        await Refs.deviceManager.of(context).initialize();
+        await deviceManager.initialize();
       } catch (e, stackTrace) {
-        developer.log(
+        talker.error(
           '[VekoloApp] Failed to initialize DeviceManager auto-connect: $e',
-          error: e,
-          stackTrace: stackTrace,
+          e,
+          stackTrace,
         );
       }
 
       // Run async initialization (load user from secure storage)
-      final authService = Refs.authService.of(context);
       await authService.initialize();
       try {
         await authService.refreshAccessToken();
       } catch (e, stack) {
-        developer.log('[VekoloApp] No valid refresh token found during initialization', error: e, stackTrace: stack);
+        talker.error('[VekoloApp] No valid refresh token found during initialization', e, stack);
       }
 
       // Mark initialization as complete
@@ -73,7 +76,7 @@ class _VekoloAppState extends State<VekoloApp> {
         });
       }
     } catch (e, stack) {
-      developer.log('[VekoloApp] Initialization failed: $e', error: e, stackTrace: stack);
+      talker.error('[VekoloApp] Initialization failed: $e', e, stack);
       if (mounted) {
         setState(() {
           _initializationError = e.toString();
@@ -97,7 +100,7 @@ class _VekoloAppState extends State<VekoloApp> {
         builder: (context) {
           // Bind all services on every build (required by ContextRef)
           late final VekoloApiClient apiClient;
-          final VekoloApiClient Function() apiClientProvider = () => apiClient;
+          VekoloApiClient apiClientProvider() => apiClient;
 
           // Create Fresh with lazy apiClient access
           final fresh = createFreshAuth(apiClient: apiClientProvider);

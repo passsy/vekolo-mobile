@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'dart:developer' as developer;
+import 'package:vekolo/app/logger.dart';
 import 'package:dio/dio.dart';
 
 /// Defines when the interceptor should log requests and responses
@@ -13,7 +13,6 @@ enum LogMode {
 
 /// A custom Dio interceptor that logs requests and responses with pretty-printed JSON
 class PrettyLogInterceptor extends Interceptor {
-  static const String _name = 'VekoloApiClient';
   static const JsonEncoder _prettyEncoder = JsonEncoder.withIndent('  ');
 
   final LogMode logMode;
@@ -49,7 +48,7 @@ class PrettyLogInterceptor extends Interceptor {
       }
 
       buffer.writeln('└─────────────────────────────────────────');
-      developer.log(buffer.toString(), name: _name);
+      talker.info(buffer.toString());
     }
 
     super.onRequest(options, handler);
@@ -85,7 +84,7 @@ class PrettyLogInterceptor extends Interceptor {
       }
 
       buffer.writeln('└─────────────────────────────────────────');
-      developer.log(buffer.toString(), name: _name);
+      talker.info(buffer.toString());
     }
 
     super.onResponse(response, handler);
@@ -166,7 +165,7 @@ class PrettyLogInterceptor extends Interceptor {
       }
 
       buffer.writeln('└───────────────────────────────────────────────────────────');
-      developer.log(buffer.toString(), name: _name);
+      talker.error(buffer.toString());
     }
 
     super.onError(err, handler);

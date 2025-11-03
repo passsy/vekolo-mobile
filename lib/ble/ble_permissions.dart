@@ -1,6 +1,6 @@
 import 'dart:io';
 import 'package:permission_handler/permission_handler.dart';
-import 'dart:developer' as developer;
+import 'package:vekolo/app/logger.dart';
 
 /// Abstract interface for checking and requesting BLE permissions.
 ///
@@ -86,10 +86,10 @@ class BlePermissionsImpl implements BlePermissions {
 
   @override
   Future<bool> request() async {
-    developer.log('[BlePermissions] Requesting BLE permissions');
+    talker.info('[BlePermissions] Requesting BLE permissions');
 
     if (!Platform.isAndroid) {
-      developer.log('[BlePermissions] Not Android, no permission request needed');
+      talker.info('[BlePermissions] Not Android, no permission request needed');
       return true;
     }
 
@@ -100,14 +100,14 @@ class BlePermissionsImpl implements BlePermissions {
 
     if (isAndroid12Plus) {
       // Android 12+ (API 31+) uses new Bluetooth permissions
-      developer.log('[BlePermissions] Android 12+, requesting BLUETOOTH_SCAN and BLUETOOTH_CONNECT');
+      talker.info('[BlePermissions] Android 12+, requesting BLUETOOTH_SCAN and BLUETOOTH_CONNECT');
       permissionsToRequest.add(Permission.bluetoothScan);
       permissionsToRequest.add(Permission.bluetoothConnect);
     }
 
     if (!isAndroid12Plus) {
       // Android 11 and below requires location permission for BLE scanning
-      developer.log('[BlePermissions] Android 11 or below, requesting LOCATION permissions');
+      talker.info('[BlePermissions] Android 11 or below, requesting LOCATION permissions');
       permissionsToRequest.add(Permission.locationWhenInUse);
     }
 
@@ -119,20 +119,20 @@ class BlePermissionsImpl implements BlePermissions {
     for (final entry in statuses.entries) {
       final permission = entry.key;
       final status = entry.value;
-      developer.log('[BlePermissions] $permission: $status');
+      talker.info('[BlePermissions] $permission: $status');
 
       if (!status.isGranted) {
         allGranted = false;
         if (status.isPermanentlyDenied) {
-          developer.log('[BlePermissions] $permission is permanently denied');
+          talker.info('[BlePermissions] $permission is permanently denied');
         }
       }
     }
 
     if (allGranted) {
-      developer.log('[BlePermissions] All permissions granted');
+      talker.info('[BlePermissions] All permissions granted');
     } else {
-      developer.log('[BlePermissions] Some permissions denied');
+      talker.info('[BlePermissions] Some permissions denied');
     }
 
     return allGranted;
@@ -171,7 +171,7 @@ class BlePermissionsImpl implements BlePermissions {
 
   @override
   Future<void> openSettings() async {
-    developer.log('[BlePermissions] Opening app settings');
+    talker.info('[BlePermissions] Opening app settings');
     await openAppSettings();
   }
 
@@ -189,7 +189,7 @@ class BlePermissionsImpl implements BlePermissions {
       return true;
     } catch (e, stackTrace) {
       // If checking bluetoothScan throws an error, we're on older Android
-      developer.log('[BlePermissions] Not Android 12+: $e', stackTrace: stackTrace);
+      talker.info('[BlePermissions] Not Android 12+: $e', e, stackTrace);
       return false;
     }
   }

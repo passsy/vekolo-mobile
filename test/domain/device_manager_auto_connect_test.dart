@@ -293,7 +293,7 @@ void main() {
         final newDeps = createDeviceManager();
 
         // Make connection fail
-        newDeps.platform.overrideConnect = (deviceId, {Duration timeout = const Duration(seconds: 35)}) async {
+        newDeps.platform.overrideConnect = (deviceId, {Duration timeout = const Duration(seconds: 35)}) {
           throw Exception('Connection failed');
         };
 

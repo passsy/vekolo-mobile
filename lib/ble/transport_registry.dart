@@ -1,4 +1,4 @@
-import 'dart:developer' as developer;
+import 'package:vekolo/app/logger.dart';
 
 import 'package:vekolo/ble/ble_scanner.dart';
 import 'package:vekolo/ble/ble_transport.dart';
@@ -68,7 +68,6 @@ class TransportRegistry {
   /// ```dart
   /// TransportRegistry.register(
   ///   TransportRegistration(
-  ///     name: 'FTMS',
   ///     factory: (deviceId) => FtmsBleTransport(deviceId: deviceId),
   ///   ),
   /// );
@@ -77,9 +76,8 @@ class TransportRegistry {
   /// The transport's `canSupport()` method will be called during detection
   /// to check compatibility with discovered devices.
   void register(TransportRegistration registration) {
-    developer.log(
+    talker.info(
       '[TransportRegistry] Registering transport: ${registration.name}',
-      name: 'TransportRegistry',
     );
     _registrations.add(registration);
   }
@@ -88,7 +86,7 @@ class TransportRegistry {
   ///
   /// Useful for testing or dynamically enabling/disabling transports.
   void unregister(String name) {
-    developer.log('[TransportRegistry] Unregistering transport: $name', name: 'TransportRegistry');
+    talker.info('[TransportRegistry] Unregistering transport: $name');
     _registrations.removeWhere((r) => r.name == name);
   }
 
@@ -96,7 +94,7 @@ class TransportRegistry {
   ///
   /// Useful for testing.
   void clear() {
-    developer.log('[TransportRegistry] Clearing all transports', name: 'TransportRegistry');
+    talker.info('[TransportRegistry] Clearing all transports');
     _registrations.clear();
   }
 
@@ -134,9 +132,8 @@ class TransportRegistry {
     DiscoveredDevice discovered, {
     required String deviceId,
   }) {
-    developer.log(
+    talker.info(
       '[TransportRegistry] Detecting transports for device: ${discovered.name} (${discovered.deviceId})',
-      name: 'TransportRegistry',
     );
 
     final compatibleTransports = <BleTransport>[];
@@ -150,32 +147,28 @@ class TransportRegistry {
         final isCompatible = transport.canSupport(discovered);
 
         if (isCompatible) {
-          developer.log(
+          talker.info(
             '[TransportRegistry] ✓ ${registration.name} is compatible',
-            name: 'TransportRegistry',
           );
           compatibleTransports.add(transport);
         } else {
-          developer.log(
+          talker.info(
             '[TransportRegistry] ✗ ${registration.name} is not compatible',
-            name: 'TransportRegistry',
           );
           // Dispose transport since we won't use it
           transport.dispose();
         }
       } catch (e, stackTrace) {
-        developer.log(
+        talker.info(
           '[TransportRegistry] Error checking ${registration.name} compatibility: $e',
-          name: 'TransportRegistry',
-          error: e,
-          stackTrace: stackTrace,
+          e,
+          stackTrace,
         );
       }
     }
 
-    developer.log(
+    talker.info(
       '[TransportRegistry] Found ${compatibleTransports.length} compatible transport(s)',
-      name: 'TransportRegistry',
     );
 
     return compatibleTransports;

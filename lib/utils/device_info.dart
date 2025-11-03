@@ -1,4 +1,4 @@
-import 'dart:developer' as developer;
+import 'package:vekolo/app/logger.dart';
 import 'dart:io' if (dart.library.html) 'dart:html';
 
 import 'package:device_info_plus/device_info_plus.dart';
@@ -39,11 +39,10 @@ class DeviceInfoUtil {
         return linuxInfo.prettyName;
       }
     } catch (e, stackTrace) {
-      developer.log(
+      talker.error(
         'Error getting device info: $e',
-        name: 'DeviceInfoUtil.getDeviceName',
-        error: e,
-        stackTrace: stackTrace,
+        e,
+        stackTrace,
       );
     }
 

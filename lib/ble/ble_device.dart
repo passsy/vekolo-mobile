@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'dart:developer' as developer;
+import 'package:vekolo/app/logger.dart';
 
 import 'package:async/async.dart';
 import 'package:clock/clock.dart';
@@ -146,7 +146,7 @@ class BleDevice extends FitnessDevice {
     return CancelableOperation.fromFuture(
       _connectImpl(),
       onCancel: () async {
-        developer.log('[BleDevice] Connection cancelled for $name', name: 'BleDevice');
+        talker.info('[BleDevice] Connection cancelled for $name');
         // Detach all transports on cancel
         await Future.wait(_transports.map((t) => t.detach()));
       },
@@ -155,12 +155,12 @@ class BleDevice extends FitnessDevice {
 
   Future<void> _connectImpl() async {
     try {
-      developer.log('[BleDevice] Connecting device: $name', name: 'BleDevice');
+      talker.info('[BleDevice] Connecting device: $name');
 
       // Connect via BlePlatform abstraction (works with FakeBlePlatform in tests)
-      developer.log('[BleDevice] Connecting to physical device', name: 'BleDevice');
+      talker.info('[BleDevice] Connecting to physical device');
       await _platform.connect(_id, timeout: const Duration(seconds: 15));
-      developer.log('[BleDevice] Connected', name: 'BleDevice');
+      talker.info('[BleDevice] Connected');
 
       // Get the device object via platform abstraction
       final device = _platform.getDevice(_id);
@@ -168,46 +168,43 @@ class BleDevice extends FitnessDevice {
       // Request larger MTU for better performance (optional, non-fatal if it fails)
       try {
         final mtu = await _platform.requestMtu(_id);
-        developer.log('[BleDevice] MTU negotiated: $mtu bytes', name: 'BleDevice');
+        talker.info('[BleDevice] MTU negotiated: $mtu bytes');
       } catch (e) {
         // MTU negotiation can fail on some devices or platforms (iOS handles automatically)
         // This is non-fatal, continue with default MTU
-        developer.log('[BleDevice] MTU negotiation failed, using default: $e', name: 'BleDevice');
+        talker.info('[BleDevice] MTU negotiation failed, using default: $e');
       }
 
       // Discover services once via platform abstraction
-      developer.log('[BleDevice] Discovering services', name: 'BleDevice');
+      talker.info('[BleDevice] Discovering services');
       final services = await _platform.discoverServices(_id);
-      developer.log('[BleDevice] Discovered ${services.length} services', name: 'BleDevice');
+      talker.info('[BleDevice] Discovered ${services.length} services');
 
       // Create DiscoveredDevice for Phase 1 checks if not provided
       final discoveredDevice = _discoveredDevice ?? _createDiscoveredDeviceFromServices(device, services);
 
       // Phase 1: Verify canSupport for all transports (fast compatibility check)
       // This uses advertising data to verify transports can potentially work with the device
-      developer.log('[BleDevice] Verifying Phase 1 transport compatibility (canSupport)', name: 'BleDevice');
+      talker.info('[BleDevice] Verifying Phase 1 transport compatibility (canSupport)');
       final phase1VerifiedTransports = <BleTransport>[];
       for (final transport in _transports) {
         try {
           final canSupport = transport.canSupport(discoveredDevice);
           if (canSupport) {
             phase1VerifiedTransports.add(transport);
-            developer.log(
+            talker.info(
               '[BleDevice] Transport ${transport.runtimeType} passed Phase 1 (canSupport)',
-              name: 'BleDevice',
             );
           } else {
-            developer.log(
+            talker.info(
               '[BleDevice] Transport ${transport.runtimeType} failed Phase 1 (canSupport)',
-              name: 'BleDevice',
             );
           }
         } catch (e, stackTrace) {
-          developer.log(
+          talker.error(
             '[BleDevice] Phase 1 verification failed for ${transport.runtimeType}: $e',
-            name: 'BleDevice',
-            error: e,
-            stackTrace: stackTrace,
+            e,
+            stackTrace,
           );
         }
       }
@@ -215,29 +212,26 @@ class BleDevice extends FitnessDevice {
       // Phase 2: Verify verifyCompatibility for Phase 1 verified transports (deep compatibility check)
       // This allows transports to perform deep checks on the connected device
       // Process serially to avoid overwhelming the BLE stack
-      developer.log('[BleDevice] Verifying Phase 2 transport compatibility (verifyCompatibility)', name: 'BleDevice');
+      talker.info('[BleDevice] Verifying Phase 2 transport compatibility (verifyCompatibility)');
       final verifiedTransports = <BleTransport>[];
       for (final transport in phase1VerifiedTransports) {
         try {
           final isCompatible = await transport.verifyCompatibility(device: device, services: services);
           if (isCompatible) {
             verifiedTransports.add(transport);
-            developer.log(
+            talker.info(
               '[BleDevice] Transport ${transport.runtimeType} passed Phase 2 (verifyCompatibility)',
-              name: 'BleDevice',
             );
           } else {
-            developer.log(
+            talker.info(
               '[BleDevice] Transport ${transport.runtimeType} failed Phase 2 (verifyCompatibility)',
-              name: 'BleDevice',
             );
           }
         } catch (e, stackTrace) {
-          developer.log(
+          talker.error(
             '[BleDevice] Phase 2 verification failed for ${transport.runtimeType}: $e',
-            name: 'BleDevice',
-            error: e,
-            stackTrace: stackTrace,
+            e,
+            stackTrace,
           );
         }
       }
@@ -247,9 +241,8 @@ class BleDevice extends FitnessDevice {
         throw Exception('No compatible transports found for device $name');
       }
 
-      developer.log(
+      talker.info(
         '[BleDevice] ${verifiedTransports.length}/${_transports.length} transport(s) verified, now attaching',
-        name: 'BleDevice',
       );
 
       // Try to attach only verified transports with the connected device and discovered services
@@ -260,13 +253,12 @@ class BleDevice extends FitnessDevice {
         try {
           await transport.attach(device: device, services: services);
           attachedCount++;
-          developer.log('[BleDevice] Successfully attached ${transport.runtimeType}', name: 'BleDevice');
+          talker.info('[BleDevice] Successfully attached ${transport.runtimeType}');
         } catch (e, stackTrace) {
-          developer.log(
+          talker.error(
             '[BleDevice] Transport attachment failed for ${transport.runtimeType}: $e',
-            name: 'BleDevice',
-            error: e,
-            stackTrace: stackTrace,
+            e,
+            stackTrace,
           );
           // Don't remove - just let it stay detached
           // Error is stored in transport.lastAttachError
@@ -278,9 +270,8 @@ class BleDevice extends FitnessDevice {
         throw Exception('All transports failed to attach for device $name');
       }
 
-      developer.log(
+      talker.info(
         '[BleDevice] Device connected successfully with $attachedCount/${_transports.length} transport(s) attached',
-        name: 'BleDevice',
       );
 
       _lastConnectionError = null;
@@ -297,7 +288,7 @@ class BleDevice extends FitnessDevice {
 
   @override
   Future<void> disconnect() async {
-    developer.log('[BleDevice] Disconnecting device: $name', name: 'BleDevice');
+    talker.info('[BleDevice] Disconnecting device: $name');
 
     // Detach all transports in parallel
     await Future.wait(_transports.map((t) => t.detach()));
@@ -422,7 +413,7 @@ class BleDevice extends FitnessDevice {
   ///
   /// Must be called when this device is no longer needed to prevent memory leaks.
   Future<void> dispose() async {
-    developer.log('[BleDevice] Disposing device: $name', name: 'BleDevice');
+    talker.info('[BleDevice] Disposing device: $name');
 
     // Unsubscribe from all beacon subscriptions
     for (final unsubscribe in _transportStateUnsubscribers) {

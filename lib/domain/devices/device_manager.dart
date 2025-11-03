@@ -31,11 +31,11 @@
 library;
 
 import 'dart:async';
-import 'dart:developer' as developer;
 
 import 'package:async/async.dart';
 import 'package:flutter/foundation.dart';
 import 'package:state_beacon/state_beacon.dart';
+import 'package:vekolo/app/logger.dart';
 import 'package:vekolo/ble/ble_device.dart';
 import 'package:vekolo/ble/ble_platform.dart';
 import 'package:vekolo/ble/ble_scanner.dart';
@@ -51,7 +51,11 @@ import 'package:vekolo/services/device_assignment_persistence.dart';
 /// It provides a clean API for the rest of the app to work with fitness devices
 /// without knowing implementation details.
 class DeviceManager {
-  DeviceManager({required this.platform, required this.scanner, required this.transportRegistry});
+  DeviceManager({
+    required this.platform,
+    required this.scanner,
+    required this.transportRegistry,
+  });
 
   /// BLE platform for device connection management.
   final BlePlatform platform;
@@ -485,11 +489,10 @@ class DeviceManager {
     try {
       await saveDeviceAssignments(this);
     } catch (error, stackTrace) {
-      developer.log(
+      talker.error(
         '[DeviceManager] Failed to save assignments: $error',
-        name: 'DeviceManager',
-        error: error,
-        stackTrace: stackTrace,
+        error,
+        stackTrace,
       );
     }
   }
@@ -510,17 +513,17 @@ class DeviceManager {
   ///
   /// Errors are logged but don't block initialization. Unavailable devices are silently skipped.
   Future<void> initialize() async {
-    developer.log('[DeviceManager] Initializing auto-connect', name: 'DeviceManager');
+    talker.info('[DeviceManager] Initializing auto-connect');
 
     try {
       final assignments = await loadDeviceAssignments();
       if (assignments.isEmpty) {
-        developer.log('[DeviceManager] No saved assignments to restore', name: 'DeviceManager');
+        talker.info('[DeviceManager] No saved assignments to restore');
         return;
       }
 
       _autoConnectDeviceIds.addAll(assignments.keys);
-      developer.log('[DeviceManager] Found ${assignments.length} device(s) to auto-connect', name: 'DeviceManager');
+      talker.info('[DeviceManager] Found ${assignments.length} device(s) to auto-connect');
 
       // Check for already discovered devices
       final discoveredDevices = scanner.devices.value;
@@ -541,11 +544,10 @@ class DeviceManager {
         try {
           await _connectAndRestoreDevice(deviceId, assignments[deviceId]!);
         } catch (e, stackTrace) {
-          developer.log(
+          talker.error(
             '[DeviceManager] Failed to connect to $deviceId: $e',
-            name: 'DeviceManager',
-            error: e,
-            stackTrace: stackTrace,
+            e,
+            stackTrace,
           );
         }
       }
@@ -555,11 +557,10 @@ class DeviceManager {
         _startAutoConnectScanning(devicesToScan, assignments);
       }
     } catch (e, stackTrace) {
-      developer.log(
+      talker.error(
         '[DeviceManager] Failed to initialize auto-connect: $e',
-        name: 'DeviceManager',
-        error: e,
-        stackTrace: stackTrace,
+        e,
+        stackTrace,
       );
     }
   }
@@ -621,30 +622,25 @@ class DeviceManager {
             if (device.supportsErgMode) {
               assignPrimaryTrainer(deviceId);
             }
-            break;
           case 'powerSource':
             if (device.capabilities.contains(DeviceDataType.power)) {
               assignPowerSource(deviceId);
             }
-            break;
           case 'cadenceSource':
             if (device.capabilities.contains(DeviceDataType.cadence)) {
               assignCadenceSource(deviceId);
             }
-            break;
           case 'speedSource':
             if (device.capabilities.contains(DeviceDataType.speed)) {
               assignSpeedSource(deviceId);
             }
-            break;
           case 'heartRateSource':
             if (device.capabilities.contains(DeviceDataType.heartRate)) {
               assignHeartRateSource(deviceId);
             }
-            break;
         }
       } catch (e) {
-        developer.log('[DeviceManager] Failed to restore role $role for $deviceId: $e', name: 'DeviceManager');
+        talker.info('[DeviceManager] Failed to restore role $role for $deviceId: $e');
       }
     }
   }
@@ -655,7 +651,7 @@ class DeviceManager {
       return; // Already scanning
     }
 
-    developer.log('[DeviceManager] Starting scan for ${deviceIds.length} missing device(s)', name: 'DeviceManager');
+    talker.info('[DeviceManager] Starting scan for ${deviceIds.length} missing device(s)');
 
     _autoConnectScanToken = scanner.startScan();
 
@@ -675,18 +671,16 @@ class DeviceManager {
                   _autoConnectScanToken = null;
                   _scannerDevicesUnsubscribe?.call();
                   _scannerDevicesUnsubscribe = null;
-                  developer.log(
+                  talker.info(
                     '[DeviceManager] All devices connected or sensors assigned, stopping scan',
-                    name: 'DeviceManager',
                   );
                 }
               })
               .catchError((error, stackTrace) {
-                developer.log(
+                talker.error(
                   '[DeviceManager] Failed to auto-connect ${discovered.deviceId}: $error',
-                  name: 'DeviceManager',
-                  error: error,
-                  stackTrace: stackTrace as StackTrace?,
+                  error,
+                  stackTrace as StackTrace?,
                 );
               });
         }
