@@ -26,10 +26,14 @@ void main() {
 
     // On app start, known devices should automatically reconnect
     await robot.launchApp(loggedIn: true);
-    spot<HomePage>().existsOnce();
-    await robot.idle(1000);
+    expect(robot.aether.devices, contains(kickrCore));
+
+    // Wait for auto-connect to discover and connect the device
+    // Auto-connect: load assignments → start scan → discover device → connect → restore assignments
+    // await robot.idle(500);
+    expect(kickrCore.isConnected, isTrue);
 
     await robot.openManageDevicesPage();
-    expect(kickrCore.isConnected, isTrue);
+    spotText('Kickr Core').existsAtLeastOnce();
   });
 }

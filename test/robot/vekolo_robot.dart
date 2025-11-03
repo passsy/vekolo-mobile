@@ -42,10 +42,14 @@ class VekoloRobot {
   bool _isSetup = false;
 
   Future<void> _setup() async {
+    // Only setup once per test to preserve SharedPreferences across app restarts
+    if (_isSetup) return;
+
     TestWidgetsFlutterBinding.ensureInitialized();
     await loadAppFonts();
 
-    // Setup mock SharedPreferences and SecureStorage
+    // Setup mock SharedPreferences and SecureStorage ONCE per test
+    // This ensures data persists across app restarts within the same test
     SharedPreferences.setMockInitialValues({});
     FlutterSecureStorage.setMockInitialValues({});
 
@@ -208,6 +212,8 @@ class Aether {
   static final _heartRateServiceUuid = fbp.Guid('0000180d-0000-1000-8000-00805f9b34fb');
   static final _cyclingPowerServiceUuid = fbp.Guid('00001818-0000-1000-8000-00805f9b34fb');
   static final _cyclingSpeedCadenceServiceUuid = fbp.Guid('00001816-0000-1000-8000-00805f9b34fb');
+
+  List<FakeDevice> get devices => fakeBlePlatform.devices;
 
   /// Create a simulated BLE device.
   ///

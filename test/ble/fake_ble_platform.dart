@@ -49,6 +49,9 @@ class FakeBlePlatform implements BlePlatform {
   @override
   ReadableBeacon<List<ScanResult>> get scanResults => _scanResultsBeacon;
 
+  /// All simulated devices, including those that are turned off.
+  List<FakeDevice> get devices => _devices.values.toList();
+
   Future<void> Function()? overrideStartScan;
 
   @override
@@ -606,6 +609,8 @@ class FakeDevice {
   /// This simulates the connection state. Use [connect] and [disconnect]
   /// to change the state (to be implemented when auto-connect is added).
   bool get isConnected => _isConnected;
+
+  bool get isAdvertising => _isAdvertising;
 
   /// Start advertising this device.
   ///
