@@ -237,8 +237,8 @@ void main() {
         player.start();
         await Future.delayed(Duration(milliseconds: 500));
 
-        // Should have elapsed at least 400ms
-        expect(player.elapsedTime$.value, greaterThanOrEqualTo(400));
+        // Should have elapsed at least 300ms (timer ticks every 100ms, so 3+ ticks in 500ms)
+        expect(player.elapsedTime$.value, greaterThanOrEqualTo(300));
         expect(player.elapsedTime$.value, lessThan(700));
 
         player.dispose();

@@ -674,11 +674,14 @@ void main() {
     });
 
     test('auto-restarts when permissions are granted', () async {
-      final (:scanner, :platform, :permissions) = createScanner();
-      // Start with no permissions
-      platform.setAdapterState(BluetoothAdapterState.on);
-      permissions.setHasPermission(false);
-      permissions.setLocationServiceEnabled(true);
+      // Create platform and permissions with unfavorable conditions BEFORE scanner initialization
+      final p = FakeBlePlatform();
+      final perms = FakeBlePermissions();
+      p.setAdapterState(BluetoothAdapterState.on);
+      perms.setHasPermission(false);
+      perms.setLocationServiceEnabled(true);
+
+      final (:scanner, :platform, :permissions) = createScanner(platform: p, permissions: perms);
 
       final token = scanner.startScan();
       await Future.delayed(const Duration(milliseconds: 100));

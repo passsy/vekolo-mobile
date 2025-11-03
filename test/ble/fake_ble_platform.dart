@@ -626,9 +626,11 @@ class FakeDevice {
   /// Stop advertising this device.
   ///
   /// The device immediately disappears from scan results.
+  /// Connection state is preserved - a connected device can stop advertising
+  /// but remain connected (e.g., when going out of scan range but maintaining connection).
   void turnOff() {
     _isAdvertising = false;
-    _isConnected = false;
+    // Don't disconnect - connection state persists independently of advertising
     platform._emitScanResults();
   }
 
@@ -657,9 +659,16 @@ class FakeDevice {
   /// Disconnect from this device.
   ///
   /// Sets [isConnected] to false. Safe to call even if not currently connected.
+  /// Note: If the platform has an override for disconnect that doesn't change
+  /// the connection state, this device's state will also remain unchanged.
   Future<void> disconnect() async {
+    final wasConnected = _isConnected;
     await platform.disconnect(id);
-    _isConnected = false;
+    // Only update state if platform actually disconnected
+    // (check if platform removed from connected set)
+    if (wasConnected && !platform._connectedDeviceIds.contains(id)) {
+      _isConnected = false;
+    }
   }
 
   /// Convert this fake device to a FlutterBluePlus ScanResult.
