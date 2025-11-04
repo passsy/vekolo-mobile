@@ -71,6 +71,17 @@ class BleDevice extends FitnessDevice {
   String get name => _name;
 
   @override
+  List<String> get transportIds {
+    // Return all transport IDs from attached transports
+    final attachedTransports = _transports.where((t) => t.isAttached).toList();
+    if (attachedTransports.isNotEmpty) {
+      return attachedTransports.map((t) => t.transportId).toList();
+    }
+    // Fallback to all transport IDs if none attached yet
+    return _transports.map((t) => t.transportId).toList();
+  }
+
+  @override
   DeviceType get type {
     // Determine device type based on capabilities
     // If device supports ERG mode, it's a trainer

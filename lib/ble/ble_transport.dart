@@ -31,6 +31,18 @@ enum TransportState { detached, attaching, attached }
 /// See docs/BLE_DEVICE_ARCHITECTURE.md for detailed architecture documentation.
 abstract interface class BleTransport {
   // ============================================================================
+  // Transport Identification
+  // ============================================================================
+
+  /// Stable transport protocol identifier for persistence.
+  ///
+  /// This ID is used when saving device assignments to identify which protocol
+  /// to use when reconnecting. Must be stable across app versions.
+  ///
+  /// Examples: "ftms", "heart-rate", "cycling-power", "cycling-speed-cadence"
+  String get transportId;
+
+  // ============================================================================
   // Compatibility Detection (Two-Phase)
   // ============================================================================
 

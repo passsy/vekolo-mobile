@@ -39,6 +39,7 @@ import 'dart:async';
 
 import 'package:clock/clock.dart';
 import 'package:state_beacon/state_beacon.dart';
+import 'package:vekolo/app/logger.dart';
 import 'package:vekolo/domain/devices/device_manager.dart';
 import 'package:vekolo/domain/models/erg_command.dart';
 
@@ -227,13 +228,15 @@ class WorkoutSyncService {
   /// Retry delays scale with attempt number: 1s, 2s, 3s for attempts 1-3.
   /// This gives transient issues time to resolve while not hanging indefinitely.
   Future<void> _syncTargetToDevice(ErgCommand command) async {
-    final trainer = _deviceManager.primaryTrainer;
+    final assigned = _deviceManager.primaryTrainer;
 
     // Validate trainer exists and supports ERG mode
-    if (trainer == null) {
+    if (assigned?.connectedDevice == null) {
       syncError.value = 'No trainer connected';
       return;
     }
+
+    final trainer = assigned!.connectedDevice!;
 
     if (!trainer.supportsErgMode) {
       syncError.value = 'Trainer does not support ERG mode';
@@ -252,8 +255,7 @@ class WorkoutSyncService {
       _retryCount = 0;
     } catch (e, stackTrace) {
       // Log error with full stack trace for debugging
-      print('[WorkoutSyncService.syncTargetToDevice] Failed to set target power to ${command.targetWatts}W: $e');
-      print(stackTrace);
+      talker.error('[WorkoutSyncService.syncTargetToDevice] Failed to set target power to ${command.targetWatts}W', e, stackTrace);
 
       // Check if it's a "device not connected" error - don't retry those
       if (e is StateError && e.message == 'Device not connected') {
@@ -268,7 +270,7 @@ class WorkoutSyncService {
         final delay = _retryCount; // 1s, 2s, 3s for retries 1-3
         syncError.value = 'Retry $_retryCount/$_maxRetries';
 
-        print('[WorkoutSyncService.syncTargetToDevice] Retrying in ${delay}s (attempt $_retryCount/$_maxRetries)');
+        talker.warning('[WorkoutSyncService.syncTargetToDevice] Retrying in ${delay}s (attempt $_retryCount/$_maxRetries)');
 
         // Wait and retry
         await Future.delayed(Duration(seconds: delay));
@@ -281,7 +283,7 @@ class WorkoutSyncService {
         // All retries exhausted
         syncError.value = 'Failed after $_maxRetries retries';
         _retryCount = 0;
-        print('[WorkoutSyncService.syncTargetToDevice] Giving up after $_maxRetries failed attempts');
+        talker.error('[WorkoutSyncService.syncTargetToDevice] Giving up after $_maxRetries failed attempts');
       }
     }
   }
@@ -299,7 +301,8 @@ class WorkoutSyncService {
   /// If conditions aren't met, this is a no-op. The timer is automatically
   /// cancelled when [stopSync] is called.
   void _startRefreshTimer() {
-    final trainer = _deviceManager.primaryTrainer;
+    final assigned = _deviceManager.primaryTrainer;
+    final trainer = assigned?.connectedDevice;
 
     // Only create timer if trainer exists and needs refresh
     if (trainer == null || !trainer.requiresContinuousRefresh) {
@@ -309,7 +312,7 @@ class WorkoutSyncService {
     // Cancel any existing timer
     _refreshTimer?.cancel();
 
-    print(
+    talker.info(
       '[WorkoutSyncService.startRefreshTimer] Starting periodic refresh every ${trainer.refreshInterval.inSeconds}s',
     );
 
@@ -317,7 +320,7 @@ class WorkoutSyncService {
     _refreshTimer = Timer.periodic(trainer.refreshInterval, (timer) {
       // Re-send last command if we're syncing and have a command to send
       if (_lastSentCommand != null && isSyncing.value) {
-        print('[WorkoutSyncService.refreshTimer] Refreshing target: ${_lastSentCommand!.targetWatts}W');
+        talker.debug('[WorkoutSyncService.refreshTimer] Refreshing target: ${_lastSentCommand!.targetWatts}W');
         _syncTargetToDevice(_lastSentCommand!);
       }
     });

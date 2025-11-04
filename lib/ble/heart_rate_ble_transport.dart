@@ -43,6 +43,9 @@ class HeartRateBleTransport implements BleTransport, HeartRateSource {
   // ============================================================================
 
   @override
+  String get transportId => 'heart-rate';
+
+  @override
   bool canSupport(DiscoveredDevice device) {
     // Heart rate monitors advertise the Heart Rate Service UUID (0x180D)
     return device.serviceUuids.contains(_heartRateServiceUuid);

@@ -97,6 +97,9 @@ class MockTrainer extends FitnessDevice {
   String get name => _name;
 
   @override
+  List<String> get transportIds => ['mock-ftms'];
+
+  @override
   DeviceType get type => DeviceType.trainer;
 
   @override

@@ -11,10 +11,12 @@ import 'package:vekolo/app/refs.dart';
 import 'package:vekolo/domain/models/device_info.dart';
 import 'package:vekolo/pages/devices_page.dart';
 import 'package:vekolo/pages/scanner_page.dart';
+import 'package:vekolo/services/device_assignment_persistence.dart';
 
 import '../ble/fake_ble_platform.dart';
 import '../fake/fake_auth_service.dart';
 import '../fake/fake_vekolo_api_client.dart';
+import '../helpers/shared_preferences_helper.dart';
 import 'robot_test_fn.dart';
 
 // Cache for robot instances by WidgetTester identity
@@ -50,14 +52,43 @@ class VekoloRobot {
 
     // Setup mock SharedPreferences and SecureStorage ONCE per test
     // This ensures data persists across app restarts within the same test
-    SharedPreferences.setMockInitialValues({});
+    createTestSharedPreferencesAsync();
     FlutterSecureStorage.setMockInitialValues({});
 
     _isSetup = true;
   }
 
-  Future<void> launchApp({bool loggedIn = false}) async {
+  /// Launch the app, optionally with pre-paired devices.
+  ///
+  /// If [pairedDevices] is provided, device assignments will be saved to persistent
+  /// storage before launching the app, allowing auto-connect to reconnect them on startup.
+  /// This is much faster than going through the UI pairing flow.
+  ///
+  /// Example without devices:
+  /// ```dart
+  /// await robot.launchApp(loggedIn: true);
+  /// ```
+  ///
+  /// Example with pre-paired devices:
+  /// ```dart
+  /// final kickrCore = robot.aether.createDevice(
+  ///   name: 'Kickr Core',
+  ///   capabilities: {DeviceDataType.power, DeviceDataType.cadence, DeviceDataType.speed},
+  /// );
+  /// await robot.launchApp(
+  ///   pairedDevices: [kickrCore],
+  ///   loggedIn: true,
+  /// );
+  /// // kickrCore is now connected and ready to use
+  /// ```
+  Future<void> launchApp({bool loggedIn = false, List<FakeDevice> pairedDevices = const []}) async {
     await _setup();
+
+    // If devices should be pre-paired, save assignments before launching app
+    if (pairedDevices.isNotEmpty) {
+      await _saveDeviceAssignments(pairedDevices);
+    }
+
     tester.view.physicalSize = const Size(1179 / 3, 2556 / 3); // iPhone 15″
     addTearDown(tester.view.resetPhysicalSize);
     tester.view.devicePixelRatio = 1.0;
@@ -86,6 +117,43 @@ class VekoloRobot {
     if (loggedIn) {
       // TODO
     }
+
+    // If devices were pre-paired, wait for auto-connect to complete
+    if (pairedDevices.isNotEmpty) {
+      // Wait for auto-connect to complete
+      await idle(500);
+
+      // Verify all devices are connected
+      for (final device in pairedDevices) {
+        expect(device.isConnected, isTrue, reason: 'Device ${device.name} should be auto-connected');
+      }
+    }
+  }
+
+  /// Save device assignments to persistent storage.
+  ///
+  /// This allows auto-connect to reconnect devices on app startup without
+  /// going through the UI pairing flow.
+  Future<void> _saveDeviceAssignments(List<FakeDevice> devices) async {
+    if (devices.isEmpty) return;
+
+    final persistence = DeviceAssignmentPersistence(SharedPreferencesAsync());
+
+    // For simplicity in tests, we assign the first device to all roles
+    // (In a real scenario, you'd assign specific roles based on capabilities)
+    final device = devices.first;
+
+    // Determine transport from device services
+    final transport = _getTransportIdFromServices(device.services);
+
+    final assignment = DeviceAssignment(deviceId: device.id, deviceName: device.name, transport: transport);
+
+    await persistence.saveAssignments(
+      primaryTrainer: assignment,
+      powerSource: assignment,
+      cadenceSource: assignment,
+      speedSource: assignment,
+    );
   }
 
   /// A faster version of idle waiting less real world time.
@@ -137,6 +205,34 @@ class VekoloRobot {
     await idle(1000);
     await idle();
     connected.doesNotExist();
+  }
+
+  /// Determines the transport ID from advertised service UUIDs.
+  ///
+  /// Maps Bluetooth service UUIDs to transport IDs for device assignment persistence.
+  String _getTransportIdFromServices(List<fbp.Guid> services) {
+    // FTMS service UUID (0x1826)
+    final ftmsServiceUuid = fbp.Guid('00001826-0000-1000-8000-00805f9b34fb');
+    // Heart Rate service UUID (0x180D)
+    final heartRateServiceUuid = fbp.Guid('0000180d-0000-1000-8000-00805f9b34fb');
+    // Cycling Power service UUID (0x1818)
+    final cyclingPowerServiceUuid = fbp.Guid('00001818-0000-1000-8000-00805f9b34fb');
+    // Cycling Speed and Cadence service UUID (0x1816)
+    final cyclingSpeedCadenceServiceUuid = fbp.Guid('00001816-0000-1000-8000-00805f9b34fb');
+
+    // Check services in priority order (FTMS is most capable)
+    if (services.contains(ftmsServiceUuid)) {
+      return 'ftms';
+    } else if (services.contains(heartRateServiceUuid)) {
+      return 'heart-rate';
+    } else if (services.contains(cyclingPowerServiceUuid)) {
+      return 'cycling-power';
+    } else if (services.contains(cyclingSpeedCadenceServiceUuid)) {
+      return 'cycling-speed-cadence';
+    }
+
+    // Fallback to ftms if unknown (most test devices will be trainers)
+    return 'ftms';
   }
 }
 

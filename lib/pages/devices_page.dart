@@ -113,7 +113,10 @@ class DevicesPage extends StatelessWidget {
                   const Spacer(),
                   Builder(
                     builder: (context) {
-                      final liveData = _getLiveDataForDevice(context, assignedDevice, dataType);
+                      final connectedDevice = assignedDevice.connectedDevice;
+                      final liveData = connectedDevice != null
+                          ? _getLiveDataForDevice(context, connectedDevice, dataType)
+                          : 'Not connected';
                       return Text(
                         liveData,
                         style: Theme.of(
@@ -126,12 +129,12 @@ class DevicesPage extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 12),
-            if (assignedDevice != null)
+            if (assignedDevice?.connectedDevice != null)
               _buildDeviceCard(
                 context,
-                device: assignedDevice,
+                device: assignedDevice!.connectedDevice!,
                 onUnassign: () => _handleUnassignDataSource(context, dataType),
-                onRemove: () => _handleRemove(context, assignedDevice),
+                onRemove: () => _handleRemove(context, assignedDevice.connectedDevice!),
               )
             else
               OutlinedButton.icon(

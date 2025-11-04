@@ -4,9 +4,12 @@ import 'package:vekolo/app/logger.dart';
 import 'package:context_plus/context_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 import 'package:state_beacon/state_beacon.dart';
 import 'package:vekolo/app/refs.dart';
+import 'package:vekolo/domain/devices/device_manager.dart';
 import 'package:vekolo/domain/models/workout/workout_models.dart';
+import 'package:vekolo/models/profile_defaults.dart';
 import 'package:vekolo/services/workout_player_service.dart';
 
 /// Page for executing structured workouts with real-time power control.
@@ -33,6 +36,10 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
   WorkoutPlayerService? _playerService;
   bool _isLoading = true;
   String? _loadError;
+  bool _hasStarted = false;
+  VoidCallback? _powerSubscription;
+  DateTime? _lowPowerStartTime;
+  bool _isManualPause = false;
 
   @override
   void initState() {
@@ -42,6 +49,7 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
 
   @override
   void dispose() {
+    _powerSubscription?.call();
     _playerService?.dispose();
     super.dispose();
   }
@@ -64,10 +72,14 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
       // Initialize player service
       if (!mounted) return;
       final deviceManager = Refs.deviceManager.of(context);
+      final authService = Refs.authService.of(context);
+      final user = authService.currentUser.value;
+      final ftp = user?.ftp ?? ProfileDefaults.ftp;
+
       final playerService = WorkoutPlayerService(
         workoutPlan: workoutPlan,
         deviceManager: deviceManager,
-        ftp: 200, // TODO: Get from user profile
+        ftp: ftp,
       );
 
       // Listen to triggered events
@@ -81,6 +93,9 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
         _playerService = playerService;
         _isLoading = false;
       });
+
+      // Monitor power to auto-start/resume workout when user starts pedaling
+      _setupPowerMonitoring(deviceManager, playerService);
 
       talker.info('[WorkoutPlayerPage] Workout player initialized');
     } catch (e, stackTrace) {
@@ -97,6 +112,103 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message), duration: const Duration(seconds: 5), behavior: SnackBarBehavior.floating),
     );
+  }
+
+  /// Sets up power monitoring to auto-start/resume/pause workout based on pedaling.
+  ///
+  /// Auto-start: workout starts when power >= 40W is detected
+  /// Auto-resume: when paused, workout resumes when power >= 40W
+  /// Auto-pause: when running, workout pauses after power < 30W for 3 seconds
+  ///
+  /// Note: Resume threshold (40W) is higher than pause threshold (30W) to provide
+  /// hysteresis and prevent rapid pause/resume cycling.
+  void _setupPowerMonitoring(DeviceManager deviceManager, WorkoutPlayerService playerService) {
+    const startResumeThreshold = 40; // Watts - minimum power to trigger start/resume
+    const autoPauseThreshold = 30; // Watts - power below this triggers auto-pause after delay
+    const autoPauseDelay = Duration(seconds: 3); // Delay before auto-pausing
+
+    _powerSubscription = deviceManager.powerStream.subscribe((powerData) {
+      if (!mounted) return;
+
+      final currentPower = powerData?.watts ?? 0;
+      final isPaused = playerService.isPaused.value;
+      final isComplete = playerService.isComplete.value;
+
+      // Don't do anything if workout is complete
+      if (isComplete) return;
+
+      // Auto-start: workout hasn't started yet and user is pedaling
+      if (!_hasStarted && currentPower >= startResumeThreshold) {
+        talker.info('[WorkoutPlayerPage] Auto-starting workout - power detected: ${currentPower}W');
+        playerService.start();
+        setState(() {
+          _hasStarted = true;
+          _lowPowerStartTime = null; // Reset low power timer
+        });
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Workout started!'),
+              duration: Duration(seconds: 2),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      }
+      // Auto-resume: workout is paused (but not manually paused) and user starts pedaling
+      else if (_hasStarted && isPaused && !_isManualPause && currentPower >= startResumeThreshold) {
+        talker.info('[WorkoutPlayerPage] Auto-resuming workout - power detected: ${currentPower}W');
+        playerService.start();
+        setState(() => _lowPowerStartTime = null); // Reset low power timer
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Workout resumed!'),
+              duration: Duration(seconds: 2),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      }
+      // Auto-pause: workout is running and power drops below threshold
+      else if (_hasStarted && !isPaused && currentPower < autoPauseThreshold) {
+        final now = DateTime.now();
+
+        if (_lowPowerStartTime == null) {
+          // First time power dropped below threshold, start timer
+          setState(() => _lowPowerStartTime = now);
+        } else {
+          // Check if power has been low for long enough
+          final lowPowerDuration = now.difference(_lowPowerStartTime!);
+          if (lowPowerDuration >= autoPauseDelay) {
+            talker.info('[WorkoutPlayerPage] Auto-pausing workout - low power detected: ${currentPower}W');
+            playerService.pause();
+            setState(() {
+              _lowPowerStartTime = null; // Reset timer
+              _isManualPause = false; // This is an auto-pause, not manual
+            });
+
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Workout paused - start pedaling to resume'),
+                  duration: Duration(seconds: 3),
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            }
+          }
+        }
+      }
+      // Power is above auto-pause threshold while running - reset timer
+      else if (_hasStarted && !isPaused && currentPower >= autoPauseThreshold) {
+        if (_lowPowerStartTime != null) {
+          setState(() => _lowPowerStartTime = null);
+        }
+      }
+    });
   }
 
   Future<bool> _onWillPop(BuildContext context) async {
@@ -184,6 +296,11 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
               automaticallyImplyLeading: false,
               actions: [
                 IconButton(
+                  icon: const Icon(Icons.devices),
+                  onPressed: () => builderContext.push('/devices'),
+                  tooltip: 'Manage Devices',
+                ),
+                IconButton(
                   icon: const Icon(Icons.close),
                   onPressed: () async {
                     final shouldPop = await _onWillPop(builderContext);
@@ -224,6 +341,11 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
         final currentCadence = deviceManager.cadenceStream.watch(context);
         final currentHeartRate = deviceManager.heartRateStream.watch(context);
 
+        // Get FTP from user profile (fallback to default if not set)
+        final authService = Refs.authService.of(context);
+        final user = authService.currentUser.watch(context);
+        final ftp = user?.ftp ?? ProfileDefaults.ftp;
+
         return ListView(
           padding: const EdgeInsets.all(16),
           children: [
@@ -236,12 +358,12 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
             const SizedBox(height: 24),
 
             // Current block
-            _buildCurrentBlockCard(currentBlock, currentBlockRemainingTime),
+            _buildCurrentBlockCard(currentBlock, currentBlockRemainingTime, ftp: ftp, scaleFactor: powerScaleFactor),
             const SizedBox(height: 16),
 
             // Next block preview
             if (nextBlock != null) ...[
-              _buildNextBlockCard(nextBlock),
+              _buildNextBlockCard(nextBlock, ftp: ftp, scaleFactor: powerScaleFactor),
               const SizedBox(height: 24),
             ] else if (isComplete) ...[
               _buildWorkoutCompleteCard(),
@@ -267,8 +389,10 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
               onPlayPause: () {
                 if (isPaused) {
                   player.start();
+                  setState(() => _isManualPause = false); // Clear manual pause flag when resuming
                 } else {
                   player.pause();
+                  setState(() => _isManualPause = true); // Set manual pause flag
                 }
               },
               onSkip: () => player.skip(),
@@ -363,7 +487,7 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
     );
   }
 
-  Widget _buildCurrentBlockCard(dynamic block, int remainingTime) {
+  Widget _buildCurrentBlockCard(dynamic block, int remainingTime, {required int ftp, required double scaleFactor}) {
     if (block == null) {
       return Card(
         child: Padding(
@@ -404,18 +528,16 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
                 style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
-              Text('Target: ${(block.power * 100).toStringAsFixed(0)}% FTP', style: const TextStyle(fontSize: 16)),
-              if (block.cadence != null) Text('Cadence: ${block.cadence} RPM', style: const TextStyle(fontSize: 16)),
+              _buildPowerTarget(block.power, ftp, scaleFactor),
+              if (block.cadence != null || block.cadenceLow != null || block.cadenceHigh != null)
+                _buildCadenceTarget(block.cadence, block.cadenceLow, block.cadenceHigh),
             ] else if (block is RampBlock) ...[
               Text(
                 block.description ?? 'Ramp Block',
                 style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
-              Text(
-                'Ramping: ${(block.powerStart * 100).toStringAsFixed(0)}% → ${(block.powerEnd * 100).toStringAsFixed(0)}% FTP',
-                style: const TextStyle(fontSize: 16),
-              ),
+              _buildRampPowerTarget(block.powerStart, block.powerEnd, ftp, scaleFactor),
             ],
             const SizedBox(height: 12),
             Row(
@@ -434,7 +556,7 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
     );
   }
 
-  Widget _buildNextBlockCard(dynamic block) {
+  Widget _buildNextBlockCard(dynamic block, {required int ftp, required double scaleFactor}) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -457,19 +579,19 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
                 block.description ?? 'Power Block',
                 style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
-              Text(
-                'Target: ${(block.power * 100).toStringAsFixed(0)}% FTP',
-                style: TextStyle(fontSize: 14, color: Colors.grey[700]),
-              ),
+              const SizedBox(height: 4),
+              _buildPowerTarget(block.power, ftp, scaleFactor, isSecondary: true),
+              if (block.cadence != null || block.cadenceLow != null || block.cadenceHigh != null) ...[
+                const SizedBox(height: 2),
+                _buildCadenceTarget(block.cadence, block.cadenceLow, block.cadenceHigh, isSecondary: true),
+              ],
             ] else if (block is RampBlock) ...[
               Text(
                 block.description ?? 'Ramp Block',
                 style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
-              Text(
-                'Ramping: ${(block.powerStart * 100).toStringAsFixed(0)}% → ${(block.powerEnd * 100).toStringAsFixed(0)}% FTP',
-                style: TextStyle(fontSize: 14, color: Colors.grey[700]),
-              ),
+              const SizedBox(height: 4),
+              _buildRampPowerTarget(block.powerStart, block.powerEnd, ftp, scaleFactor, isSecondary: true),
             ],
           ],
         ),
@@ -594,6 +716,41 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
           children: [
             const Text('CONTROLS', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
             const SizedBox(height: 16),
+
+            // Show status message when paused
+            if (!isComplete && isPaused) ...[
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: _hasStarted ? Colors.orange.withValues(alpha: 0.1) : Colors.blue.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: _hasStarted ? Colors.orange.withValues(alpha: 0.3) : Colors.blue.withValues(alpha: 0.3),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      _hasStarted ? Icons.pause_circle : Icons.pedal_bike,
+                      color: _hasStarted ? Colors.orange : Colors.blue,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        _hasStarted ? 'Paused - Start pedaling to resume' : 'Start pedaling to begin workout',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: _hasStarted ? Colors.orange[900] : Colors.blue[900],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
@@ -601,10 +758,10 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
                   Expanded(
                     child: ElevatedButton.icon(
                       onPressed: onPlayPause,
-                      icon: Icon(isPaused ? Icons.play_arrow : Icons.pause),
-                      label: Text(isPaused ? 'Start' : 'Pause'),
+                      icon: const Icon(Icons.pause),
+                      label: const Text('Pause'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: isPaused ? Colors.green : Colors.orange,
+                        backgroundColor: Colors.orange,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 16),
                       ),
@@ -704,5 +861,56 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
         ),
       ),
     );
+  }
+
+  Widget _buildPowerTarget(double powerPercent, int ftp, double scaleFactor, {bool isSecondary = false}) {
+    final targetWatts = (powerPercent * ftp * scaleFactor).round();
+    final percentDisplay = (powerPercent * 100).toStringAsFixed(0);
+
+    final textStyle = isSecondary
+        ? TextStyle(fontSize: 14, color: Colors.grey[700])
+        : const TextStyle(fontSize: 16);
+
+    return Text(
+      'Power: $targetWatts W ($percentDisplay% FTP)',
+      style: textStyle,
+    );
+  }
+
+  Widget _buildRampPowerTarget(double powerStartPercent, double powerEndPercent, int ftp, double scaleFactor, {bool isSecondary = false}) {
+    final startWatts = (powerStartPercent * ftp * scaleFactor).round();
+    final endWatts = (powerEndPercent * ftp * scaleFactor).round();
+    final startPercent = (powerStartPercent * 100).toStringAsFixed(0);
+    final endPercent = (powerEndPercent * 100).toStringAsFixed(0);
+
+    final textStyle = isSecondary
+        ? TextStyle(fontSize: 14, color: Colors.grey[700])
+        : const TextStyle(fontSize: 16);
+
+    return Text(
+      'Power: $startWatts → $endWatts W ($startPercent% → $endPercent% FTP)',
+      style: textStyle,
+    );
+  }
+
+  Widget _buildCadenceTarget(int? cadence, int? cadenceLow, int? cadenceHigh, {bool isSecondary = false}) {
+    final textStyle = isSecondary
+        ? TextStyle(fontSize: 14, color: Colors.grey[700])
+        : const TextStyle(fontSize: 16);
+
+    String cadenceText;
+    if (cadence != null) {
+      cadenceText = 'Cadence: $cadence RPM';
+    } else if (cadenceLow != null && cadenceHigh != null) {
+      cadenceText = 'Cadence: $cadenceLow-$cadenceHigh RPM';
+    } else if (cadenceLow != null) {
+      cadenceText = 'Cadence: ≥$cadenceLow RPM';
+    } else if (cadenceHigh != null) {
+      cadenceText = 'Cadence: ≤$cadenceHigh RPM';
+    } else {
+      return const SizedBox.shrink();
+    }
+
+    return Text(cadenceText, style: textStyle);
   }
 }

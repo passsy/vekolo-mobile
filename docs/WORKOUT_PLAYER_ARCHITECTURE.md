@@ -58,10 +58,16 @@ Implement a workout player that allows users to execute structured workouts with
 - Display next block preview
 - Timer display (elapsed / remaining / total)
 - Progress bar
-- Controls: Play/Pause, Skip, End Workout
+- Controls: Pause, Skip, End Workout (no Start button - auto-starts on pedaling)
 - Power scale factor adjustment (+/- 1%)
 - Event notifications (SnackBar or overlay)
 - Real-time metrics (power, cadence, HR) from beacons
+- **Auto-start/pause functionality**:
+  - Auto-start: Workout automatically starts when power ≥ 40W detected
+  - Auto-resume: Paused workout resumes when power ≥ 40W
+  - Auto-pause: Running workout pauses after power < 30W for 3 seconds
+  - Hysteresis: 10W gap (30-40W) prevents pause/resume loops
+  - User feedback: Status messages show "Start pedaling to begin" / "Paused - Start pedaling to resume"
 
 **workout_list_page.dart** (optional, later)
 - Browse available workouts
@@ -70,23 +76,30 @@ Implement a workout player that allows users to execute structured workouts with
 ## Data Flow
 
 ```
-User taps "Start Workout"
+User navigates to WorkoutPlayerPage
   ↓
 Load workout JSON → Parse to WorkoutPlan model
   ↓
-Create WorkoutPlayerService(plan, deviceManager, syncService)
+Create WorkoutPlayerService(plan, deviceManager)
   ↓
-Navigate to WorkoutPlayerPage
+Setup power monitoring (auto-start/pause/resume)
   ↓
-Player starts timer loop (100ms)
+Display "Start pedaling to begin workout" message
   ↓
-Every tick:
-  - Update elapsed time
-  - Check if current block is complete → advance to next
-  - Calculate current power target (with scale factor)
-  - Update WorkoutSyncService.currentTarget beacon
-  - Check for events to trigger
-  - Update UI via streams
+Monitor DeviceManager.powerStream continuously:
+  ├─ Power ≥ 40W & not started → Auto-start workout + show notification
+  ├─ Power ≥ 40W & paused → Auto-resume workout + show notification
+  ├─ Power < 30W for 3s & running → Auto-pause workout + show notification
+  └─ Power ≥ 30W & running → Reset pause timer (prevent spurious pause)
+  ↓
+When workout is running:
+  Player timer loop (100ms):
+    - Update elapsed time
+    - Check if current block is complete → advance to next
+    - Calculate current power target (with scale factor)
+    - Update WorkoutSyncService.currentTarget beacon
+    - Check for events to trigger
+    - Update UI via streams
   ↓
 WorkoutSyncService (existing)
   - Listens to currentTarget beacon
@@ -129,6 +142,13 @@ Trainer adjusts resistance in ERG mode
 - Integration test with mock workout
 - Edge cases (pause/resume, skip, complete early)
 - Error handling
+- **Auto-pause/resume tests** (`test/pages/workout_player_auto_pause_logic_test.dart`):
+  - Auto-start at 40W threshold
+  - Auto-pause after sustained low power (3 seconds)
+  - Auto-resume at 40W
+  - Hysteresis validation (dead zone 30-40W prevents loops)
+  - Rapid power fluctuation handling
+  - Boundary condition testing
 
 ## Key Differences from Web
 
@@ -147,3 +167,8 @@ Trainer adjusts resistance in ERG mode
 - ✅ Events trigger at correct times
 - ✅ Power scale factor adjustable
 - ✅ Complete workout flow (start → play → finish)
+- ✅ Auto-start when user begins pedaling (≥40W)
+- ✅ Auto-pause after stopping pedaling (<30W for 3s)
+- ✅ Auto-resume when user resumes pedaling (≥40W)
+- ✅ Hysteresis prevents pause/resume loops
+- ✅ Clear user feedback for auto-start/pause states

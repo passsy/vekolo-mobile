@@ -15,8 +15,10 @@ import 'package:vekolo/config/api_config.dart';
 import 'package:vekolo/domain/devices/device_manager.dart';
 import 'package:vekolo/app/router.dart';
 import 'package:vekolo/services/auth_service.dart';
+import 'package:vekolo/services/device_assignment_persistence.dart';
 import 'package:vekolo/services/fresh_auth.dart';
 import 'package:vekolo/services/workout_sync_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vekolo/widgets/initialization_error_screen.dart';
 import 'package:vekolo/widgets/splash_screen.dart';
 
@@ -34,9 +36,12 @@ class _VekoloAppState extends State<VekoloApp> {
 
   /// Perform async initialization of services before mounting the main app / drawing the first frame
   Future<void> _initialize(BuildContext context) async {
-    print('_initialize starting');
+    talker.debug('[VekoloApp] _initialize starting');
     if (!mounted) return;
     try {
+      // Initialize SharedPreferences first (required by other services)
+      if (!mounted) return;
+
       // Disable verbose flutter_blue_plus logging
       Refs.blePlatform.of(context).setLogLevel(LogLevel.none);
 
@@ -51,11 +56,7 @@ class _VekoloAppState extends State<VekoloApp> {
       try {
         await deviceManager.initialize();
       } catch (e, stackTrace) {
-        talker.error(
-          '[VekoloApp] Failed to initialize DeviceManager auto-connect: $e',
-          e,
-          stackTrace,
-        );
+        talker.error('[VekoloApp] Failed to initialize DeviceManager auto-connect: $e', e, stackTrace);
       }
 
       // Run async initialization (load user from secure storage)
@@ -68,7 +69,7 @@ class _VekoloAppState extends State<VekoloApp> {
 
       // Mark initialization as complete
       if (mounted) {
-        print("_initialized = true;");
+        talker.debug('[VekoloApp] _initialized = true');
         setState(() {
           _initialized = true;
           _initializationError = null;
@@ -88,12 +89,12 @@ class _VekoloAppState extends State<VekoloApp> {
 
   @override
   Widget build(BuildContext context) {
-    print('build: initialized=$_initialized');
+    talker.debug('[VekoloApp] build: initialized=$_initialized');
     return ContextPlus.root(
       child: AppRestart(
         onStop: () {
           setState(() {
-            print("reset _initialized");
+            talker.debug('[VekoloApp] reset _initialized');
             _initialized = false;
           });
         },
@@ -151,12 +152,24 @@ class _VekoloAppState extends State<VekoloApp> {
             key: (blePlatform, blePermissions),
           );
 
+          // Note: SharedPreferences must be initialized before this point
+          // It's initialized in _initialize() method
+          final persistence = Refs.deviceAssignmentPersistence.bindWhenUnbound(
+            context,
+            () => DeviceAssignmentPersistence(SharedPreferencesAsync()),
+          );
+
           // Initialize DeviceManager
           final deviceManager = Refs.deviceManager.bindWhenUnbound(
             context,
-            () => DeviceManager(platform: blePlatform, scanner: scanner, transportRegistry: transportRegistry),
+            () => DeviceManager(
+              platform: blePlatform,
+              scanner: scanner,
+              transportRegistry: transportRegistry,
+              persistence: persistence,
+            ),
             dispose: (manager) => manager.dispose(),
-            key: (blePlatform, scanner, transportRegistry),
+            key: (blePlatform, scanner, transportRegistry, persistence),
           );
 
           // Initialize WorkoutSyncService with DeviceManager dependency

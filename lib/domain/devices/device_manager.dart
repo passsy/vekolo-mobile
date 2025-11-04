@@ -40,6 +40,7 @@ import 'package:vekolo/ble/ble_device.dart';
 import 'package:vekolo/ble/ble_platform.dart';
 import 'package:vekolo/ble/ble_scanner.dart';
 import 'package:vekolo/ble/transport_registry.dart';
+import 'package:vekolo/domain/devices/assigned_device.dart';
 import 'package:vekolo/domain/devices/fitness_device.dart';
 import 'package:vekolo/domain/models/device_info.dart';
 import 'package:vekolo/domain/models/fitness_data.dart';
@@ -55,6 +56,7 @@ class DeviceManager {
     required this.platform,
     required this.scanner,
     required this.transportRegistry,
+    required this.persistence,
   });
 
   /// BLE platform for device connection management.
@@ -65,6 +67,9 @@ class DeviceManager {
 
   /// Transport registry for detecting compatible transports and creating devices.
   final TransportRegistry transportRegistry;
+
+  /// Persistence service for saving/loading device assignments.
+  final DeviceAssignmentPersistence persistence;
 
   // ============================================================================
   // Device Collection
@@ -81,24 +86,24 @@ class DeviceManager {
   // ============================================================================
 
   /// Primary trainer for ERG control, can also provide power/cadence data.
-  FitnessDevice? _primaryTrainer;
-  final WritableBeacon<FitnessDevice?> _primaryTrainerBeacon = Beacon.writable(null);
+  AssignedDevice? _primaryTrainer;
+  final WritableBeacon<AssignedDevice?> _primaryTrainerBeacon = Beacon.writable(null);
 
   /// Dedicated power meter, overrides trainer's power if assigned.
-  FitnessDevice? _powerSource;
-  final WritableBeacon<FitnessDevice?> _powerSourceBeacon = Beacon.writable(null);
+  AssignedDevice? _powerSource;
+  final WritableBeacon<AssignedDevice?> _powerSourceBeacon = Beacon.writable(null);
 
   /// Dedicated cadence sensor, overrides trainer's cadence if assigned.
-  FitnessDevice? _cadenceSource;
-  final WritableBeacon<FitnessDevice?> _cadenceSourceBeacon = Beacon.writable(null);
+  AssignedDevice? _cadenceSource;
+  final WritableBeacon<AssignedDevice?> _cadenceSourceBeacon = Beacon.writable(null);
 
   /// Dedicated speed sensor, overrides trainer's speed if assigned.
-  FitnessDevice? _speedSource;
-  final WritableBeacon<FitnessDevice?> _speedSourceBeacon = Beacon.writable(null);
+  AssignedDevice? _speedSource;
+  final WritableBeacon<AssignedDevice?> _speedSourceBeacon = Beacon.writable(null);
 
   /// Dedicated heart rate monitor.
-  FitnessDevice? _heartRateSource;
-  final WritableBeacon<FitnessDevice?> _heartRateSourceBeacon = Beacon.writable(null);
+  AssignedDevice? _heartRateSource;
+  final WritableBeacon<AssignedDevice?> _heartRateSourceBeacon = Beacon.writable(null);
 
   // ============================================================================
   // Beacons for Aggregated Data (Derived from assigned devices)
@@ -106,28 +111,28 @@ class DeviceManager {
 
   late final ReadableBeacon<PowerData?> _powerBeacon = Beacon.derived(() {
     // Track assignment beacons so derived updates when assignments change
-    final powerSource = _powerSourceBeacon.value;
-    final primaryTrainer = _primaryTrainerBeacon.value;
+    final powerSource = _powerSourceBeacon.value?.connectedDevice;
+    final primaryTrainer = _primaryTrainerBeacon.value?.connectedDevice;
     final device = powerSource ?? primaryTrainer;
     return device?.powerStream?.value;
   });
 
   late final ReadableBeacon<CadenceData?> _cadenceBeacon = Beacon.derived(() {
-    final cadenceSource = _cadenceSourceBeacon.value;
-    final primaryTrainer = _primaryTrainerBeacon.value;
+    final cadenceSource = _cadenceSourceBeacon.value?.connectedDevice;
+    final primaryTrainer = _primaryTrainerBeacon.value?.connectedDevice;
     final device = cadenceSource ?? primaryTrainer;
     return device?.cadenceStream?.value;
   });
 
   late final ReadableBeacon<SpeedData?> _speedBeacon = Beacon.derived(() {
-    final speedSource = _speedSourceBeacon.value;
-    final primaryTrainer = _primaryTrainerBeacon.value;
+    final speedSource = _speedSourceBeacon.value?.connectedDevice;
+    final primaryTrainer = _primaryTrainerBeacon.value?.connectedDevice;
     final device = speedSource ?? primaryTrainer;
     return device?.speedStream?.value;
   });
 
   late final ReadableBeacon<HeartRateData?> _heartRateBeacon = Beacon.derived(() {
-    final heartRateSource = _heartRateSourceBeacon.value;
+    final heartRateSource = _heartRateSourceBeacon.value?.connectedDevice;
     return heartRateSource?.heartRateStream?.value;
   });
 
@@ -230,23 +235,23 @@ class DeviceManager {
     await disconnectDevice(deviceId);
 
     // Clear all assignments for this device
-    if (_primaryTrainer?.id == deviceId) {
+    if (_primaryTrainer?.deviceId == deviceId) {
       _primaryTrainer = null;
       _primaryTrainerBeacon.value = null;
     }
-    if (_powerSource?.id == deviceId) {
+    if (_powerSource?.deviceId == deviceId) {
       _powerSource = null;
       _powerSourceBeacon.value = null;
     }
-    if (_cadenceSource?.id == deviceId) {
+    if (_cadenceSource?.deviceId == deviceId) {
       _cadenceSource = null;
       _cadenceSourceBeacon.value = null;
     }
-    if (_speedSource?.id == deviceId) {
+    if (_speedSource?.deviceId == deviceId) {
       _speedSource = null;
       _speedSourceBeacon.value = null;
     }
-    if (_heartRateSource?.id == deviceId) {
+    if (_heartRateSource?.deviceId == deviceId) {
       _heartRateSource = null;
       _heartRateSourceBeacon.value = null;
     }
@@ -312,9 +317,10 @@ class DeviceManager {
       throw ArgumentError('Device $deviceId does not support ERG mode');
     }
 
-    _primaryTrainer = device;
-    _primaryTrainerBeacon.value = device;
-    _saveAssignmentsAsync();
+    final assigned = AssignedDevice.fromDevice(device);
+    _primaryTrainer = assigned;
+    _primaryTrainerBeacon.value = assigned;
+    _saveAssignmentsAsync(_buildDeviceAssignments());
   }
 
   /// Assigns a device as the dedicated power source.
@@ -338,9 +344,10 @@ class DeviceManager {
       throw ArgumentError('Device $deviceId does not provide power data');
     }
 
-    _powerSource = device;
-    _powerSourceBeacon.value = device;
-    _saveAssignmentsAsync();
+    final assigned = AssignedDevice.fromDevice(device);
+    _powerSource = assigned;
+    _powerSourceBeacon.value = assigned;
+    _saveAssignmentsAsync(_buildDeviceAssignments());
   }
 
   /// Assigns a device as the dedicated cadence source.
@@ -362,9 +369,10 @@ class DeviceManager {
       throw ArgumentError('Device $deviceId does not provide cadence data');
     }
 
-    _cadenceSource = device;
-    _cadenceSourceBeacon.value = device;
-    _saveAssignmentsAsync();
+    final assigned = AssignedDevice.fromDevice(device);
+    _cadenceSource = assigned;
+    _cadenceSourceBeacon.value = assigned;
+    _saveAssignmentsAsync(_buildDeviceAssignments());
   }
 
   /// Assigns a device as the dedicated speed source.
@@ -386,9 +394,10 @@ class DeviceManager {
       throw ArgumentError('Device $deviceId does not provide speed data');
     }
 
-    _speedSource = device;
-    _speedSourceBeacon.value = device;
-    _saveAssignmentsAsync();
+    final assigned = AssignedDevice.fromDevice(device);
+    _speedSource = assigned;
+    _speedSourceBeacon.value = assigned;
+    _saveAssignmentsAsync(_buildDeviceAssignments());
   }
 
   /// Assigns a device as the heart rate source.
@@ -411,9 +420,10 @@ class DeviceManager {
       throw ArgumentError('Device $deviceId does not provide heart rate data');
     }
 
-    _heartRateSource = device;
-    _heartRateSourceBeacon.value = device;
-    _saveAssignmentsAsync();
+    final assigned = AssignedDevice.fromDevice(device);
+    _heartRateSource = assigned;
+    _heartRateSourceBeacon.value = assigned;
+    _saveAssignmentsAsync(_buildDeviceAssignments());
   }
 
   // ============================================================================
@@ -429,34 +439,34 @@ class DeviceManager {
   ReadableBeacon<List<FitnessDevice>> get devicesBeacon => _devicesBeacon;
 
   /// Returns the currently assigned primary trainer, or null if none assigned.
-  FitnessDevice? get primaryTrainer => _primaryTrainer;
+  AssignedDevice? get primaryTrainer => _primaryTrainer;
 
   /// Reactive beacon of primary trainer assignment.
-  ReadableBeacon<FitnessDevice?> get primaryTrainerBeacon => _primaryTrainerBeacon;
+  ReadableBeacon<AssignedDevice?> get primaryTrainerBeacon => _primaryTrainerBeacon;
 
   /// Returns the currently assigned power source, or null if none assigned.
-  FitnessDevice? get powerSource => _powerSource;
+  AssignedDevice? get powerSource => _powerSource;
 
   /// Reactive beacon of power source assignment.
-  ReadableBeacon<FitnessDevice?> get powerSourceBeacon => _powerSourceBeacon;
+  ReadableBeacon<AssignedDevice?> get powerSourceBeacon => _powerSourceBeacon;
 
   /// Returns the currently assigned cadence source, or null if none assigned.
-  FitnessDevice? get cadenceSource => _cadenceSource;
+  AssignedDevice? get cadenceSource => _cadenceSource;
 
   /// Reactive beacon of cadence source assignment.
-  ReadableBeacon<FitnessDevice?> get cadenceSourceBeacon => _cadenceSourceBeacon;
+  ReadableBeacon<AssignedDevice?> get cadenceSourceBeacon => _cadenceSourceBeacon;
 
   /// Returns the currently assigned speed source, or null if none assigned.
-  FitnessDevice? get speedSource => _speedSource;
+  AssignedDevice? get speedSource => _speedSource;
 
   /// Reactive beacon of speed source assignment.
-  ReadableBeacon<FitnessDevice?> get speedSourceBeacon => _speedSourceBeacon;
+  ReadableBeacon<AssignedDevice?> get speedSourceBeacon => _speedSourceBeacon;
 
   /// Returns the currently assigned heart rate source, or null if none assigned.
-  FitnessDevice? get heartRateSource => _heartRateSource;
+  AssignedDevice? get heartRateSource => _heartRateSource;
 
   /// Reactive beacon of heart rate source assignment.
-  ReadableBeacon<FitnessDevice?> get heartRateSourceBeacon => _heartRateSourceBeacon;
+  ReadableBeacon<AssignedDevice?> get heartRateSourceBeacon => _heartRateSourceBeacon;
 
   // ============================================================================
   // Auto-Connect State
@@ -464,6 +474,12 @@ class DeviceManager {
 
   /// Devices that should be auto-connected (saved assignments).
   final Set<String> _autoConnectDeviceIds = {};
+
+  /// Devices currently being connected (to prevent duplicate connection attempts).
+  final Set<String> _connectingDeviceIds = {};
+
+  /// Subscription for auto-saving assignments when they change.
+  void Function()? _assignmentsPersistenceUnsubscribe;
 
   /// Scan token for auto-connect scanning.
   ScanToken? _autoConnectScanToken;
@@ -484,16 +500,59 @@ class DeviceManager {
     return device;
   }
 
+  DeviceAssignments _buildDeviceAssignments() {
+    return DeviceAssignments(
+      primaryTrainer: _primaryTrainer != null
+          ? DeviceAssignment(
+              deviceId: _primaryTrainer!.deviceId,
+              deviceName: _primaryTrainer!.deviceName,
+              transport: _primaryTrainer!.transport,
+            )
+          : null,
+      powerSource: _powerSource != null
+          ? DeviceAssignment(
+              deviceId: _powerSource!.deviceId,
+              deviceName: _powerSource!.deviceName,
+              transport: _powerSource!.transport,
+            )
+          : null,
+      cadenceSource: _cadenceSource != null
+          ? DeviceAssignment(
+              deviceId: _cadenceSource!.deviceId,
+              deviceName: _cadenceSource!.deviceName,
+              transport: _cadenceSource!.transport,
+            )
+          : null,
+      speedSource: _speedSource != null
+          ? DeviceAssignment(
+              deviceId: _speedSource!.deviceId,
+              deviceName: _speedSource!.deviceName,
+              transport: _speedSource!.transport,
+            )
+          : null,
+      heartRateSource: _heartRateSource != null
+          ? DeviceAssignment(
+              deviceId: _heartRateSource!.deviceId,
+              deviceName: _heartRateSource!.deviceName,
+              transport: _heartRateSource!.transport,
+            )
+          : null,
+    );
+  }
+
   /// Saves device assignments asynchronously (fire-and-forget).
-  Future<void> _saveAssignmentsAsync() async {
+  /// Updates the saved assignments beacon, which triggers auto-persistence.
+  Future<void> _saveAssignmentsAsync(DeviceAssignments assignments) async {
     try {
-      await saveDeviceAssignments(this);
-    } catch (error, stackTrace) {
-      talker.error(
-        '[DeviceManager] Failed to save assignments: $error',
-        error,
-        stackTrace,
+      await persistence.saveAssignments(
+        primaryTrainer: assignments.primaryTrainer,
+        powerSource: assignments.powerSource,
+        cadenceSource: assignments.cadenceSource,
+        speedSource: assignments.speedSource,
+        heartRateSource: assignments.heartRateSource,
       );
+    } catch (e, stack) {
+      talker.error('[DeviceManager] Failed to persist assignments: $e', e, stack);
     }
   }
 
@@ -513,68 +572,39 @@ class DeviceManager {
   ///
   /// Errors are logged but don't block initialization. Unavailable devices are silently skipped.
   Future<void> initialize() async {
-    talker.info('[DeviceManager] Initializing auto-connect');
-
-    try {
-      final assignments = await loadDeviceAssignments();
-      if (assignments.isEmpty) {
-        talker.info('[DeviceManager] No saved assignments to restore');
-        return;
-      }
-
-      _autoConnectDeviceIds.addAll(assignments.keys);
-      talker.info('[DeviceManager] Found ${assignments.length} device(s) to auto-connect');
-
-      // Check for already discovered devices
-      final discoveredDevices = scanner.devices.value;
-      final devicesToConnect = <String>{};
-      final devicesToScan = <String>{};
-
-      for (final deviceId in _autoConnectDeviceIds) {
-        final discovered = discoveredDevices.where((d) => d.deviceId == deviceId).firstOrNull;
-        if (discovered != null) {
-          devicesToConnect.add(deviceId);
-        } else {
-          devicesToScan.add(deviceId);
-        }
-      }
-
-      // Connect to already discovered devices
-      for (final deviceId in devicesToConnect) {
-        try {
-          await _connectAndRestoreDevice(deviceId, assignments[deviceId]!);
-        } catch (e, stackTrace) {
-          talker.error(
-            '[DeviceManager] Failed to connect to $deviceId: $e',
-            e,
-            stackTrace,
-          );
-        }
-      }
-
-      // Start scanning for missing devices if any
-      if (devicesToScan.isNotEmpty) {
-        _startAutoConnectScanning(devicesToScan, assignments);
-      }
-    } catch (e, stackTrace) {
-      talker.error(
-        '[DeviceManager] Failed to initialize auto-connect: $e',
-        e,
-        stackTrace,
-      );
-    }
+    final assignments = await persistence.loadAssignments();
+    _restoreAssignments(assignments);
+    _startAutoConnectIfNeeded(assignments);
   }
 
-  /// Connects to a device and restores its assignments.
-  Future<void> _connectAndRestoreDevice(String deviceId, Set<String> roles) async {
+  /// Starts auto-connect scanning if there are saved device assignments.
+  void _startAutoConnectIfNeeded(DeviceAssignments assignments) {
+    Set<String> _extractDeviceIds(DeviceAssignments assignments) {
+      return {
+        if (assignments.primaryTrainer != null) assignments.primaryTrainer!.deviceId,
+        if (assignments.powerSource != null) assignments.powerSource!.deviceId,
+        if (assignments.cadenceSource != null) assignments.cadenceSource!.deviceId,
+        if (assignments.speedSource != null) assignments.speedSource!.deviceId,
+        if (assignments.heartRateSource != null) assignments.heartRateSource!.deviceId,
+      };
+    }
+
+    final deviceIds = _extractDeviceIds(assignments);
+    _autoConnectDeviceIds.addAll(deviceIds);
+
+    talker.info('[DeviceManager] Found ${deviceIds.length} device(s) to auto-connect');
+    _startAutoConnectScanning();
+  }
+
+  /// Connects to a device during auto-connect.
+  Future<void> _connectAndRestoreDevice(String deviceId) async {
     // Check if device already exists in manager
     final existingDevice = _devices.where((d) => d.id == deviceId).firstOrNull;
     if (existingDevice != null) {
-      // Device already exists, just connect and restore assignments
+      // Device already exists, just connect if needed
       if (existingDevice.connectionState.value != ConnectionState.connected) {
         await connectDevice(deviceId).value;
       }
-      _restoreAssignments(deviceId, roles);
       return;
     }
 
@@ -606,64 +636,149 @@ class DeviceManager {
 
     // Connect
     await connectDevice(deviceId).value;
-
-    // Restore assignments
-    _restoreAssignments(deviceId, roles);
   }
 
-  /// Restores role assignments for a device.
-  void _restoreAssignments(String deviceId, Set<String> roles) {
+  /// Restores role assignments for all connected devices from saved assignments.
+  ///
+  /// Iterates through all saved assignments and attempts to restore them for
+  /// devices that are already connected. Used during initialization.
+  void _restoreAssignments(DeviceAssignments assignments) {
+    // Create AssignedDevice wrappers from persisted assignments
+    // Devices are not connected yet, so connectedDevice will be null
+    // These will be updated with actual device references in _restoreAssignmentsForDevice
+
+    if (assignments.primaryTrainer != null) {
+      final assignment = assignments.primaryTrainer!;
+      _primaryTrainer = AssignedDevice(
+        deviceId: assignment.deviceId,
+        deviceName: assignment.deviceName,
+        transport: assignment.transport,
+      );
+      _primaryTrainerBeacon.value = _primaryTrainer;
+    }
+
+    if (assignments.powerSource != null) {
+      final assignment = assignments.powerSource!;
+      _powerSource = AssignedDevice(
+        deviceId: assignment.deviceId,
+        deviceName: assignment.deviceName,
+        transport: assignment.transport,
+      );
+      _powerSourceBeacon.value = _powerSource;
+    }
+
+    if (assignments.cadenceSource != null) {
+      final assignment = assignments.cadenceSource!;
+      _cadenceSource = AssignedDevice(
+        deviceId: assignment.deviceId,
+        deviceName: assignment.deviceName,
+        transport: assignment.transport,
+      );
+      _cadenceSourceBeacon.value = _cadenceSource;
+    }
+
+    if (assignments.speedSource != null) {
+      final assignment = assignments.speedSource!;
+      _speedSource = AssignedDevice(
+        deviceId: assignment.deviceId,
+        deviceName: assignment.deviceName,
+        transport: assignment.transport,
+      );
+      _speedSourceBeacon.value = _speedSource;
+    }
+
+    if (assignments.heartRateSource != null) {
+      final assignment = assignments.heartRateSource!;
+      _heartRateSource = AssignedDevice(
+        deviceId: assignment.deviceId,
+        deviceName: assignment.deviceName,
+        transport: assignment.transport,
+      );
+      _heartRateSourceBeacon.value = _heartRateSource;
+    }
+
+    talker.info('[DeviceManager] Restored assignments from persistence (devices not yet connected)');
+  }
+
+  /// Restores role assignments for a specific device that was just connected during auto-connect.
+  ///
+  /// Updates existing AssignedDevice wrappers to reference the now-connected device.
+  /// Used when a device is discovered and connected during auto-connect scanning.
+  void _restoreAssignmentsForDevice(String deviceId) {
     final device = _findDevice(deviceId);
 
-    for (final role in roles) {
-      try {
-        switch (role) {
-          case 'primaryTrainer':
-            if (device.supportsErgMode) {
-              assignPrimaryTrainer(deviceId);
-            }
-          case 'powerSource':
-            if (device.capabilities.contains(DeviceDataType.power)) {
-              assignPowerSource(deviceId);
-            }
-          case 'cadenceSource':
-            if (device.capabilities.contains(DeviceDataType.cadence)) {
-              assignCadenceSource(deviceId);
-            }
-          case 'speedSource':
-            if (device.capabilities.contains(DeviceDataType.speed)) {
-              assignSpeedSource(deviceId);
-            }
-          case 'heartRateSource':
-            if (device.capabilities.contains(DeviceDataType.heartRate)) {
-              assignHeartRateSource(deviceId);
-            }
-        }
-      } catch (e) {
-        talker.info('[DeviceManager] Failed to restore role $role for $deviceId: $e');
-      }
+    // Update existing AssignedDevice wrappers with the connected device reference
+    if (_primaryTrainer?.deviceId == deviceId) {
+      _primaryTrainer = _primaryTrainer!.withConnectedDevice(device);
+      _primaryTrainerBeacon.value = _primaryTrainer;
+      talker.info('[DeviceManager] Updated primaryTrainer with connected device');
+    }
+
+    if (_powerSource?.deviceId == deviceId) {
+      _powerSource = _powerSource!.withConnectedDevice(device);
+      _powerSourceBeacon.value = _powerSource;
+      talker.info('[DeviceManager] Updated powerSource with connected device');
+    }
+
+    if (_cadenceSource?.deviceId == deviceId) {
+      _cadenceSource = _cadenceSource!.withConnectedDevice(device);
+      _cadenceSourceBeacon.value = _cadenceSource;
+      talker.info('[DeviceManager] Updated cadenceSource with connected device');
+    }
+
+    if (_speedSource?.deviceId == deviceId) {
+      _speedSource = _speedSource!.withConnectedDevice(device);
+      _speedSourceBeacon.value = _speedSource;
+      talker.info('[DeviceManager] Updated speedSource with connected device');
+    }
+
+    if (_heartRateSource?.deviceId == deviceId) {
+      _heartRateSource = _heartRateSource!.withConnectedDevice(device);
+      _heartRateSourceBeacon.value = _heartRateSource;
+      talker.info('[DeviceManager] Updated heartRateSource with connected device');
     }
   }
 
   /// Starts scanning for devices that need to be auto-connected.
-  void _startAutoConnectScanning(Set<String> deviceIds, Map<String, Set<String>> assignments) {
+  void _startAutoConnectScanning() {
     if (_autoConnectScanToken != null) {
       return; // Already scanning
     }
 
-    talker.info('[DeviceManager] Starting scan for ${deviceIds.length} missing device(s)');
+    talker.info('[DeviceManager] Starting scan for ${_autoConnectDeviceIds.length} device(s)');
 
     _autoConnectScanToken = scanner.startScan();
 
     // Monitor scanner for discovered devices
     _scannerDevicesUnsubscribe = scanner.devices.subscribe((discoveredDevices) {
       for (final discovered in discoveredDevices) {
-        if (deviceIds.contains(discovered.deviceId)) {
-          // Found a device we're looking for
-          _connectAndRestoreDevice(discovered.deviceId, assignments[discovered.deviceId]!)
+        if (_autoConnectDeviceIds.contains(discovered.deviceId)) {
+          // Check if device is already connected or being connected
+          final existingDevice = _devices.where((d) => d.id == discovered.deviceId).firstOrNull;
+          if (existingDevice != null && existingDevice.connectionState.value == ConnectionState.connected) {
+            // Device already connected, skip and remove from pending list
+            _autoConnectDeviceIds.remove(discovered.deviceId);
+            continue;
+          }
+
+          // Check if device is already being connected
+          if (_connectingDeviceIds.contains(discovered.deviceId)) {
+            // Connection already in progress, skip
+            continue;
+          }
+
+          // Found a device we're looking for - mark as connecting and connect it
+          _connectingDeviceIds.add(discovered.deviceId);
+          talker.info('[DeviceManager] Starting connection to ${discovered.deviceId}');
+
+          _connectAndRestoreDevice(discovered.deviceId)
               .then((_) {
-                deviceIds.remove(discovered.deviceId);
-                _autoConnectDeviceIds.remove(discovered.deviceId);
+                final connectedDeviceId = discovered.deviceId;
+                _autoConnectDeviceIds.remove(connectedDeviceId);
+                _connectingDeviceIds.remove(connectedDeviceId);
+
+                // Restore assignments for the device that was just connected
+                _restoreAssignmentsForDevice(connectedDeviceId);
 
                 // Stop scanning if all devices found or all sensors are assigned
                 if (_shouldStopAutoConnectScanning() && _autoConnectScanToken != null) {
@@ -671,12 +786,12 @@ class DeviceManager {
                   _autoConnectScanToken = null;
                   _scannerDevicesUnsubscribe?.call();
                   _scannerDevicesUnsubscribe = null;
-                  talker.info(
-                    '[DeviceManager] All devices connected or sensors assigned, stopping scan',
-                  );
+                  talker.info('[DeviceManager] All devices connected or sensors assigned, stopping scan');
                 }
               })
               .catchError((error, stackTrace) {
+                // Remove from connecting set on error
+                _connectingDeviceIds.remove(discovered.deviceId);
                 talker.error(
                   '[DeviceManager] Failed to auto-connect ${discovered.deviceId}: $error',
                   error,
@@ -728,6 +843,10 @@ class DeviceManager {
     }
     _scannerDevicesUnsubscribe?.call();
     _scannerDevicesUnsubscribe = null;
+
+    // Stop auto-persistence of assignments
+    _assignmentsPersistenceUnsubscribe?.call();
+    _assignmentsPersistenceUnsubscribe = null;
 
     // Disconnect all devices via BlePlatform
     await Future.wait(

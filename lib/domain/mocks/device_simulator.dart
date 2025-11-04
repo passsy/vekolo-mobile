@@ -198,6 +198,9 @@ class _MockPowerMeter extends FitnessDevice {
   String get name => _name;
 
   @override
+  List<String> get transportIds => ['mock-power-meter'];
+
+  @override
   DeviceType get type => DeviceType.powerMeter;
 
   @override
@@ -313,6 +316,9 @@ class _MockCadenceSensor extends FitnessDevice {
 
   @override
   String get name => _name;
+
+  @override
+  List<String> get transportIds => ['mock-cadence-sensor'];
 
   @override
   DeviceType get type => DeviceType.cadenceSensor;
@@ -435,6 +441,9 @@ class _MockHeartRateMonitor extends FitnessDevice {
 
   @override
   String get name => _name;
+
+  @override
+  List<String> get transportIds => ['mock-heart-rate'];
 
   @override
   DeviceType get type => DeviceType.heartRateMonitor;

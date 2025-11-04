@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:fresh_dio/fresh_dio.dart' hide RefreshToken;
 import 'package:state_beacon/state_beacon.dart';
+import 'package:vekolo/app/logger.dart';
 import 'package:vekolo/api/vekolo_api_client.dart';
 import 'package:vekolo/models/user.dart';
 import 'package:vekolo/services/fresh_auth.dart';
@@ -29,8 +30,7 @@ class SecureTokenStorage extends TokenStorage<VekoloToken> {
         refreshToken: RefreshToken(data['refreshToken'] as String),
       );
     } catch (e, stackTrace) {
-      print('[SecureTokenStorage] Failed to parse token: $e');
-      print(stackTrace);
+      talker.error('[SecureTokenStorage] Failed to parse token', e, stackTrace);
       return null;
     }
   }
@@ -111,8 +111,7 @@ class AuthService {
     try {
       return User.init.fromAccessToken(accessToken);
     } catch (e, stackTrace) {
-      print('[AuthService] Failed to parse user data: $e');
-      print(stackTrace);
+      talker.error('[AuthService] Failed to parse user data', e, stackTrace);
       return null;
     }
   }

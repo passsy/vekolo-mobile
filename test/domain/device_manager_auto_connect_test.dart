@@ -12,6 +12,7 @@ import 'package:vekolo/domain/models/device_info.dart';
 import 'package:vekolo/services/device_assignment_persistence.dart';
 import '../ble/fake_ble_platform.dart';
 import '../ble/fake_ble_permissions.dart';
+import '../helpers/shared_preferences_helper.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -21,7 +22,7 @@ void main() {
       SharedPreferences.setMockInitialValues({});
     });
 
-    ({DeviceManager manager, FakeBlePlatform platform, BleScanner scanner}) createDeviceManager() {
+    Future<({DeviceManager manager, FakeBlePlatform platform, BleScanner scanner})> createDeviceManager() async {
       final platform = FakeBlePlatform();
       platform.setAdapterState(BluetoothAdapterState.on);
       final scanner = BleScanner(platform: platform, permissions: FakeBlePermissions());
@@ -30,7 +31,14 @@ void main() {
       transportRegistry.register(ftmsTransportRegistration);
       transportRegistry.register(heartRateTransportRegistration);
       addTearDown(() => scanner.dispose());
-      final deviceManager = DeviceManager(platform: platform, scanner: scanner, transportRegistry: transportRegistry);
+      final prefs = createTestSharedPreferencesAsync();
+      final persistence = DeviceAssignmentPersistence(prefs);
+      final deviceManager = DeviceManager(
+        platform: platform,
+        scanner: scanner,
+        transportRegistry: transportRegistry,
+        persistence: persistence,
+      );
       addTearDown(() async => await deviceManager.dispose());
       return (manager: deviceManager, platform: platform, scanner: scanner);
     }
@@ -40,7 +48,7 @@ void main() {
 
     group('initialize', () {
       test('does nothing when no saved assignments', () async {
-        final deps = createDeviceManager();
+        final deps = await createDeviceManager();
 
         await deps.manager.initialize();
 
@@ -49,7 +57,7 @@ void main() {
       });
 
       test('connects to already discovered devices', () async {
-        final deps = createDeviceManager();
+        final deps = await createDeviceManager();
 
         // Create a trainer device and add it to platform
         final trainer = MockTrainer(id: 'trainer-1', name: 'Test Trainer');
@@ -57,10 +65,11 @@ void main() {
         deps.manager.assignPrimaryTrainer(trainer.id);
 
         // Save assignments
-        await saveDeviceAssignments(deps.manager);
+        // Wait for auto-save via beacon subscription (needs extra time for async beacon + persistence)
+        await Future.delayed(const Duration(milliseconds: 200));
 
         // Create new device manager (simulating app restart) with fresh dependencies
-        final newDeps = createDeviceManager();
+        final newDeps = await createDeviceManager();
 
         // Simulate device already discovered on the new platform
         final fakeDevice = newDeps.platform.addDevice(
@@ -81,23 +90,24 @@ void main() {
         await Future.delayed(const Duration(milliseconds: 200));
 
         expect(newDeps.manager.devices, hasLength(1));
-        expect(newDeps.manager.primaryTrainer?.id, equals('trainer-1'));
+        expect(newDeps.manager.primaryTrainer?.deviceId, equals('trainer-1'));
       });
 
       test('starts scanning for missing devices', () async {
-        final deps = createDeviceManager();
+        final deps = await createDeviceManager();
 
         // Save an assignment for a device that doesn't exist yet
         final trainer = MockTrainer(id: 'trainer-1', name: 'Test Trainer');
         await deps.manager.addDevice(trainer);
         deps.manager.assignPrimaryTrainer(trainer.id);
-        await saveDeviceAssignments(deps.manager);
+        // Wait for auto-save via beacon subscription (needs extra time for async beacon + persistence)
+        await Future.delayed(const Duration(milliseconds: 200));
 
         // Remove device to simulate it not being discovered yet
         await deps.manager.removeDevice(trainer.id);
 
         // Create new device manager with fresh dependencies
-        final newDeps = createDeviceManager();
+        final newDeps = await createDeviceManager();
 
         // Initialize should start scanning
         await newDeps.manager.initialize();
@@ -122,7 +132,7 @@ void main() {
 
         // Device should be connected and assigned
         expect(newDeps.manager.devices, hasLength(1));
-        expect(newDeps.manager.primaryTrainer?.id, equals('trainer-1'));
+        expect(newDeps.manager.primaryTrainer?.deviceId, equals('trainer-1'));
 
         // Scanning should stop after device is found
         await Future.delayed(const Duration(milliseconds: 200));
@@ -130,7 +140,7 @@ void main() {
       });
 
       test('restores multiple device assignments', () async {
-        final deps = createDeviceManager();
+        final deps = await createDeviceManager();
 
         // Create and assign devices
         final trainer = MockTrainer(id: 'trainer-1', name: 'Trainer');
@@ -139,10 +149,12 @@ void main() {
         await deps.manager.addDevice(hrMonitor);
         deps.manager.assignPrimaryTrainer(trainer.id);
         deps.manager.assignHeartRateSource(hrMonitor.id);
-        await saveDeviceAssignments(deps.manager);
+        // Wait for auto-save via beacon subscription (needs extra time for async beacon + persistence)
+        await Future.delayed(const Duration(milliseconds: 200));
+        await pumpEventQueue();
 
         // Create new device manager with fresh dependencies
-        final newDeps = createDeviceManager();
+        final newDeps = await createDeviceManager();
 
         // Add devices to the new platform
         final trainerDevice = newDeps.platform.addDevice(
@@ -171,22 +183,24 @@ void main() {
 
         // Wait for connections and assignments
         await Future.delayed(const Duration(milliseconds: 500));
+        await pumpEventQueue();
 
         expect(newDeps.manager.devices, hasLength(2));
-        expect(newDeps.manager.primaryTrainer?.id, equals('trainer-1'));
-        expect(newDeps.manager.heartRateSource?.id, equals(hrDeviceId));
+        expect(newDeps.manager.primaryTrainer?.deviceId, equals('trainer-1'));
+        expect(newDeps.manager.heartRateSource?.deviceId, equals(hrDeviceId));
       });
     });
 
     group('_shouldStopAutoConnectScanning', () {
       test('stops when all devices found', () async {
-        final deps = createDeviceManager();
+        final deps = await createDeviceManager();
 
         // Add a device and assign it
         final trainer = MockTrainer(id: 'trainer-1', name: 'Trainer');
         await deps.manager.addDevice(trainer);
         deps.manager.assignPrimaryTrainer(trainer.id);
-        await saveDeviceAssignments(deps.manager);
+        // Wait for auto-save via beacon subscription (needs extra time for async beacon + persistence)
+        await Future.delayed(const Duration(milliseconds: 200));
 
         // Simulate all devices found by clearing the set
         // Note: This tests the internal logic indirectly through initialize
@@ -199,7 +213,7 @@ void main() {
       });
 
       test('stops when all sensors assigned', () async {
-        final deps = createDeviceManager();
+        final deps = await createDeviceManager();
 
         // Save assignments for devices that will be discovered
         final trainer = MockTrainer(id: 'trainer-1', name: 'Trainer');
@@ -218,14 +232,15 @@ void main() {
         deps.manager.assignSpeedSource(trainer.id); // Trainer provides speed
         deps.manager.assignHeartRateSource(hrMonitor.id);
 
-        await saveDeviceAssignments(deps.manager);
+        // Wait for auto-save via beacon subscription (needs extra time for async beacon + persistence)
+        await Future.delayed(const Duration(milliseconds: 200));
         await deps.manager.removeDevice(trainer.id);
         await deps.manager.removeDevice(powerMeter.id);
         await deps.manager.removeDevice(cadenceSensor.id);
         await deps.manager.removeDevice(hrMonitor.id);
 
         // Create new device manager (simulating app restart)
-        final newDeps = createDeviceManager();
+        final newDeps = await createDeviceManager();
 
         // Initialize should start scanning
         await newDeps.manager.initialize();
@@ -280,17 +295,18 @@ void main() {
 
     group('error handling', () {
       test('handles connection failures gracefully', () async {
-        final deps = createDeviceManager();
+        final deps = await createDeviceManager();
 
         // Save assignment
         final trainer = MockTrainer(id: 'trainer-1', name: 'Trainer');
         await deps.manager.addDevice(trainer);
         deps.manager.assignPrimaryTrainer(trainer.id);
-        await saveDeviceAssignments(deps.manager);
+        // Wait for auto-save via beacon subscription (needs extra time for async beacon + persistence)
+        await Future.delayed(const Duration(milliseconds: 200));
         await deps.manager.removeDevice(trainer.id);
 
         // Create new manager with fresh dependencies
-        final newDeps = createDeviceManager();
+        final newDeps = await createDeviceManager();
 
         // Make connection fail
         newDeps.platform.overrideConnect = (deviceId, {Duration timeout = const Duration(seconds: 35)}) {
@@ -318,17 +334,18 @@ void main() {
       });
 
       test('handles missing device in scanner gracefully', () async {
-        final deps = createDeviceManager();
+        final deps = await createDeviceManager();
 
         // Save assignment for device that won't be discovered
         final trainer = MockTrainer(id: 'trainer-1', name: 'Trainer');
         await deps.manager.addDevice(trainer);
         deps.manager.assignPrimaryTrainer(trainer.id);
-        await saveDeviceAssignments(deps.manager);
+        // Wait for auto-save via beacon subscription (needs extra time for async beacon + persistence)
+        await Future.delayed(const Duration(milliseconds: 200));
         await deps.manager.removeDevice(trainer.id);
 
         // Create new manager with fresh dependencies
-        final newDeps = createDeviceManager();
+        final newDeps = await createDeviceManager();
 
         // Initialize should start scanning but device never appears
         await newDeps.manager.initialize();
@@ -345,18 +362,72 @@ void main() {
       });
     });
 
+    group('duplicate connection prevention', () {
+      test('prevents multiple simultaneous connection attempts to same device', () async {
+        final deps = await createDeviceManager();
+
+        // Save assignment
+        final trainer = MockTrainer(id: 'trainer-1', name: 'Trainer');
+        await deps.manager.addDevice(trainer);
+        deps.manager.assignPrimaryTrainer(trainer.id);
+        // Wait for auto-save via beacon subscription (needs extra time for async beacon + persistence)
+        await Future.delayed(const Duration(milliseconds: 200));
+        await deps.manager.removeDevice(trainer.id);
+
+        // Create new manager with fresh dependencies
+        final newDeps = await createDeviceManager();
+
+        // Track connection attempts
+        int connectionAttempts = 0;
+        newDeps.platform.overrideConnect = (deviceId, {Duration timeout = const Duration(seconds: 35)}) async {
+          connectionAttempts++;
+          // Simulate slow connection (500ms) - much longer than typical BLE advertisement interval (100-200ms)
+          // This ensures multiple scanner updates happen during connection
+          await Future.delayed(const Duration(milliseconds: 500));
+          return;
+        };
+
+        // Add device to the new platform
+        final fakeDevice = newDeps.platform.addDevice('trainer-1', 'Trainer', rssi: -60, services: [ftmsServiceUuid]);
+        fakeDevice.turnOn();
+
+        await Future.delayed(const Duration(milliseconds: 100));
+
+        // Initialize - this will start scanning
+        await newDeps.manager.initialize();
+
+        // Wait a bit for scanning to discover the device and start connection
+        await Future.delayed(const Duration(milliseconds: 150));
+
+        // Simulate BLE advertisement intervals (typical: 100-200ms) by forcing scanner updates
+        // While connection is in progress (takes 500ms), these updates would trigger duplicate
+        // connection attempts in the buggy version
+        for (int i = 0; i < 5; i++) {
+          fakeDevice.updateRssi(-60 + (i % 3) * 5); // Vary RSSI to simulate real conditions
+          await Future.delayed(const Duration(milliseconds: 100)); // Typical advertisement interval
+        }
+
+        // Wait for connection to complete and all async operations to finish
+        await Future.delayed(const Duration(milliseconds: 300));
+
+        // Verify only ONE connection attempt was made despite multiple scanner updates
+        expect(connectionAttempts, equals(1), reason: 'Should only attempt connection once');
+      });
+    });
+
     group('assignment restoration', () {
       test('restores primary trainer assignment', () async {
-        final deps = createDeviceManager();
+        final deps = await createDeviceManager();
 
         final trainer = MockTrainer(id: 'trainer-1', name: 'Trainer');
         await deps.manager.addDevice(trainer);
         deps.manager.assignPrimaryTrainer(trainer.id);
-        await saveDeviceAssignments(deps.manager);
+        // Wait for auto-save via beacon subscription (needs extra time for async beacon + persistence)
+        await Future.delayed(const Duration(milliseconds: 200));
         await deps.manager.removeDevice(trainer.id);
 
         // Create new manager with fresh dependencies
-        final newDeps = createDeviceManager();
+        final newDeps = await createDeviceManager();
 
         final fakeDevice = newDeps.platform.addDevice('trainer-1', 'Trainer', rssi: -60, services: [ftmsServiceUuid]);
         fakeDevice.turnOn();
@@ -365,22 +436,23 @@ void main() {
         await newDeps.manager.initialize();
         await Future.delayed(const Duration(milliseconds: 500));
 
-        expect(newDeps.manager.primaryTrainer?.id, equals('trainer-1'));
+        expect(newDeps.manager.primaryTrainer?.deviceId, equals('trainer-1'));
       });
 
       test('restores multiple role assignments for same device', () async {
-        final deps = createDeviceManager();
+        final deps = await createDeviceManager();
 
         final trainer = MockTrainer(id: 'trainer-1', name: 'Trainer');
         await deps.manager.addDevice(trainer);
         deps.manager.assignPrimaryTrainer(trainer.id);
         deps.manager.assignPowerSource(trainer.id);
         deps.manager.assignCadenceSource(trainer.id);
-        await saveDeviceAssignments(deps.manager);
+        // Wait for auto-save via beacon subscription (needs extra time for async beacon + persistence)
+        await Future.delayed(const Duration(milliseconds: 200));
         await deps.manager.removeDevice(trainer.id);
 
         // Create new manager with fresh dependencies
-        final newDeps = createDeviceManager();
+        final newDeps = await createDeviceManager();
 
         final fakeDevice = newDeps.platform.addDevice('trainer-1', 'Trainer', rssi: -60, services: [ftmsServiceUuid]);
         fakeDevice.turnOn();
@@ -389,9 +461,9 @@ void main() {
         await newDeps.manager.initialize();
         await Future.delayed(const Duration(milliseconds: 500));
 
-        expect(newDeps.manager.primaryTrainer?.id, equals('trainer-1'));
-        expect(newDeps.manager.powerSource?.id, equals('trainer-1'));
-        expect(newDeps.manager.cadenceSource?.id, equals('trainer-1'));
+        expect(newDeps.manager.primaryTrainer?.deviceId, equals('trainer-1'));
+        expect(newDeps.manager.powerSource?.deviceId, equals('trainer-1'));
+        expect(newDeps.manager.cadenceSource?.deviceId, equals('trainer-1'));
       });
     });
   });

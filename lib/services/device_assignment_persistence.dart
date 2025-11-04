@@ -1,9 +1,8 @@
 import 'dart:convert';
-import 'package:vekolo/app/logger.dart';
 
 import 'package:deep_pick/deep_pick.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:vekolo/domain/devices/device_manager.dart';
+import 'package:vekolo/app/logger.dart';
 
 /// Storage key for device assignments
 const String _storageKey = 'device_assignments_v1';
@@ -11,158 +10,212 @@ const String _storageKey = 'device_assignments_v1';
 /// Current storage format version
 const int _currentVersion = 1;
 
-/// Save current device assignments to persistent storage.
+/// Device assignment record.
 ///
-/// Saves which devices are assigned to which roles (powerSource, heartRateSource, etc.)
-/// so they can be auto-reconnected on app restart.
-Future<void> saveDeviceAssignments(DeviceManager deviceManager) async {
-  final prefs = await SharedPreferences.getInstance();
+/// Represents a single device assigned to a specific role.
+/// The role is implicit based on which parameter this is passed to in [saveAssignments].
+class DeviceAssignment {
+  const DeviceAssignment({required this.deviceId, required this.deviceName, required this.transport});
 
-  final assignments = <Map<String, dynamic>>[];
+  final String deviceId;
+  final String deviceName;
+  final String transport;
 
-  // Add all assigned devices to the list
-  if (deviceManager.primaryTrainerBeacon.value != null) {
-    final device = deviceManager.primaryTrainerBeacon.value!;
-    assignments.add({
-      'deviceId': device.id,
-      'deviceName': device.name,
-      'role': 'primaryTrainer',
-      'assignedAt': DateTime.now().toIso8601String(),
-    });
-  }
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is DeviceAssignment &&
+          runtimeType == other.runtimeType &&
+          deviceId == other.deviceId &&
+          deviceName == other.deviceName &&
+          transport == other.transport;
 
-  if (deviceManager.powerSourceBeacon.value != null) {
-    final device = deviceManager.powerSourceBeacon.value!;
-    assignments.add({
-      'deviceId': device.id,
-      'deviceName': device.name,
-      'role': 'powerSource',
-      'assignedAt': DateTime.now().toIso8601String(),
-    });
-  }
-
-  if (deviceManager.cadenceSourceBeacon.value != null) {
-    final device = deviceManager.cadenceSourceBeacon.value!;
-    assignments.add({
-      'deviceId': device.id,
-      'deviceName': device.name,
-      'role': 'cadenceSource',
-      'assignedAt': DateTime.now().toIso8601String(),
-    });
-  }
-
-  if (deviceManager.speedSourceBeacon.value != null) {
-    final device = deviceManager.speedSourceBeacon.value!;
-    assignments.add({
-      'deviceId': device.id,
-      'deviceName': device.name,
-      'role': 'speedSource',
-      'assignedAt': DateTime.now().toIso8601String(),
-    });
-  }
-
-  if (deviceManager.heartRateSourceBeacon.value != null) {
-    final device = deviceManager.heartRateSourceBeacon.value!;
-    assignments.add({
-      'deviceId': device.id,
-      'deviceName': device.name,
-      'role': 'heartRateSource',
-      'assignedAt': DateTime.now().toIso8601String(),
-    });
-  }
-
-  final data = {
-    'version': _currentVersion,
-    'assignments': assignments,
-  };
-
-  final json = jsonEncode(data);
-  await prefs.setString(_storageKey, json);
-
-  talker.info(
-    '[DeviceAssignments] Saved ${assignments.length} assignment(s)',
-  );
+  @override
+  int get hashCode => Object.hash(deviceId, deviceName, transport);
 }
 
-/// Load saved device assignments.
+/// Loaded device assignments.
 ///
-/// Returns a map of deviceId -> set of roles, which can be used to reconnect devices.
-/// For example: `{'device-123': {'powerSource', 'primaryTrainer'}}`
-Future<Map<String, Set<String>>> loadDeviceAssignments() async {
-  final prefs = await SharedPreferences.getInstance();
-  final json = prefs.getString(_storageKey);
-  if (json == null) {
-    talker.info('[DeviceAssignments] No saved assignments found');
-    return {};
+/// Represents all device assignments loaded from persistent storage.
+class DeviceAssignments {
+  const DeviceAssignments({
+    this.primaryTrainer,
+    this.powerSource,
+    this.cadenceSource,
+    this.speedSource,
+    this.heartRateSource,
+  });
+
+  final DeviceAssignment? primaryTrainer;
+  final DeviceAssignment? powerSource;
+  final DeviceAssignment? cadenceSource;
+  final DeviceAssignment? speedSource;
+  final DeviceAssignment? heartRateSource;
+}
+
+/// Service for persisting device assignments.
+///
+/// Handles saving and loading device role assignments (powerSource, heartRateSource, etc.)
+/// to/from persistent storage so they can be auto-reconnected on app restart.
+class DeviceAssignmentPersistence {
+  DeviceAssignmentPersistence(this._prefs);
+
+  final SharedPreferencesAsync _prefs;
+
+  /// Save device assignments to persistent storage.
+  ///
+  /// Saves which devices are assigned to which roles so they can be
+  /// auto-reconnected on app restart.
+  Future<void> saveAssignments({
+    DeviceAssignment? primaryTrainer,
+    DeviceAssignment? powerSource,
+    DeviceAssignment? cadenceSource,
+    DeviceAssignment? speedSource,
+    DeviceAssignment? heartRateSource,
+  }) async {
+    final assignments = <Map<String, dynamic>>[];
+
+    if (primaryTrainer != null) {
+      assignments.add({
+        'deviceId': primaryTrainer.deviceId,
+        'deviceName': primaryTrainer.deviceName,
+        'transport': primaryTrainer.transport,
+        'role': 'primaryTrainer',
+      });
+    }
+
+    if (powerSource != null) {
+      assignments.add({
+        'deviceId': powerSource.deviceId,
+        'deviceName': powerSource.deviceName,
+        'transport': powerSource.transport,
+        'role': 'powerSource',
+      });
+    }
+
+    if (cadenceSource != null) {
+      assignments.add({
+        'deviceId': cadenceSource.deviceId,
+        'deviceName': cadenceSource.deviceName,
+        'transport': cadenceSource.transport,
+        'role': 'cadenceSource',
+      });
+    }
+
+    if (speedSource != null) {
+      assignments.add({
+        'deviceId': speedSource.deviceId,
+        'deviceName': speedSource.deviceName,
+        'transport': speedSource.transport,
+        'role': 'speedSource',
+      });
+    }
+
+    if (heartRateSource != null) {
+      assignments.add({
+        'deviceId': heartRateSource.deviceId,
+        'deviceName': heartRateSource.deviceName,
+        'transport': heartRateSource.transport,
+        'role': 'heartRateSource',
+      });
+    }
+
+    final data = {'version': _currentVersion, 'savedAt': DateTime.now().toIso8601String(), 'assignments': assignments};
+
+    final json = jsonEncode(data);
+    await _prefs.setString(_storageKey, json);
+
+    talker.info('[DeviceAssignments] Saved ${assignments.length} assignment(s)');
   }
 
-  try {
-    final data = jsonDecode(json);
-
-    // Check version
-    final version = pick(data, 'version').asIntOrNull();
-    if (version == null) {
-      talker.info('[DeviceAssignments] No version field, ignoring');
-      return {};
+  /// Load saved device assignments.
+  ///
+  /// Returns all saved device assignments organized by role.
+  Future<DeviceAssignments> loadAssignments() async {
+    final json = await _prefs.getString(_storageKey);
+    if (json == null) {
+      talker.info('[DeviceAssignments] No saved assignments found');
+      return const DeviceAssignments();
     }
 
-    if (version != _currentVersion) {
-      talker.info(
-        '[DeviceAssignments] Unknown version $version (expected $_currentVersion), ignoring',
-      );
-      // Future: handle version migration here if needed
-      return {};
-    }
+    try {
+      final data = jsonDecode(json);
 
-    // Parse assignments list
-    final assignmentsList = pick(data, 'assignments').asListOrNull<dynamic>((p) => p.value);
-    if (assignmentsList == null) {
-      talker.info('[DeviceAssignments] No assignments list found');
-      return {};
-    }
-
-    final assignments = <({String deviceId, String deviceName, String role, String assignedAt})>[];
-
-    for (final item in assignmentsList) {
-      try {
-        assignments.add((
-          deviceId: pick(item, 'deviceId').asStringOrThrow(),
-          deviceName: pick(item, 'deviceName').asStringOrThrow(),
-          role: pick(item, 'role').asStringOrThrow(),
-          assignedAt: pick(item, 'assignedAt').asStringOrThrow(),
-        ));
-      } catch (e) {
-        // Skip invalid assignments
-        talker.info('[DeviceAssignments] Skipping invalid assignment: $e');
+      // Check version
+      final version = pick(data, 'version').asIntOrNull();
+      if (version == null) {
+        talker.info('[DeviceAssignments] No version field, ignoring');
+        return const DeviceAssignments();
       }
+
+      if (version != _currentVersion) {
+        talker.info('[DeviceAssignments] Unknown version $version (expected $_currentVersion), ignoring');
+        // Future: handle version migration here if needed
+        return const DeviceAssignments();
+      }
+
+      // Parse assignments list
+      final assignmentsList = pick(data, 'assignments').asListOrNull<dynamic>((p) => p.value);
+      if (assignmentsList == null) {
+        talker.info('[DeviceAssignments] No assignments list found');
+        return const DeviceAssignments();
+      }
+
+      DeviceAssignment? primaryTrainer;
+      DeviceAssignment? powerSource;
+      DeviceAssignment? cadenceSource;
+      DeviceAssignment? speedSource;
+      DeviceAssignment? heartRateSource;
+
+      for (final item in assignmentsList) {
+        try {
+          final deviceId = pick(item, 'deviceId').asStringOrThrow();
+          final deviceName = pick(item, 'deviceName').asStringOrThrow();
+          final transport = pick(item, 'transport').asStringOrThrow();
+          final role = pick(item, 'role').asStringOrThrow();
+
+          final assignment = DeviceAssignment(deviceId: deviceId, deviceName: deviceName, transport: transport);
+
+          switch (role) {
+            case 'primaryTrainer':
+              primaryTrainer = assignment;
+            case 'powerSource':
+              powerSource = assignment;
+            case 'cadenceSource':
+              cadenceSource = assignment;
+            case 'speedSource':
+              speedSource = assignment;
+            case 'heartRateSource':
+              heartRateSource = assignment;
+            default:
+              talker.info('[DeviceAssignments] Unknown role: $role');
+          }
+        } catch (e) {
+          // Skip invalid assignments
+          talker.info('[DeviceAssignments] Skipping invalid assignment: $e');
+        }
+      }
+
+      talker.info('[DeviceAssignments] Loaded assignments');
+
+      return DeviceAssignments(
+        primaryTrainer: primaryTrainer,
+        powerSource: powerSource,
+        cadenceSource: cadenceSource,
+        speedSource: speedSource,
+        heartRateSource: heartRateSource,
+      );
+    } catch (e, stackTrace) {
+      talker.error('[DeviceAssignments] Failed to load assignments, resetting', e, stackTrace);
+      return const DeviceAssignments();
     }
-
-    // Build map of deviceId -> roles
-    final result = <String, Set<String>>{};
-    for (final assignment in assignments) {
-      result.putIfAbsent(assignment.deviceId, () => {}).add(assignment.role);
-    }
-
-    talker.info(
-      '[DeviceAssignments] Loaded ${assignments.length} assignment(s) for ${result.length} device(s)',
-    );
-
-    return result;
-  } catch (e, stackTrace) {
-    talker.error(
-      '[DeviceAssignments] Failed to load assignments, resetting',
-      e,
-      stackTrace,
-    );
-    return {};
   }
-}
 
-/// Clear all saved device assignments.
-///
-/// Useful for testing or when user wants to reset device connections.
-Future<void> clearDeviceAssignments() async {
-  final prefs = await SharedPreferences.getInstance();
-  await prefs.remove(_storageKey);
-  talker.info('[DeviceAssignments] Cleared all assignments');
+  /// Clear all saved device assignments.
+  ///
+  /// Useful for testing or when user wants to reset device connections.
+  Future<void> clearAssignments() async {
+    await _prefs.remove(_storageKey);
+    talker.info('[DeviceAssignments] Cleared all assignments');
+  }
 }

@@ -103,8 +103,7 @@ class _TrainerPageState extends State<TrainerPage> {
         _sendTargetPower();
       }
     } catch (e, stackTrace) {
-      talker.info('[TrainerPage] Connection failed: $e');
-      print(stackTrace);
+      talker.error('[TrainerPage] Connection failed', e, stackTrace);
       if (mounted) {
         setState(() {
           _errorMessage = 'Connection failed: $e';

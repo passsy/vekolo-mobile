@@ -8,6 +8,7 @@ import 'package:vekolo/ble/ble_scanner.dart';
 import 'package:vekolo/ble/transport_registry.dart';
 import 'package:vekolo/domain/devices/device_manager.dart';
 import 'package:vekolo/services/auth_service.dart';
+import 'package:vekolo/services/device_assignment_persistence.dart';
 import 'package:vekolo/services/workout_sync_service.dart';
 
 abstract final class Refs {
@@ -19,6 +20,7 @@ abstract final class Refs {
   static final blePermissions = Ref<BlePermissions>();
   static final bleScanner = Ref<BleScanner>();
   static final transportRegistry = Ref<TransportRegistry>();
+  static final deviceAssignmentPersistence = Ref<DeviceAssignmentPersistence>();
   static final deviceManager = Ref<DeviceManager>();
   static final workoutSyncService = Ref<WorkoutSyncService>();
   static final router = Ref<GoRouter>();

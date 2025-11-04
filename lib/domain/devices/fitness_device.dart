@@ -46,6 +46,15 @@ abstract class FitnessDevice {
   /// Examples: "Wahoo KICKR", "Garmin HRM-Dual", "Stages Power L".
   String get name;
 
+  /// All transport protocols used by this device.
+  ///
+  /// A device can have multiple transports. For example, a KICKR CORE might have
+  /// both FTMS (for power/cadence/speed) and HeartRate transports.
+  ///
+  /// Examples: ["FTMS"], ["HeartRate"], ["FTMS", "HeartRate"], ["CyclingPower", "CyclingSpeedCadence"].
+  /// Used for displaying all available protocols and understanding device capabilities.
+  List<String> get transportIds;
+
   /// Type of device determining its primary function.
   ///
   /// A [DeviceType.trainer] can be controlled and provides multiple data sources,

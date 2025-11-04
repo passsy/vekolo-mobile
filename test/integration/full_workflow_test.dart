@@ -13,32 +13,38 @@
 /// - Error handling and recovery
 import 'package:clock/clock.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vekolo/domain/devices/device_manager.dart';
 import 'package:vekolo/domain/mocks/device_simulator.dart';
 import 'package:vekolo/domain/models/erg_command.dart';
+import 'package:vekolo/services/device_assignment_persistence.dart';
 import 'package:vekolo/services/workout_sync_service.dart';
 import '../ble/fake_ble_platform.dart';
 import '../ble/fake_ble_permissions.dart';
+import '../helpers/shared_preferences_helper.dart';
 import 'package:vekolo/ble/ble_scanner.dart';
 import 'package:vekolo/ble/transport_registry.dart';
 
 void main() {
   group('Full Workflow Integration', () {
+    setUp(() {
+      SharedPreferences.setMockInitialValues({});
+    });
+
     /// Creates a test environment with all required managers.
     ///
     /// Automatically disposes resources using addTearDown to prevent state leaks.
-    ({
-      DeviceManager deviceManager,
-      WorkoutSyncService syncService,
-    })
-    createTestEnvironment() {
+    Future<({DeviceManager deviceManager, WorkoutSyncService syncService})> createTestEnvironment() async {
       final blePlatform = FakeBlePlatform();
       final scanner = BleScanner(platform: blePlatform, permissions: FakeBlePermissions());
       final transportRegistry = TransportRegistry();
+      final prefs = createTestSharedPreferencesAsync();
+      final persistence = DeviceAssignmentPersistence(prefs);
       final deviceManager = DeviceManager(
         platform: blePlatform,
         scanner: scanner,
         transportRegistry: transportRegistry,
+        persistence: persistence,
       );
       final syncService = WorkoutSyncService(deviceManager);
 
@@ -47,14 +53,11 @@ void main() {
         await deviceManager.dispose();
       });
 
-      return (
-        deviceManager: deviceManager,
-        syncService: syncService,
-      );
+      return (deviceManager: deviceManager, syncService: syncService);
     }
 
     test('complete multi-device setup and workout sync flow', () async {
-      final env = createTestEnvironment();
+      final env = await createTestEnvironment();
       final deviceManager = env.deviceManager;
       final syncService = env.syncService;
 
@@ -89,15 +92,15 @@ void main() {
       deviceManager.assignHeartRateSource(hrMonitor.id);
 
       // Verify assignments
-      expect(deviceManager.primaryTrainer?.id, equals(trainer.id));
-      expect(deviceManager.powerSource?.id, equals(powerMeter.id));
-      expect(deviceManager.heartRateSource?.id, equals(hrMonitor.id));
+      expect(deviceManager.primaryTrainer?.deviceId, equals(trainer.id));
+      expect(deviceManager.powerSource?.deviceId, equals(powerMeter.id));
+      expect(deviceManager.heartRateSource?.deviceId, equals(hrMonitor.id));
 
       // Wait for beacons to update
       await Future<void>.delayed(const Duration(milliseconds: 600));
-      expect(deviceManager.primaryTrainerBeacon.value?.id, equals(trainer.id));
-      expect(deviceManager.powerSourceBeacon.value?.id, equals(powerMeter.id));
-      expect(deviceManager.heartRateSourceBeacon.value?.id, equals(hrMonitor.id));
+      expect(deviceManager.primaryTrainerBeacon.value?.deviceId, equals(trainer.id));
+      expect(deviceManager.powerSourceBeacon.value?.deviceId, equals(powerMeter.id));
+      expect(deviceManager.heartRateSourceBeacon.value?.deviceId, equals(hrMonitor.id));
 
       // =====================================================================
       // Phase 3: Device Connection
@@ -216,7 +219,7 @@ void main() {
     });
 
     test('workout sync handles trainer disconnection gracefully', () async {
-      final env = createTestEnvironment();
+      final env = await createTestEnvironment();
       final deviceManager = env.deviceManager;
       final syncService = env.syncService;
 
@@ -249,7 +252,7 @@ void main() {
     });
 
     test('data streams handle device reassignment', () async {
-      final env = createTestEnvironment();
+      final env = await createTestEnvironment();
       final deviceManager = env.deviceManager;
 
       // Setup initial trainer
@@ -281,7 +284,7 @@ void main() {
       await Future<void>.delayed(const Duration(milliseconds: 600));
 
       // Power data should now come from power meter, not trainer
-      expect(deviceManager.powerSource?.id, equals(powerMeter.id));
+      expect(deviceManager.powerSource?.deviceId, equals(powerMeter.id));
       expect(deviceManager.powerStream.value, isNotNull);
 
       // Cadence should still come from trainer (no reassignment)
@@ -290,7 +293,7 @@ void main() {
     });
 
     test('multiple devices emit data independently', () async {
-      final env = createTestEnvironment();
+      final env = await createTestEnvironment();
       final deviceManager = env.deviceManager;
 
       // Setup all devices
@@ -338,7 +341,7 @@ void main() {
     });
 
     test('workout sync retry mechanism recovers from transient errors', () async {
-      final env = createTestEnvironment();
+      final env = await createTestEnvironment();
       final deviceManager = env.deviceManager;
       final syncService = env.syncService;
 

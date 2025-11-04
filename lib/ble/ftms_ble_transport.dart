@@ -176,6 +176,9 @@ class FtmsBleTransport
   // ============================================================================
 
   @override
+  String get transportId => 'ftms';
+
+  @override
   bool canSupport(DiscoveredDevice device) {
     // FTMS devices advertise the FTMS service UUID (0x1826)
     return device.serviceUuids.contains(_ftmsServiceUuid);
@@ -235,8 +238,7 @@ class FtmsBleTransport
       _stateBeacon.value = TransportState.attached;
       talker.info('[FtmsBleTransport] FTMS service attached successfully');
     } catch (e, stackTrace) {
-      print('[FtmsBleTransport] Failed to attach to FTMS service: $e');
-      print(stackTrace);
+      talker.error('[FtmsBleTransport] Failed to attach to FTMS service', e, stackTrace);
       _lastAttachError = ConnectionError(
         message: 'Failed to attach to FTMS service: $e',
         timestamp: clock.now(),
@@ -418,8 +420,7 @@ class FtmsBleTransport
         _speedBeacon.value = SpeedData(kmh: speed, timestamp: timestamp);
       }
     } catch (e, stackTrace) {
-      print('[FtmsBleTransport] Error parsing indoor bike data: $e');
-      print(stackTrace);
+      talker.error('[FtmsBleTransport] Error parsing indoor bike data', e, stackTrace);
     }
   }
 
@@ -458,7 +459,7 @@ class FtmsBleTransport
         }
         // Add more op codes as needed
       } else {
-        print(
+        talker.warning(
           '[FtmsBleTransport] FTMS operation 0x${requestOpCode.toRadixString(16)} failed with result: 0x${resultCode.toRadixString(16)}',
         );
 
@@ -560,8 +561,7 @@ class FtmsBleTransport
         // Add more modes here as needed (speed, inclination, HR, cadence, etc.)
       }
     } catch (e, stackTrace) {
-      print('[FtmsBleTransport] Error during state sync: $e');
-      print(stackTrace);
+      talker.error('[FtmsBleTransport] Error during state sync', e, stackTrace);
       _hasControl = false; // Assume we lost control on error
     } finally {
       // Always reset syncing flag so subsequent syncs can proceed

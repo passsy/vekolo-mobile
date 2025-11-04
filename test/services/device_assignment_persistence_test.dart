@@ -8,6 +8,7 @@ import 'package:vekolo/domain/mocks/mock_trainer.dart';
 import 'package:vekolo/services/device_assignment_persistence.dart';
 import '../ble/fake_ble_platform.dart';
 import '../ble/fake_ble_permissions.dart';
+import '../helpers/shared_preferences_helper.dart';
 import 'package:vekolo/ble/ble_scanner.dart';
 import 'package:vekolo/ble/transport_registry.dart';
 
@@ -15,53 +16,46 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('Device Assignment Persistence', () {
-    setUp(() {
-      // Clear SharedPreferences before each test
-      SharedPreferences.setMockInitialValues({});
-    });
+    Future<({DeviceManager manager, DeviceAssignmentPersistence persistence, SharedPreferencesAsync prefs})>
+    createDeviceManager() async {
+      final platform = FakeBlePlatform();
+      final scanner = BleScanner(platform: platform, permissions: FakeBlePermissions());
+      final transportRegistry = TransportRegistry();
+      final prefs = createTestSharedPreferencesAsync();
+      final persistence = DeviceAssignmentPersistence(prefs);
+      final deviceManager = DeviceManager(
+        platform: platform,
+        scanner: scanner,
+        transportRegistry: transportRegistry,
+        persistence: persistence,
+      );
+      addTearDown(() async => await deviceManager.dispose());
+      return (manager: deviceManager, persistence: persistence, prefs: prefs);
+    }
 
     group('saveDeviceAssignments', () {
       test('saves no assignments when no devices assigned', () async {
-        final platform = FakeBlePlatform();
-        final scanner = BleScanner(platform: platform, permissions: FakeBlePermissions());
-        final transportRegistry = TransportRegistry();
-        final deviceManager = DeviceManager(
-          platform: platform,
-          scanner: scanner,
-          transportRegistry: transportRegistry,
-        );
-        addTearDown(() async => await deviceManager.dispose());
+        final deps = await createDeviceManager();
 
-        await saveDeviceAssignments(deviceManager);
+        // Wait to ensure no unexpected saves happen
+        await Future.delayed(const Duration(milliseconds: 200));
 
-        final prefs = await SharedPreferences.getInstance();
-        final json = prefs.getString('device_assignments_v1');
-        expect(json, isNotNull);
-
-        final data = jsonDecode(json!);
-        expect(pick(data, 'version').asIntOrNull(), 1);
-        expect(pick(data, 'assignments').asListOrNull<dynamic>((p) => p.value), isEmpty);
+        // When no devices are assigned, nothing should be saved
+        final json = await deps.prefs.getString('device_assignments_v1');
+        expect(json, isNull);
       });
 
       test('saves primary trainer assignment', () async {
-        final platform = FakeBlePlatform();
-        final scanner = BleScanner(platform: platform, permissions: FakeBlePermissions());
-        final transportRegistry = TransportRegistry();
-        final deviceManager = DeviceManager(
-          platform: platform,
-          scanner: scanner,
-          transportRegistry: transportRegistry,
-        );
-        addTearDown(() async => await deviceManager.dispose());
+        final deps = await createDeviceManager();
 
         final trainer = MockTrainer(id: 'trainer-1', name: 'KICKR CORE');
-        await deviceManager.addDevice(trainer);
-        deviceManager.assignPrimaryTrainer(trainer.id);
+        await deps.manager.addDevice(trainer);
+        deps.manager.assignPrimaryTrainer(trainer.id);
 
-        await saveDeviceAssignments(deviceManager);
+        // Wait for auto-save via beacon subscription (needs extra time for async beacon + persistence)
+        await Future.delayed(const Duration(milliseconds: 200));
 
-        final prefs = await SharedPreferences.getInstance();
-        final json = prefs.getString('device_assignments_v1');
+        final json = await deps.prefs.getString('device_assignments_v1');
         expect(json, isNotNull);
 
         final data = jsonDecode(json!);
@@ -72,88 +66,71 @@ void main() {
         expect(pick(assignments[0], 'deviceId').asStringOrNull(), 'trainer-1');
         expect(pick(assignments[0], 'deviceName').asStringOrNull(), 'KICKR CORE');
         expect(pick(assignments[0], 'role').asStringOrNull(), 'primaryTrainer');
-        expect(pick(assignments[0], 'assignedAt').asStringOrNull(), isNotNull);
+        expect(pick(assignments[0], 'transport').asStringOrNull(), isNotNull);
       });
 
       test('saves multiple role assignments for same device', () async {
-        final platform = FakeBlePlatform();
-        final scanner = BleScanner(platform: platform, permissions: FakeBlePermissions());
-        final transportRegistry = TransportRegistry();
-        final deviceManager = DeviceManager(
-          platform: platform,
-          scanner: scanner,
-          transportRegistry: transportRegistry,
-        );
-        addTearDown(() async => await deviceManager.dispose());
+        final deps = await createDeviceManager();
 
         final trainer = MockTrainer(id: 'trainer-1', name: 'KICKR CORE');
-        await deviceManager.addDevice(trainer);
-        deviceManager.assignPrimaryTrainer(trainer.id);
-        deviceManager.assignPowerSource(trainer.id);
+        await deps.manager.addDevice(trainer);
+        deps.manager.assignPrimaryTrainer(trainer.id);
+        deps.manager.assignPowerSource(trainer.id);
 
-        await saveDeviceAssignments(deviceManager);
+        // Wait for auto-save via beacon subscription (needs extra time for async beacon + persistence)
+        await Future.delayed(const Duration(milliseconds: 200));
 
-        final prefs = await SharedPreferences.getInstance();
-        final json = prefs.getString('device_assignments_v1');
+        final json = await deps.prefs.getString('device_assignments_v1');
         final data = jsonDecode(json!);
 
         final assignments = pick(data, 'assignments').asListOrNull<dynamic>((p) => p.value)!;
         expect(assignments.length, 2);
 
-        final roles = assignments
-            .map((a) => pick(a, 'role').asStringOrNull()!)
-            .toSet();
+        final roles = assignments.map((a) => pick(a, 'role').asStringOrNull()!).toSet();
         expect(roles, containsAll(['primaryTrainer', 'powerSource']));
       });
 
       test('saves all assigned role types', () async {
-        final platform = FakeBlePlatform();
-        final scanner = BleScanner(platform: platform, permissions: FakeBlePermissions());
-        final transportRegistry = TransportRegistry();
-        final deviceManager = DeviceManager(
-          platform: platform,
-          scanner: scanner,
-          transportRegistry: transportRegistry,
-        );
-        addTearDown(() async => await deviceManager.dispose());
+        final deps = await createDeviceManager();
 
         final trainer = MockTrainer(id: 'trainer-1', name: 'KICKR');
 
-        await deviceManager.addDevice(trainer);
+        await deps.manager.addDevice(trainer);
 
         // Assign all roles to same device (valid for a multi-function device like KICKR)
-        deviceManager.assignPrimaryTrainer(trainer.id);
-        deviceManager.assignPowerSource(trainer.id);
-        deviceManager.assignCadenceSource(trainer.id);
-        deviceManager.assignSpeedSource(trainer.id);
+        deps.manager.assignPrimaryTrainer(trainer.id);
+        deps.manager.assignPowerSource(trainer.id);
+        deps.manager.assignCadenceSource(trainer.id);
+        deps.manager.assignSpeedSource(trainer.id);
 
-        await saveDeviceAssignments(deviceManager);
+        // Wait for auto-save via beacon subscription (needs extra time for async beacon + persistence)
+        await Future.delayed(const Duration(milliseconds: 200));
 
-        final prefs = await SharedPreferences.getInstance();
-        final json = prefs.getString('device_assignments_v1');
+        final json = await deps.prefs.getString('device_assignments_v1');
         final data = jsonDecode(json!);
 
         final assignments = pick(data, 'assignments').asListOrNull<dynamic>((p) => p.value)!;
         expect(assignments.length, 4);
 
-        final roles = assignments
-            .map((a) => pick(a, 'role').asStringOrNull()!)
-            .toSet();
-        expect(
-          roles,
-          containsAll(['primaryTrainer', 'powerSource', 'cadenceSource', 'speedSource']),
-        );
+        final roles = assignments.map((a) => pick(a, 'role').asStringOrNull()!).toSet();
+        expect(roles, containsAll(['primaryTrainer', 'powerSource', 'cadenceSource', 'speedSource']));
       });
     });
 
     group('loadDeviceAssignments', () {
-      test('returns empty map when no assignments saved', () async {
-        final assignments = await loadDeviceAssignments();
-        expect(assignments, isEmpty);
+      test('returns empty assignments when no assignments saved', () async {
+        final persistence = (await createDeviceManager()).persistence;
+        final assignments = await persistence.loadAssignments();
+
+        expect(assignments.primaryTrainer, isNull);
+        expect(assignments.powerSource, isNull);
+        expect(assignments.cadenceSource, isNull);
+        expect(assignments.speedSource, isNull);
+        expect(assignments.heartRateSource, isNull);
       });
 
       test('loads single device with single role', () async {
-        final prefs = await SharedPreferences.getInstance();
+        final deps = await createDeviceManager();
         final data = {
           'version': 1,
           'assignments': [
@@ -161,20 +138,22 @@ void main() {
               'deviceId': 'trainer-1',
               'deviceName': 'KICKR CORE',
               'role': 'powerSource',
+              'transport': 'FTMS',
               'assignedAt': '2025-01-31T10:00:00.000Z',
             },
           ],
         };
-        await prefs.setString('device_assignments_v1', jsonEncode(data));
+        await deps.prefs.setString('device_assignments_v1', jsonEncode(data));
+        final assignments = await deps.persistence.loadAssignments();
 
-        final assignments = await loadDeviceAssignments();
-
-        expect(assignments.length, 1);
-        expect(assignments['trainer-1'], {'powerSource'});
+        expect(assignments.powerSource?.deviceId, 'trainer-1');
+        expect(assignments.powerSource?.deviceName, 'KICKR CORE');
+        expect(assignments.powerSource?.transport, 'FTMS');
+        expect(assignments.primaryTrainer, isNull);
       });
 
       test('loads single device with multiple roles', () async {
-        final prefs = await SharedPreferences.getInstance();
+        final deps = await createDeviceManager();
         final data = {
           'version': 1,
           'assignments': [
@@ -182,26 +161,28 @@ void main() {
               'deviceId': 'trainer-1',
               'deviceName': 'KICKR CORE',
               'role': 'primaryTrainer',
+              'transport': 'FTMS',
               'assignedAt': '2025-01-31T10:00:00.000Z',
             },
             {
               'deviceId': 'trainer-1',
               'deviceName': 'KICKR CORE',
               'role': 'powerSource',
+              'transport': 'FTMS',
               'assignedAt': '2025-01-31T10:00:00.000Z',
             },
           ],
         };
-        await prefs.setString('device_assignments_v1', jsonEncode(data));
+        await deps.prefs.setString('device_assignments_v1', jsonEncode(data));
+        final assignments = await deps.persistence.loadAssignments();
 
-        final assignments = await loadDeviceAssignments();
-
-        expect(assignments.length, 1);
-        expect(assignments['trainer-1'], {'primaryTrainer', 'powerSource'});
+        expect(assignments.primaryTrainer?.deviceId, 'trainer-1');
+        expect(assignments.powerSource?.deviceId, 'trainer-1');
+        expect(assignments.cadenceSource, isNull);
       });
 
       test('loads multiple devices with different roles', () async {
-        final prefs = await SharedPreferences.getInstance();
+        final deps = await createDeviceManager();
         final data = {
           'version': 1,
           'assignments': [
@@ -209,65 +190,67 @@ void main() {
               'deviceId': 'trainer-1',
               'deviceName': 'KICKR',
               'role': 'powerSource',
+              'transport': 'FTMS',
               'assignedAt': '2025-01-31T10:00:00.000Z',
             },
             {
               'deviceId': 'hr-1',
               'deviceName': 'Polar H9',
               'role': 'heartRateSource',
+              'transport': 'HeartRate',
               'assignedAt': '2025-01-31T10:00:00.000Z',
             },
           ],
         };
-        await prefs.setString('device_assignments_v1', jsonEncode(data));
+        await deps.prefs.setString('device_assignments_v1', jsonEncode(data));
+        final assignments = await deps.persistence.loadAssignments();
 
-        final assignments = await loadDeviceAssignments();
-
-        expect(assignments.length, 2);
-        expect(assignments['trainer-1'], {'powerSource'});
-        expect(assignments['hr-1'], {'heartRateSource'});
+        expect(assignments.powerSource?.deviceId, 'trainer-1');
+        expect(assignments.powerSource?.deviceName, 'KICKR');
+        expect(assignments.heartRateSource?.deviceId, 'hr-1');
+        expect(assignments.heartRateSource?.deviceName, 'Polar H9');
       });
 
       test('handles unknown version gracefully', () async {
-        final prefs = await SharedPreferences.getInstance();
+        final deps = await createDeviceManager();
         final data = {
           'version': 99,
           'assignments': [
-            {'deviceId': 'test', 'deviceName': 'Test', 'role': 'powerSource'},
+            {'deviceId': 'test', 'deviceName': 'Test', 'role': 'powerSource', 'transport': 'FTMS'},
           ],
         };
-        await prefs.setString('device_assignments_v1', jsonEncode(data));
+        await deps.prefs.setString('device_assignments_v1', jsonEncode(data));
+        final assignments = await deps.persistence.loadAssignments();
 
-        final assignments = await loadDeviceAssignments();
-
-        expect(assignments, isEmpty);
+        expect(assignments.primaryTrainer, isNull);
+        expect(assignments.powerSource, isNull);
       });
 
       test('handles missing version field gracefully', () async {
-        final prefs = await SharedPreferences.getInstance();
+        final deps = await createDeviceManager();
         final data = {
           'assignments': [
-            {'deviceId': 'test', 'deviceName': 'Test', 'role': 'powerSource'},
+            {'deviceId': 'test', 'deviceName': 'Test', 'role': 'powerSource', 'transport': 'FTMS'},
           ],
         };
-        await prefs.setString('device_assignments_v1', jsonEncode(data));
+        await deps.prefs.setString('device_assignments_v1', jsonEncode(data));
+        final assignments = await deps.persistence.loadAssignments();
 
-        final assignments = await loadDeviceAssignments();
-
-        expect(assignments, isEmpty);
+        expect(assignments.primaryTrainer, isNull);
+        expect(assignments.powerSource, isNull);
       });
 
       test('handles corrupted JSON gracefully', () async {
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('device_assignments_v1', 'not valid json');
+        final deps = await createDeviceManager();
+        await deps.prefs.setString('device_assignments_v1', 'not valid json');
+        final assignments = await deps.persistence.loadAssignments();
 
-        final assignments = await loadDeviceAssignments();
-
-        expect(assignments, isEmpty);
+        expect(assignments.primaryTrainer, isNull);
+        expect(assignments.powerSource, isNull);
       });
 
       test('handles missing required fields gracefully', () async {
-        final prefs = await SharedPreferences.getInstance();
+        final deps = await createDeviceManager();
         final data = {
           'version': 1,
           'assignments': [
@@ -275,20 +258,21 @@ void main() {
               // Missing deviceId
               'deviceName': 'KICKR',
               'role': 'powerSource',
+              'transport': 'FTMS',
             },
           ],
         };
-        await prefs.setString('device_assignments_v1', jsonEncode(data));
+        await deps.prefs.setString('device_assignments_v1', jsonEncode(data));
+        final assignments = await deps.persistence.loadAssignments();
 
-        final assignments = await loadDeviceAssignments();
-
-        expect(assignments, isEmpty);
+        expect(assignments.primaryTrainer, isNull);
+        expect(assignments.powerSource, isNull);
       });
     });
 
     group('clearDeviceAssignments', () {
       test('clears saved assignments', () async {
-        final prefs = await SharedPreferences.getInstance();
+        final deps = await createDeviceManager();
         final data = {
           'version': 1,
           'assignments': [
@@ -296,50 +280,49 @@ void main() {
               'deviceId': 'trainer-1',
               'deviceName': 'KICKR',
               'role': 'powerSource',
+              'transport': 'FTMS',
               'assignedAt': '2025-01-31T10:00:00.000Z',
             },
           ],
         };
-        await prefs.setString('device_assignments_v1', jsonEncode(data));
+        await deps.prefs.setString('device_assignments_v1', jsonEncode(data));
 
-        await clearDeviceAssignments();
+        await deps.persistence.clearAssignments();
 
-        final json = prefs.getString('device_assignments_v1');
+        final json = await deps.prefs.getString('device_assignments_v1');
         expect(json, isNull);
       });
 
       test('works when no assignments exist', () async {
-        // Should not throw
-        await clearDeviceAssignments();
+        final deps = await createDeviceManager();
 
-        final prefs = await SharedPreferences.getInstance();
-        final json = prefs.getString('device_assignments_v1');
+        // Should not throw
+        await deps.persistence.clearAssignments();
+
+        final json = await deps.prefs.getString('device_assignments_v1');
         expect(json, isNull);
       });
     });
 
     group('Round-trip', () {
       test('save and load preserves assignments', () async {
-        final platform = FakeBlePlatform();
-        final scanner = BleScanner(platform: platform, permissions: FakeBlePermissions());
-        final transportRegistry = TransportRegistry();
-        final deviceManager = DeviceManager(
-          platform: platform,
-          scanner: scanner,
-          transportRegistry: transportRegistry,
-        );
-        addTearDown(() async => await deviceManager.dispose());
+        final deps = await createDeviceManager();
 
         final trainer = MockTrainer(id: 'trainer-1', name: 'KICKR CORE');
-        await deviceManager.addDevice(trainer);
-        deviceManager.assignPrimaryTrainer(trainer.id);
-        deviceManager.assignPowerSource(trainer.id);
+        await deps.manager.addDevice(trainer);
+        deps.manager.assignPrimaryTrainer(trainer.id);
+        deps.manager.assignPowerSource(trainer.id);
 
-        await saveDeviceAssignments(deviceManager);
-        final loaded = await loadDeviceAssignments();
+        // Wait for auto-save via beacon subscription (needs extra time for async beacon + persistence)
+        await Future.delayed(const Duration(milliseconds: 200));
 
-        expect(loaded.length, 1);
-        expect(loaded['trainer-1'], {'primaryTrainer', 'powerSource'});
+        // Load using the persistence API
+        final loaded = await deps.persistence.loadAssignments();
+
+        expect(loaded.primaryTrainer?.deviceId, 'trainer-1');
+        expect(loaded.primaryTrainer?.deviceName, 'KICKR CORE');
+        expect(loaded.powerSource?.deviceId, 'trainer-1');
+        expect(loaded.powerSource?.deviceName, 'KICKR CORE');
       });
     });
   });
