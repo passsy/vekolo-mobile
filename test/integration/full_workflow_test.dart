@@ -27,10 +27,6 @@ import 'package:vekolo/ble/transport_registry.dart';
 
 void main() {
   group('Full Workflow Integration', () {
-    setUp(() {
-      SharedPreferences.setMockInitialValues({});
-    });
-
     /// Creates a test environment with all required managers.
     ///
     /// Automatically disposes resources using addTearDown to prevent state leaks.

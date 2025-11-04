@@ -1,4 +1,5 @@
 import 'package:clock/clock.dart';
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart' hide BluetoothState;
 import 'package:flutter_test/flutter_test.dart';
@@ -373,28 +374,27 @@ void main() {
     // These tests validate the concept but may not pass with the current FakeClock implementation.
     // In production, device expiry works correctly based on wall clock time.
 
-    test(
-      'device expires after 5 seconds without advertisement',
-      () async {
+    test('device expires after 30 seconds without advertisement', () {
+      fakeAsync((async) {
         final (:scanner, :platform) = createScanner();
         final device = platform.addDevice('D1', 'Heart Monitor', rssi: -60);
         device.turnOn();
 
         scanner.startScan();
-        await Future.delayed(const Duration(milliseconds: 200));
+        async.flushMicrotasks();
+        async.elapse(const Duration(milliseconds: 200));
 
         expect(scanner.devices.value, hasLength(1));
 
         // Turn off device so it stops advertising
         device.turnOff();
 
-        // Wait real time for expiry (5 seconds + margin)
-        await Future.delayed(const Duration(seconds: 7));
+        // Advance time past the expiry threshold (30 seconds + periodic check)
+        async.elapse(const Duration(seconds: 31));
 
         expect(scanner.devices.value, isEmpty);
-      },
-      skip: 'Requires real time delays - takes too long for unit tests',
-    );
+      });
+    });
 
     test('device does not expire if still advertising', () async {
       final (:scanner, :platform) = createScanner();
@@ -411,83 +411,88 @@ void main() {
       expect(scanner.devices.value, hasLength(1));
     });
 
-    test('device expires when turned off', () async {
-      final (:scanner, :platform) = createScanner();
-      final device = platform.addDevice('D1', 'Heart Monitor', rssi: -60);
-      device.turnOn();
-
-      scanner.startScan();
-      await Future.delayed(const Duration(milliseconds: 200));
-
-      expect(scanner.devices.value, hasLength(1));
-
-      // Turn device off and wait for expiry
-      device.turnOff();
-      await Future.delayed(const Duration(seconds: 7));
-
-      expect(scanner.devices.value, isEmpty);
-    }, skip: 'Requires real time delays - takes too long for unit tests');
-
-    test('multiple devices expire independently', () async {
-      final (:scanner, :platform) = createScanner();
-      final device1 = platform.addDevice('D1', 'First', rssi: -60);
-      final device2 = platform.addDevice('D2', 'Second', rssi: -60);
-
-      device1.turnOn();
-      scanner.startScan();
-      await Future.delayed(const Duration(milliseconds: 200));
-
-      device2.turnOn();
-      await Future.delayed(const Duration(milliseconds: 200));
-
-      expect(scanner.devices.value, hasLength(2));
-
-      // Turn off device1 so it stops advertising
-      device1.turnOff();
-
-      await Future.delayed(const Duration(seconds: 7));
-
-      // D1 should have expired, D2 still present
-      expect(scanner.devices.value, hasLength(1));
-      expect(scanner.devices.value.first.deviceId, 'D2');
-
-      // Turn off device2
-      device2.turnOff();
-      await Future.delayed(const Duration(seconds: 7));
-
-      expect(scanner.devices.value, isEmpty);
-    }, skip: 'Requires real time delays - takes too long for unit tests');
-
-    test(
-      'expired device reappears if it starts advertising again',
-      () async {
+    test('device expires when turned off', () {
+      fakeAsync((async) {
         final (:scanner, :platform) = createScanner();
         final device = platform.addDevice('D1', 'Heart Monitor', rssi: -60);
         device.turnOn();
 
         scanner.startScan();
-        await Future.delayed(const Duration(milliseconds: 200));
+        async.flushMicrotasks();
+        async.elapse(const Duration(milliseconds: 200));
+
+        expect(scanner.devices.value, hasLength(1));
+
+        // Turn device off and wait for expiry
+        device.turnOff();
+        async.elapse(const Duration(seconds: 31));
+
+        expect(scanner.devices.value, isEmpty);
+      });
+    });
+
+    test('multiple devices expire independently', () {
+      fakeAsync((async) {
+        final (:scanner, :platform) = createScanner();
+        final device1 = platform.addDevice('D1', 'First', rssi: -60);
+        final device2 = platform.addDevice('D2', 'Second', rssi: -60);
+
+        device1.turnOn();
+        scanner.startScan();
+        async.flushMicrotasks();
+        async.elapse(const Duration(milliseconds: 200));
+
+        device2.turnOn();
+        async.elapse(const Duration(milliseconds: 200));
+
+        expect(scanner.devices.value, hasLength(2));
+
+        // Turn off device1 so it stops advertising
+        device1.turnOff();
+
+        async.elapse(const Duration(seconds: 31));
+
+        // D1 should have expired, D2 still present
+        expect(scanner.devices.value, hasLength(1));
+        expect(scanner.devices.value.first.deviceId, 'D2');
+
+        // Turn off device2
+        device2.turnOff();
+        async.elapse(const Duration(seconds: 31));
+
+        expect(scanner.devices.value, isEmpty);
+      });
+    });
+
+    test('expired device reappears if it starts advertising again', () {
+      fakeAsync((async) {
+        final (:scanner, :platform) = createScanner();
+        final device = platform.addDevice('D1', 'Heart Monitor', rssi: -60);
+        device.turnOn();
+
+        scanner.startScan();
+        async.flushMicrotasks();
+        async.elapse(const Duration(milliseconds: 200));
 
         expect(scanner.devices.value, hasLength(1));
         final firstSeenTime = scanner.devices.value.first.firstSeen;
 
         // Device expires
         device.turnOff();
-        await Future.delayed(const Duration(seconds: 7));
+        async.elapse(const Duration(seconds: 31));
 
         expect(scanner.devices.value, isEmpty);
 
         // Device comes back
         device.turnOn();
-        await Future.delayed(const Duration(milliseconds: 200));
+        async.elapse(const Duration(milliseconds: 200));
 
         expect(scanner.devices.value, hasLength(1));
         expect(scanner.devices.value.first.deviceId, 'D1');
         // firstSeen should be newer since it's a new discovery
         expect(scanner.devices.value.first.firstSeen.isAfter(firstSeenTime), true);
-      },
-      skip: 'Requires real time delays - takes too long for unit tests',
-    );
+      });
+    });
   });
 
   group('BleScanner - Bluetooth State', () {

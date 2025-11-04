@@ -18,10 +18,6 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('DeviceManager Auto-Connect', () {
-    setUp(() {
-      SharedPreferences.setMockInitialValues({});
-    });
-
     Future<({DeviceManager manager, FakeBlePlatform platform, BleScanner scanner})> createDeviceManager() async {
       final platform = FakeBlePlatform();
       platform.setAdapterState(BluetoothAdapterState.on);
