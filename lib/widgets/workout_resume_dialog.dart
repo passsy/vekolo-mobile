@@ -1,13 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:vekolo/domain/models/workout_session.dart';
 
+/// User choice from the workout resume dialog.
+enum ResumeChoice {
+  /// Resume the workout from where it was interrupted.
+  resume,
+
+  /// Discard the workout data but keep it marked as incomplete.
+  discard,
+
+  /// Delete the workout data entirely and start fresh.
+  startFresh,
+}
+
 /// Dialog shown when an incomplete workout session is detected.
 ///
-/// Offers the user options to:
-/// - Resume the incomplete workout from where they left off
-/// - Start a new workout (discarding the previous session)
+/// Offers the user three options:
+/// - Resume: Continue the workout from where it was interrupted
+/// - Discard: Mark the workout as abandoned but keep the data
+/// - Start Fresh: Delete the workout data entirely and start over
 ///
-/// Returns true if the user wants to resume, false if they want to start fresh.
+/// Returns [ResumeChoice] or null if dismissed.
 class WorkoutResumeDialog extends StatelessWidget {
   const WorkoutResumeDialog({
     required this.session,
@@ -59,11 +72,15 @@ class WorkoutResumeDialog extends StatelessWidget {
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.of(context).pop(false),
+          onPressed: () => Navigator.of(context).pop(ResumeChoice.startFresh),
           child: const Text('Start Fresh'),
         ),
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(ResumeChoice.discard),
+          child: const Text('Discard'),
+        ),
         ElevatedButton.icon(
-          onPressed: () => Navigator.of(context).pop(true),
+          onPressed: () => Navigator.of(context).pop(ResumeChoice.resume),
           icon: const Icon(Icons.play_arrow),
           label: const Text('Resume'),
           style: ElevatedButton.styleFrom(

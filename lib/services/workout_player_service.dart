@@ -374,6 +374,63 @@ class WorkoutPlayerService {
     _completeWorkout();
   }
 
+  /// Restores the workout state from a saved session (crash recovery).
+  ///
+  /// This allows resuming a workout from where it was interrupted, by
+  /// restoring the elapsed time and current block position.
+  ///
+  /// The workout will be in a paused state after restoration - call [start]
+  /// to resume playback.
+  ///
+  /// Example:
+  /// ```dart
+  /// // Restore from saved session
+  /// player.restoreState(
+  ///   elapsedMs: 123000,  // 2:03 into the workout
+  ///   currentBlockIndex: 2,  // Was on block #2
+  /// );
+  ///
+  /// // Now resume playback
+  /// player.start();
+  /// ```
+  void restoreState({
+    required int elapsedMs,
+    required int currentBlockIndex,
+  }) {
+    talker.info(
+      '[WorkoutPlayerService] Restoring state: elapsedMs=$elapsedMs, '
+      'currentBlockIndex=$currentBlockIndex',
+    );
+
+    // Validate block index
+    if (currentBlockIndex < 0 || currentBlockIndex >= _flattenedPlan.length) {
+      talker.warning(
+        '[WorkoutPlayerService] Invalid block index $currentBlockIndex, '
+        'clamping to valid range',
+      );
+      _currentBlockIndex = currentBlockIndex.clamp(0, _flattenedPlan.length - 1);
+    } else {
+      _currentBlockIndex = currentBlockIndex;
+    }
+
+    // Restore elapsed time
+    _workoutElapsedTime = elapsedMs;
+    elapsedTime$.value = _workoutElapsedTime;
+
+    // Update remaining time
+    remainingTime$.value = (_totalDuration - _workoutElapsedTime).clamp(0, _totalDuration);
+
+    // Update current/next blocks and progress
+    _updateCurrentAndNextBlock();
+    _updateProgress();
+
+    // Ensure workout stays paused after restore
+    isPaused.value = true;
+    _lastResumeTime = null;
+
+    talker.info('[WorkoutPlayerService] State restored successfully');
+  }
+
   /// Disposes of all resources used by this service.
   ///
   /// Stops the timer, disposes all beacons, and cleans up the sync service.

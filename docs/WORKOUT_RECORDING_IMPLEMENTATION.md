@@ -590,7 +590,9 @@ class WorkoutPlayerService {
 
 ## Implementation Phases
 
-### Phase 1: Robot Test (TDD) 🤖
+> **Quick Status:** See [Implementation Status](#implementation-status-last-updated-2025-11-06) section below for current progress.
+
+### Phase 1: Robot Test (TDD) 🤖 - 🔶 PARTIALLY COMPLETE
 
 **File:** `test/scenarios/workout_session_crash_recovery.dart`
 
@@ -616,7 +618,7 @@ class WorkoutPlayerService {
 - Start fresh flow
 - Stale metric handling (stop power for 6s → null recorded)
 
-### Phase 2: Stale Metrics Fix ⏱️
+### Phase 2: Stale Metrics Fix ⏱️ - ✅ COMPLETE
 
 **Files:**
 - Modify: `lib/domain/devices/device_manager.dart`
@@ -647,7 +649,7 @@ late final ReadableBeacon<PowerData?> _powerBeacon = Beacon.derived(() {
 
 **Inject Clock:** Add `Clock` parameter to DeviceManager constructor for testing.
 
-### Phase 3: Data Models 📊
+### Phase 3: Data Models 📊 - ✅ COMPLETE
 
 **Files:**
 - Create: `lib/domain/models/workout_session.dart`
@@ -720,7 +722,7 @@ class WorkoutSample {
 }
 ```
 
-### Phase 4: Persistence Layer 💾
+### Phase 4: Persistence Layer 💾 - ✅ COMPLETE
 
 **Files:**
 - Create: `lib/services/workout_session_persistence.dart`
@@ -810,7 +812,7 @@ Future<void> deleteWorkout(String workoutId) async {
 }
 ```
 
-### Phase 5: Recording Service 🎙️
+### Phase 5: Recording Service 🎙️ - ✅ COMPLETE
 
 **Files:**
 - Create: `lib/services/workout_recording_service.dart`
@@ -824,7 +826,7 @@ Future<void> deleteWorkout(String workoutId) async {
 - Flush samples on dispose
 - Inject Clock for testing
 
-### Phase 6: Resume Dialog & UI 🖥️
+### Phase 6: Resume Dialog & UI 🖥️ - ⚠️ MOSTLY COMPLETE
 
 **Files:**
 - Create: `lib/widgets/workout_resume_dialog.dart`
@@ -838,7 +840,7 @@ Future<void> deleteWorkout(String workoutId) async {
 3. Handle resume/discard/fresh choices
 4. Initialize recording service on workout start
 
-### Phase 7: App Lifecycle (Optional Polish) 🔄
+### Phase 7: App Lifecycle (Optional Polish) 🔄 - ❌ NOT STARTED
 
 **Files:**
 - Modify: `lib/app/app.dart` or create `lib/services/app_lifecycle_service.dart`
@@ -951,33 +953,166 @@ Not applicable (local-only, no sync yet).
 - Analyze workout data
 - Suggest FTP updates based on performance
 
+## Implementation Status (Last Updated: 2025-11-06)
+
+### Overall Progress: ~85% Complete
+
+**Production Status:** Basic recording is production-ready. Crash recovery needs state restoration completion.
+
+### ✅ Phase 2: Stale Metrics Fix - COMPLETE
+
+**Files:** `lib/domain/beacons/staleness_beacon.dart`, `lib/domain/devices/device_manager.dart:78`
+
+- ✅ Implemented using `StalenessBeacon` wrapper pattern
+- ✅ 5-second threshold configured
+- ✅ Applied to all sensor streams (power, cadence, speed, heart rate)
+- ✅ Automatically returns `null` for stale data
+- ✅ Better than planned: Reusable `.withStalenessDetection()` extension
+- ✅ Test coverage: `test/domain/beacons/staleness_beacon_test.dart`, `test/domain/devices/device_manager_staleness_test.dart`
+
+### ✅ Phase 3: Data Models - COMPLETE
+
+**File:** `lib/domain/models/workout_session.dart`
+
+- ✅ `SessionStatus` enum (active, completed, abandoned, crashed)
+- ✅ `WorkoutSessionMetadata` - full metadata with all required fields
+- ✅ `WorkoutSession` - lightweight UI model
+- ✅ `WorkoutSample` - 1Hz sample data model
+- ✅ JSON serialization using `deep_pick`
+- ✅ Test coverage: `test/domain/models/workout_session_test.dart`
+
+### ✅ Phase 4: Persistence Layer - COMPLETE
+
+**File:** `lib/services/workout_session_persistence.dart`
+
+- ✅ Uses `nanoid2` for workout IDs
+- ✅ One folder per workout: `<app_documents>/workouts/{id}/`
+- ✅ Two files per workout: `metadata.json` + `samples.jsonl`
+- ✅ SharedPreferences for O(1) crash detection (single active ID)
+- ✅ JSONL append-only sample storage
+- ✅ Sample buffering (5 samples) for performance
+- ✅ Streaming and batch sample loading
+- ✅ Test coverage: `test/services/workout_session_persistence_test.dart`
+
+### ✅ Phase 5: Recording Service - COMPLETE
+
+**File:** `lib/services/workout_recording_service.dart`
+
+- ✅ 1Hz Timer-based sampling
+- ✅ Reads beacon values synchronously (no subscriptions)
+- ✅ `startRecording()` and `resumeRecording()` methods
+- ✅ Periodic metadata updates (every 10 samples)
+- ✅ Proper cleanup on `dispose()`
+- ✅ Test coverage: `test/services/workout_recording_service_test.dart`
+
+### ⚠️ Phase 6: Resume Dialog & UI - MOSTLY COMPLETE
+
+**Files:** `lib/widgets/workout_resume_dialog.dart`, `lib/pages/workout_player_page.dart:84-163`
+
+**What's Working:**
+- ✅ Dialog implemented and integrated
+- ✅ Shows workout info (elapsed time, start time)
+- ✅ Checks for incomplete sessions on app startup
+- ✅ Shows dialog when crash detected
+- ✅ Handles "Start Fresh" option
+
+**Missing Items:**
+- ❌ Dialog only has 2 options (Resume, Start Fresh) - should have 3 (Resume, Discard, Start Fresh)
+  - Current: "Start Fresh" clears active flag
+  - Needed: "Discard" button that marks session as `abandoned` (keeps data)
+  - Needed: "Start Fresh" should delete session entirely
+- ❌ **State restoration not implemented** (see workout_player_page.dart:119-121)
+  - WorkoutPlayerService needs `restoreState(elapsedMs, currentBlockIndex)` method
+  - Currently commented as TODO
+- ❌ Recording service resume not called
+  - Has `resumeRecording()` method but never called in UI
+  - Always calls `startRecording()` instead
+- ❌ Not registered in `lib/app/refs.dart`
+  - Currently instantiated directly: `WorkoutSessionPersistence(prefs: SharedPreferencesAsync())`
+  - Should be in Refs for consistency
+
+### 🔶 Phase 1: Robot Test - PARTIALLY COMPLETE
+
+**File:** `test/scenarios/workout_session_crash_recovery.dart`
+
+- ✅ Test structure documented
+- ✅ Multiple scenarios planned (resume, discard, start fresh)
+- ✅ Test flow clearly defined in comments
+- ❌ Not functional - waiting for power simulation infrastructure
+- ❌ Marked as TODO (lines 49-67)
+
+**Blocking Issue:** Requires device power simulation capability
+
+### Priority Fixes Needed
+
+1. **HIGH: State Restoration**
+   - Add `restoreState(elapsedMs, currentBlockIndex)` to `WorkoutPlayerService`
+   - Reference: Implementation plan lines 573-589
+   - Location: `lib/services/workout_player_service.dart`
+
+2. **HIGH: Resume Integration**
+   - Call `resumeRecording(sessionId)` when user chooses "Resume"
+   - Currently always calls `startRecording()` on workout start
+   - Location: `lib/pages/workout_player_page.dart:118-122`
+
+3. **MEDIUM: Dialog Options**
+   - Add third "Discard" button to resume dialog
+   - "Discard": calls `updateSessionStatus(workoutId, SessionStatus.abandoned)`
+   - "Start Fresh": calls `deleteSession(workoutId)`
+   - Location: `lib/widgets/workout_resume_dialog.dart`
+
+4. **LOW: Refs Registration**
+   - Add `WorkoutSessionPersistence` to Refs
+   - Location: `lib/app/refs.dart`
+
+5. **LOW: Robot Tests**
+   - Complete implementation once device power simulation available
+   - Location: `test/scenarios/workout_session_crash_recovery.dart`
+
+### What's Currently Working
+
+- ✅ Continuous 1Hz recording during workouts
+- ✅ Crash detection on app restart
+- ✅ Resume dialog appears with session info
+- ✅ Stale data returns null after 5 seconds
+- ✅ JSONL storage with buffering
+- ✅ Comprehensive unit test coverage
+- ✅ Sample data survives app crashes
+
+### What Needs Completion for Full Feature
+
+- ⚠️ State restoration when resuming (elapsed time, current block)
+- ⚠️ Recording service resume call integration
+- ⚠️ Dialog "Discard" option
+- ⚠️ Robot test implementation (blocked on infrastructure)
+
 ## Success Criteria
 
-- ✅ Robot test passes (full crash recovery flow)
-- ✅ All unit tests pass
-- ✅ No memory leaks (verified with devtools)
-- ✅ Recording doesn't impact UI performance
-- ✅ Data survives force quit on iOS/Android
-- ✅ Stale metrics return null after 5 seconds
-- ✅ Manual testing checklist complete
-- ✅ Code review approved
-- ✅ Documentation complete (this doc + user-facing feature doc)
+- 🔶 Robot test passes (full crash recovery flow) - **Partially complete (structure only)**
+- ✅ All unit tests pass - **COMPLETE**
+- 🔶 No memory leaks (verified with devtools) - **Not yet verified**
+- 🔶 Recording doesn't impact UI performance - **Not yet verified**
+- 🔶 Data survives force quit on iOS/Android - **Not yet verified (needs manual testing)**
+- ✅ Stale metrics return null after 5 seconds - **COMPLETE**
+- ❌ Manual testing checklist complete - **Not started**
+- ❌ Code review approved - **Not started**
+- ✅ Documentation complete (this doc + user-facing feature doc) - **COMPLETE**
 
-## Estimated Effort
+## Estimated Effort vs. Actual
 
-| Phase | Task | Hours |
-|-------|------|-------|
-| 1 | Robot test | 2-3 |
-| 2 | Stale metrics fix | 1-2 |
-| 3 | Data models | 1-2 |
-| 4 | Persistence layer | 2-3 |
-| 5 | Recording service | 2-3 |
-| 6 | Resume dialog & UI | 2-3 |
-| 7 | App lifecycle | 1 |
-| - | Unit tests | 2-3 |
-| - | Manual testing | 1-2 |
-| - | Documentation | 1 |
-| **Total** | | **15-22 hours** |
+| Phase | Task | Estimated | Status |
+|-------|------|-----------|--------|
+| 1 | Robot test | 2-3h | 🔶 Structure complete, blocked on power simulation |
+| 2 | Stale metrics fix | 1-2h | ✅ COMPLETE (better than planned) |
+| 3 | Data models | 1-2h | ✅ COMPLETE |
+| 4 | Persistence layer | 2-3h | ✅ COMPLETE |
+| 5 | Recording service | 2-3h | ✅ COMPLETE |
+| 6 | Resume dialog & UI | 2-3h | ⚠️ Mostly complete (missing state restoration) |
+| 7 | App lifecycle | 1h | ❌ Not started |
+| - | Unit tests | 2-3h | ✅ COMPLETE (excellent coverage) |
+| - | Manual testing | 1-2h | ❌ Not started |
+| - | Documentation | 1h | ✅ COMPLETE |
+| **Remaining** | | **~3-5h** | State restoration + dialog fixes + manual testing |
 
 ## Dependencies
 

@@ -5,15 +5,14 @@ import 'package:context_plus/context_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:state_beacon/state_beacon.dart';
 import 'package:vekolo/app/refs.dart';
 import 'package:vekolo/domain/devices/device_manager.dart';
 import 'package:vekolo/domain/models/workout/workout_models.dart';
+import 'package:vekolo/domain/models/workout_session.dart';
 import 'package:vekolo/models/profile_defaults.dart';
 import 'package:vekolo/services/workout_player_service.dart';
 import 'package:vekolo/services/workout_recording_service.dart';
-import 'package:vekolo/services/workout_session_persistence.dart';
 import 'package:vekolo/widgets/workout_resume_dialog.dart';
 
 /// Page for executing structured workouts with real-time power control.
@@ -79,31 +78,34 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
       if (!mounted) return;
       final deviceManager = Refs.deviceManager.of(context);
       final authService = Refs.authService.of(context);
+      final persistence = Refs.workoutSessionPersistence.of(context);
       final user = authService.currentUser.value;
       final ftp = user?.ftp ?? ProfileDefaults.ftp;
 
       // Check for incomplete workout sessions
-      final persistence = WorkoutSessionPersistence(prefs: SharedPreferencesAsync());
       final incompleteSession = await persistence.getActiveSession();
 
-      bool shouldResume = false;
+      ResumeChoice? resumeChoice;
       if (incompleteSession != null && mounted) {
         talker.info('[WorkoutPlayerPage] Found incomplete session from ${incompleteSession.startTime}');
 
         // Show resume dialog
-        final result = await showDialog<bool>(
+        resumeChoice = await showDialog<ResumeChoice>(
           context: context,
           barrierDismissible: false,
           builder: (context) => WorkoutResumeDialog(session: incompleteSession),
         );
 
-        shouldResume = result ?? false;
-
-        if (!shouldResume) {
-          // User chose to start fresh - clear the old session
-          talker.info('[WorkoutPlayerPage] User chose to start fresh, clearing old session');
-          await persistence.clearActiveWorkout();
-        } else {
+        // Handle user choice
+        if (resumeChoice == ResumeChoice.discard) {
+          // Mark session as abandoned but keep the data
+          talker.info('[WorkoutPlayerPage] User chose to discard session');
+          await persistence.updateSessionStatus(incompleteSession.id, SessionStatus.abandoned);
+        } else if (resumeChoice == ResumeChoice.startFresh) {
+          // Delete the session entirely
+          talker.info('[WorkoutPlayerPage] User chose to start fresh, deleting old session');
+          await persistence.deleteSession(incompleteSession.id);
+        } else if (resumeChoice == ResumeChoice.resume) {
           talker.info('[WorkoutPlayerPage] User chose to resume previous session');
         }
       }
@@ -114,19 +116,28 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
         ftp: ftp,
       );
 
-      // If resuming, restore the workout state
-      if (shouldResume && incompleteSession != null) {
-        // TODO: Restore player state from session
-        // This would require adding a method to WorkoutPlayerService to restore from elapsed time
-        talker.warning('[WorkoutPlayerPage] Resume functionality not yet implemented in WorkoutPlayerService');
-      }
-
       // Initialize recording service
       final recordingService = WorkoutRecordingService(
         playerService: playerService,
         deviceManager: deviceManager,
         persistence: persistence,
       );
+
+      // If resuming, restore the workout state and recording
+      if (resumeChoice == ResumeChoice.resume && incompleteSession != null) {
+        talker.info('[WorkoutPlayerPage] Restoring workout state from saved session');
+
+        // Restore player state (elapsed time and current block)
+        playerService.restoreState(
+          elapsedMs: incompleteSession.elapsedMs,
+          currentBlockIndex: incompleteSession.currentBlockIndex,
+        );
+
+        // Resume recording with existing session
+        await recordingService.resumeRecording(sessionId: incompleteSession.id);
+
+        talker.info('[WorkoutPlayerPage] Workout state restored successfully');
+      }
 
       // Listen to triggered events
       playerService.triggeredEvent$.listen((event) {

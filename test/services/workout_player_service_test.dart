@@ -675,5 +675,116 @@ void main() {
         expect(() => player.isPaused.value, returnsNormally);
       });
     });
+
+    group('State Restoration (Crash Recovery)', () {
+      test('restoreState restores elapsed time and block index', () async {
+        final deviceManager = await createDeviceManager();
+        final plan = WorkoutPlan(
+          plan: [
+            PowerBlock(id: 'warmup', duration: 60000, power: 0.5),
+            PowerBlock(id: 'work', duration: 120000, power: 0.8),
+            PowerBlock(id: 'cooldown', duration: 60000, power: 0.4),
+          ],
+        );
+
+        final player = WorkoutPlayerService(workoutPlan: plan, deviceManager: deviceManager, ftp: 200);
+
+        // Restore to 2 minutes in, on block 1 (the work block)
+        player.restoreState(elapsedMs: 120000, currentBlockIndex: 1);
+
+        expect(player.elapsedTime$.value, 120000);
+        expect(player.currentBlockIndex$.value, 1);
+        expect(player.isPaused.value, true); // Should stay paused after restore
+        expect((player.currentBlock$.value as PowerBlock).id, 'work');
+        expect(player.remainingTime$.value, 240000 - 120000); // Total 240s - 120s elapsed
+
+        player.dispose();
+      });
+
+      test('restoreState updates progress and remaining time', () async {
+        final deviceManager = await createDeviceManager();
+        final plan = WorkoutPlan(
+          plan: [
+            PowerBlock(id: 'block1', duration: 100000, power: 0.5),
+            PowerBlock(id: 'block2', duration: 100000, power: 0.8),
+          ],
+        );
+
+        final player = WorkoutPlayerService(workoutPlan: plan, deviceManager: deviceManager, ftp: 200);
+
+        // Restore to halfway through
+        player.restoreState(elapsedMs: 100000, currentBlockIndex: 1);
+
+        expect(player.progress$.value, closeTo(0.5, 0.01)); // 50% through workout
+        expect(player.remainingTime$.value, 100000); // 100s remaining
+
+        player.dispose();
+      });
+
+      test('restoreState clamps invalid block index', () async {
+        final deviceManager = await createDeviceManager();
+        final plan = WorkoutPlan(
+          plan: [
+            PowerBlock(id: 'block1', duration: 60000, power: 0.5),
+            PowerBlock(id: 'block2', duration: 60000, power: 0.8),
+          ],
+        );
+
+        final player = WorkoutPlayerService(workoutPlan: plan, deviceManager: deviceManager, ftp: 200);
+
+        // Try to restore to invalid block index
+        player.restoreState(elapsedMs: 120000, currentBlockIndex: 10);
+
+        expect(player.currentBlockIndex$.value, 1); // Clamped to last valid block
+        expect(player.currentBlock$.value, isNotNull);
+
+        player.dispose();
+      });
+
+      test('restoreState allows workout to be resumed with start()', () async {
+        final deviceManager = await createDeviceManager();
+        final plan = WorkoutPlan(
+          plan: [
+            PowerBlock(id: 'block1', duration: 60000, power: 0.5),
+            PowerBlock(id: 'block2', duration: 60000, power: 0.8),
+          ],
+        );
+
+        final player = WorkoutPlayerService(workoutPlan: plan, deviceManager: deviceManager, ftp: 200);
+
+        // Restore state
+        player.restoreState(elapsedMs: 30000, currentBlockIndex: 0);
+
+        expect(player.isPaused.value, true);
+
+        // Should be able to resume
+        player.start();
+        expect(player.isPaused.value, false);
+
+        await Future.delayed(Duration(milliseconds: 100));
+
+        // Time should advance from restored position
+        expect(player.elapsedTime$.value, greaterThan(30000));
+
+        player.dispose();
+      });
+
+      test('restoreState with zero elapsed time starts from beginning', () async {
+        final deviceManager = await createDeviceManager();
+        final plan = WorkoutPlan(
+          plan: [PowerBlock(id: 'block1', duration: 60000, power: 0.5)],
+        );
+
+        final player = WorkoutPlayerService(workoutPlan: plan, deviceManager: deviceManager, ftp: 200);
+
+        player.restoreState(elapsedMs: 0, currentBlockIndex: 0);
+
+        expect(player.elapsedTime$.value, 0);
+        expect(player.currentBlockIndex$.value, 0);
+        expect(player.remainingTime$.value, 60000);
+
+        player.dispose();
+      });
+    });
   });
 }
