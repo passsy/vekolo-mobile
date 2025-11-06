@@ -138,7 +138,10 @@ class FakeBlePlatform implements BlePlatform {
 
       // Replace real characteristics with fake ones that don't call the platform
       final fakeCharacteristics = bluetoothService.characteristics.map((char) {
-        return FakeBluetoothCharacteristic(uuid: char.uuid, properties: char.properties, device: device);
+        final fakeChar = FakeBluetoothCharacteristic(uuid: char.uuid, properties: char.properties, device: device);
+        // Register characteristic with device for emitCharacteristic() access
+        fakeDevice._characteristics[char.uuid] = fakeChar;
+        return fakeChar;
       }).toList();
 
       // Create a fake service with fake characteristics
@@ -406,7 +409,10 @@ class FakeBlePlatform implements BlePlatform {
 
       // Replace real characteristics with fake ones that don't call the platform
       final fakeCharacteristics = bluetoothService.characteristics.map((char) {
-        return FakeBluetoothCharacteristic(uuid: char.uuid, properties: char.properties, device: device);
+        final fakeChar = FakeBluetoothCharacteristic(uuid: char.uuid, properties: char.properties, device: device);
+        // Register characteristic with device for emitCharacteristic() access
+        fakeDevice._characteristics[char.uuid] = fakeChar;
+        return fakeChar;
       }).toList();
 
       // Create a fake service with fake characteristics
@@ -595,6 +601,9 @@ class FakeDevice {
   bool _isConnected = false;
   DateTime _lastUpdate = clock.now();
 
+  /// Cache of characteristics for this device, keyed by UUID.
+  final Map<Guid, FakeBluetoothCharacteristic> _characteristics = {};
+
   FakeDevice._({
     required this.id,
     required this.name,
@@ -669,6 +678,48 @@ class FakeDevice {
     if (wasConnected && !platform._connectedDeviceIds.contains(id)) {
       _isConnected = false;
     }
+  }
+
+  /// Emit a BLE characteristic notification with the given data.
+  ///
+  /// This simulates the device sending data to subscribed characteristics.
+  /// The characteristic must exist (be discovered) and have notifications enabled
+  /// via setNotifyValue(true) before calling this.
+  ///
+  /// Example:
+  /// ```dart
+  /// // Create device and connect
+  /// final kickr = robot.aether.createDevice(...);
+  /// await kickr.connect();
+  ///
+  /// // Discover services (populates characteristics)
+  /// await platform.discoverServices(kickr.id);
+  ///
+  /// // Subscribe to characteristic
+  /// final char = await getCharacteristic(...);
+  /// await char.setNotifyValue(true);
+  ///
+  /// // Emit power data
+  /// final indoorBikeDataUuid = Guid('00002AD2-0000-1000-8000-00805f9b34fb');
+  /// kickr.emitCharacteristic(indoorBikeDataUuid, [0x44, 0x02, 0x00, 0x00, 0x96, 0x00]);
+  /// ```
+  void emitCharacteristic(Guid characteristicUuid, List<int> data) {
+    final char = _characteristics[characteristicUuid];
+    if (char == null) {
+      throw Exception(
+        'Characteristic $characteristicUuid not found on device $name. '
+        'Ensure services have been discovered and the characteristic exists.',
+      );
+    }
+
+    if (!char.isNotifying) {
+      throw Exception(
+        'Characteristic $characteristicUuid on device $name is not notifying. '
+        'Call setNotifyValue(true) before emitting data.',
+      );
+    }
+
+    char.simulateValueReceived(data);
   }
 
   /// Convert this fake device to a FlutterBluePlus ScanResult.

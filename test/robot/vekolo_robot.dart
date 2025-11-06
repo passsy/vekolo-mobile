@@ -139,20 +139,44 @@ class VekoloRobot {
 
     final persistence = DeviceAssignmentPersistence(SharedPreferencesAsync());
 
-    // For simplicity in tests, we assign the first device to all roles
-    // (In a real scenario, you'd assign specific roles based on capabilities)
-    final device = devices.first;
+    // Find devices by capability
+    FakeDevice? trainerDevice;
+    FakeDevice? hrDevice;
 
-    // Determine transport from device services
-    final transport = _getTransportIdFromServices(device.services);
+    for (final device in devices) {
+      final transport = _getTransportIdFromServices(device.services);
+      if (transport == 'ftms' || transport == 'cycling-power') {
+        trainerDevice = device;
+      } else if (transport == 'heart-rate') {
+        hrDevice = device;
+      }
+    }
 
-    final assignment = DeviceAssignment(deviceId: device.id, deviceName: device.name, transport: transport);
+    // Assign devices to roles based on their capabilities
+    final trainer = trainerDevice ?? devices.first;
+    final trainerTransport = _getTransportIdFromServices(trainer.services);
+    final trainerAssignment = DeviceAssignment(
+      deviceId: trainer.id,
+      deviceName: trainer.name,
+      transport: trainerTransport,
+    );
+
+    // Heart rate device assignment (optional)
+    DeviceAssignment? hrAssignment;
+    if (hrDevice != null) {
+      hrAssignment = DeviceAssignment(
+        deviceId: hrDevice.id,
+        deviceName: hrDevice.name,
+        transport: 'heart-rate',
+      );
+    }
 
     await persistence.saveAssignments(
-      primaryTrainer: assignment,
-      powerSource: assignment,
-      cadenceSource: assignment,
-      speedSource: assignment,
+      primaryTrainer: trainerAssignment,
+      powerSource: trainerAssignment,
+      cadenceSource: trainerAssignment,
+      speedSource: trainerAssignment,
+      heartRateSource: hrAssignment,
     );
   }
 
