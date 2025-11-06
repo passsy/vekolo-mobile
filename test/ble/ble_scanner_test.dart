@@ -3,6 +3,7 @@ import 'package:fake_async/fake_async.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart' hide BluetoothState;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:state_beacon/state_beacon.dart';
 import 'package:vekolo/ble/ble_scanner.dart';
 import 'fake_ble_permissions.dart';
 import 'fake_ble_platform.dart';
@@ -381,7 +382,7 @@ void main() {
         device.turnOn();
 
         scanner.startScan();
-        async.flushMicrotasks();
+        BeaconScheduler.flush();
         async.elapse(const Duration(milliseconds: 200));
 
         expect(scanner.devices.value, hasLength(1));
@@ -418,7 +419,7 @@ void main() {
         device.turnOn();
 
         scanner.startScan();
-        async.flushMicrotasks();
+        BeaconScheduler.flush();
         async.elapse(const Duration(milliseconds: 200));
 
         expect(scanner.devices.value, hasLength(1));
@@ -439,7 +440,7 @@ void main() {
 
         device1.turnOn();
         scanner.startScan();
-        async.flushMicrotasks();
+        BeaconScheduler.flush();
         async.elapse(const Duration(milliseconds: 200));
 
         device2.turnOn();
@@ -471,7 +472,7 @@ void main() {
         device.turnOn();
 
         scanner.startScan();
-        async.flushMicrotasks();
+        BeaconScheduler.flush();
         async.elapse(const Duration(milliseconds: 200));
 
         expect(scanner.devices.value, hasLength(1));

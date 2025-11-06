@@ -234,6 +234,12 @@ class VekoloRobot {
     // Fallback to ftms if unknown (most test devices will be trainers)
     return 'ftms';
   }
+
+  Future<void> startWorkout() async {
+    spotText('Start Workout').existsAtLeastOnce();
+    await act.tap(spotText('Start Workout'));
+    await idle(500);
+  }
 }
 
 // Cache for robot instances by WidgetTester identity

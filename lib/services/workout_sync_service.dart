@@ -228,7 +228,7 @@ class WorkoutSyncService {
   /// Retry delays scale with attempt number: 1s, 2s, 3s for attempts 1-3.
   /// This gives transient issues time to resolve while not hanging indefinitely.
   Future<void> _syncTargetToDevice(ErgCommand command) async {
-    final assigned = _deviceManager.primaryTrainer;
+    final assigned = _deviceManager.primaryTrainerBeacon.value;
 
     // Validate trainer exists and supports ERG mode
     if (assigned?.connectedDevice == null) {
@@ -301,7 +301,7 @@ class WorkoutSyncService {
   /// If conditions aren't met, this is a no-op. The timer is automatically
   /// cancelled when [stopSync] is called.
   void _startRefreshTimer() {
-    final assigned = _deviceManager.primaryTrainer;
+    final assigned = _deviceManager.primaryTrainerBeacon.value;
     final trainer = assigned?.connectedDevice;
 
     // Only create timer if trainer exists and needs refresh

@@ -5,12 +5,16 @@ import 'package:context_plus/context_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:state_beacon/state_beacon.dart';
 import 'package:vekolo/app/refs.dart';
 import 'package:vekolo/domain/devices/device_manager.dart';
 import 'package:vekolo/domain/models/workout/workout_models.dart';
 import 'package:vekolo/models/profile_defaults.dart';
 import 'package:vekolo/services/workout_player_service.dart';
+import 'package:vekolo/services/workout_recording_service.dart';
+import 'package:vekolo/services/workout_session_persistence.dart';
+import 'package:vekolo/widgets/workout_resume_dialog.dart';
 
 /// Page for executing structured workouts with real-time power control.
 ///
@@ -34,6 +38,7 @@ class WorkoutPlayerPage extends StatefulWidget {
 
 class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
   WorkoutPlayerService? _playerService;
+  WorkoutRecordingService? _recordingService;
   bool _isLoading = true;
   String? _loadError;
   bool _hasStarted = false;
@@ -50,6 +55,7 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
   @override
   void dispose() {
     _powerSubscription?.call();
+    _recordingService?.dispose();
     _playerService?.dispose();
     super.dispose();
   }
@@ -76,10 +82,50 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
       final user = authService.currentUser.value;
       final ftp = user?.ftp ?? ProfileDefaults.ftp;
 
+      // Check for incomplete workout sessions
+      final persistence = WorkoutSessionPersistence(prefs: SharedPreferencesAsync());
+      final incompleteSession = await persistence.getActiveSession();
+
+      bool shouldResume = false;
+      if (incompleteSession != null && mounted) {
+        talker.info('[WorkoutPlayerPage] Found incomplete session from ${incompleteSession.startTime}');
+
+        // Show resume dialog
+        final result = await showDialog<bool>(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => WorkoutResumeDialog(session: incompleteSession),
+        );
+
+        shouldResume = result ?? false;
+
+        if (!shouldResume) {
+          // User chose to start fresh - clear the old session
+          talker.info('[WorkoutPlayerPage] User chose to start fresh, clearing old session');
+          await persistence.clearActiveWorkout();
+        } else {
+          talker.info('[WorkoutPlayerPage] User chose to resume previous session');
+        }
+      }
+
       final playerService = WorkoutPlayerService(
         workoutPlan: workoutPlan,
         deviceManager: deviceManager,
         ftp: ftp,
+      );
+
+      // If resuming, restore the workout state
+      if (shouldResume && incompleteSession != null) {
+        // TODO: Restore player state from session
+        // This would require adding a method to WorkoutPlayerService to restore from elapsed time
+        talker.warning('[WorkoutPlayerPage] Resume functionality not yet implemented in WorkoutPlayerService');
+      }
+
+      // Initialize recording service
+      final recordingService = WorkoutRecordingService(
+        playerService: playerService,
+        deviceManager: deviceManager,
+        persistence: persistence,
       );
 
       // Listen to triggered events
@@ -89,8 +135,17 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
         }
       });
 
+      // Listen to workout completion to stop recording
+      playerService.isComplete.subscribe((isComplete) {
+        if (isComplete) {
+          talker.info('[WorkoutPlayerPage] Workout complete, stopping recording');
+          recordingService.stopRecording(completed: true);
+        }
+      });
+
       setState(() {
         _playerService = playerService;
+        _recordingService = recordingService;
         _isLoading = false;
       });
 
@@ -141,6 +196,17 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
       if (!_hasStarted && currentPower >= startResumeThreshold) {
         talker.info('[WorkoutPlayerPage] Auto-starting workout - power detected: ${currentPower}W');
         playerService.start();
+
+        // Start recording when workout starts
+        final authService = Refs.authService.of(context);
+        final user = authService.currentUser.value;
+        final ftp = user?.ftp ?? ProfileDefaults.ftp;
+        _recordingService?.startRecording(
+          'Workout', // TODO: Get workout name from route params or metadata
+          userId: user?.id,
+          ftp: ftp,
+        );
+
         setState(() {
           _hasStarted = true;
           _lowPowerStartTime = null; // Reset low power timer
@@ -389,7 +455,23 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
               onPlayPause: () {
                 if (isPaused) {
                   player.start();
-                  setState(() => _isManualPause = false); // Clear manual pause flag when resuming
+                  if (!_hasStarted) {
+                    // First time starting the workout via play button
+                    final authService = Refs.authService.of(context);
+                    final user = authService.currentUser.value;
+                    final ftp = user?.ftp ?? ProfileDefaults.ftp;
+                    _recordingService?.startRecording(
+                      'Workout', // TODO: Get workout name from route params or metadata
+                      userId: user?.id,
+                      ftp: ftp,
+                    );
+                    setState(() {
+                      _hasStarted = true;
+                      _isManualPause = false;
+                    });
+                  } else {
+                    setState(() => _isManualPause = false); // Clear manual pause flag when resuming
+                  }
                 } else {
                   player.pause();
                   setState(() => _isManualPause = true); // Set manual pause flag

@@ -40,6 +40,7 @@ import 'package:vekolo/ble/ble_device.dart';
 import 'package:vekolo/ble/ble_platform.dart';
 import 'package:vekolo/ble/ble_scanner.dart';
 import 'package:vekolo/ble/transport_registry.dart';
+import 'package:vekolo/domain/beacons/staleness_beacon.dart';
 import 'package:vekolo/domain/devices/assigned_device.dart';
 import 'package:vekolo/domain/devices/fitness_device.dart';
 import 'package:vekolo/domain/models/device_info.dart';
@@ -57,7 +58,9 @@ class DeviceManager {
     required this.scanner,
     required this.transportRegistry,
     required this.persistence,
-  });
+  }) {
+    _setupStalenessAwareStreams();
+  }
 
   /// BLE platform for device connection management.
   final BlePlatform platform;
@@ -70,6 +73,9 @@ class DeviceManager {
 
   /// Persistence service for saving/loading device assignments.
   final DeviceAssignmentPersistence persistence;
+
+  /// Staleness threshold - data older than this is considered stale and returns null.
+  static const Duration _stalenessThreshold = Duration(seconds: 5);
 
   // ============================================================================
   // Device Collection
@@ -106,35 +112,14 @@ class DeviceManager {
   final WritableBeacon<AssignedDevice?> _heartRateSourceBeacon = Beacon.writable(null);
 
   // ============================================================================
-  // Beacons for Aggregated Data (Derived from assigned devices)
+  // Beacons for Aggregated Data (with staleness detection)
   // ============================================================================
 
-  late final ReadableBeacon<PowerData?> _powerBeacon = Beacon.derived(() {
-    // Track assignment beacons so derived updates when assignments change
-    final powerSource = _powerSourceBeacon.value?.connectedDevice;
-    final primaryTrainer = _primaryTrainerBeacon.value?.connectedDevice;
-    final device = powerSource ?? primaryTrainer;
-    return device?.powerStream?.value;
-  });
-
-  late final ReadableBeacon<CadenceData?> _cadenceBeacon = Beacon.derived(() {
-    final cadenceSource = _cadenceSourceBeacon.value?.connectedDevice;
-    final primaryTrainer = _primaryTrainerBeacon.value?.connectedDevice;
-    final device = cadenceSource ?? primaryTrainer;
-    return device?.cadenceStream?.value;
-  });
-
-  late final ReadableBeacon<SpeedData?> _speedBeacon = Beacon.derived(() {
-    final speedSource = _speedSourceBeacon.value?.connectedDevice;
-    final primaryTrainer = _primaryTrainerBeacon.value?.connectedDevice;
-    final device = speedSource ?? primaryTrainer;
-    return device?.speedStream?.value;
-  });
-
-  late final ReadableBeacon<HeartRateData?> _heartRateBeacon = Beacon.derived(() {
-    final heartRateSource = _heartRateSourceBeacon.value?.connectedDevice;
-    return heartRateSource?.heartRateStream?.value;
-  });
+  /// Staleness-aware beacons for each data stream.
+  late final StalenessBeacon<PowerData> _powerBeacon;
+  late final StalenessBeacon<CadenceData> _cadenceBeacon;
+  late final StalenessBeacon<SpeedData> _speedBeacon;
+  late final StalenessBeacon<HeartRateData> _heartRateBeacon;
 
   // ============================================================================
   // Aggregated Streams (Public API)
@@ -438,32 +423,17 @@ class DeviceManager {
   /// Reactive beacon of all connected devices.
   ReadableBeacon<List<FitnessDevice>> get devicesBeacon => _devicesBeacon;
 
-  /// Returns the currently assigned primary trainer, or null if none assigned.
-  AssignedDevice? get primaryTrainer => _primaryTrainer;
-
   /// Reactive beacon of primary trainer assignment.
   ReadableBeacon<AssignedDevice?> get primaryTrainerBeacon => _primaryTrainerBeacon;
-
-  /// Returns the currently assigned power source, or null if none assigned.
-  AssignedDevice? get powerSource => _powerSource;
 
   /// Reactive beacon of power source assignment.
   ReadableBeacon<AssignedDevice?> get powerSourceBeacon => _powerSourceBeacon;
 
-  /// Returns the currently assigned cadence source, or null if none assigned.
-  AssignedDevice? get cadenceSource => _cadenceSource;
-
   /// Reactive beacon of cadence source assignment.
   ReadableBeacon<AssignedDevice?> get cadenceSourceBeacon => _cadenceSourceBeacon;
 
-  /// Returns the currently assigned speed source, or null if none assigned.
-  AssignedDevice? get speedSource => _speedSource;
-
   /// Reactive beacon of speed source assignment.
   ReadableBeacon<AssignedDevice?> get speedSourceBeacon => _speedSourceBeacon;
-
-  /// Returns the currently assigned heart rate source, or null if none assigned.
-  AssignedDevice? get heartRateSource => _heartRateSource;
 
   /// Reactive beacon of heart rate source assignment.
   ReadableBeacon<AssignedDevice?> get heartRateSourceBeacon => _heartRateSourceBeacon;
@@ -490,6 +460,50 @@ class DeviceManager {
   // ============================================================================
   // Helper Methods
   // ============================================================================
+
+  /// Sets up staleness-aware data streams with automatic null emission.
+  ///
+  /// For each metric (power, cadence, speed, heart rate), this creates a derived beacon
+  /// that selects the appropriate device data source, then wraps it with staleness detection.
+  /// When new data arrives:
+  /// 1. The data is immediately emitted to the beacon
+  /// 2. Any existing staleness timer is cancelled
+  /// 3. A new 5-second timer is started
+  /// 4. If the timer fires (no new data for 5s), null is emitted
+  ///
+  /// This ensures that stale data automatically becomes null without requiring
+  /// periodic polling or manual subscriptions.
+  void _setupStalenessAwareStreams() {
+    // Power stream: derived beacon selecting the appropriate device, with staleness detection
+    _powerBeacon = Beacon.derived(() {
+      final powerSource = _powerSourceBeacon.value?.connectedDevice;
+      final primaryTrainer = _primaryTrainerBeacon.value?.connectedDevice;
+      final device = powerSource ?? primaryTrainer;
+      return device?.powerStream?.value;
+    }).withStalenessDetection(threshold: _stalenessThreshold);
+
+    // Cadence stream: derived beacon selecting the appropriate device, with staleness detection
+    _cadenceBeacon = Beacon.derived(() {
+      final cadenceSource = _cadenceSourceBeacon.value?.connectedDevice;
+      final primaryTrainer = _primaryTrainerBeacon.value?.connectedDevice;
+      final device = cadenceSource ?? primaryTrainer;
+      return device?.cadenceStream?.value;
+    }).withStalenessDetection(threshold: _stalenessThreshold);
+
+    // Speed stream: derived beacon selecting the appropriate device, with staleness detection
+    _speedBeacon = Beacon.derived(() {
+      final speedSource = _speedSourceBeacon.value?.connectedDevice;
+      final primaryTrainer = _primaryTrainerBeacon.value?.connectedDevice;
+      final device = speedSource ?? primaryTrainer;
+      return device?.speedStream?.value;
+    }).withStalenessDetection(threshold: _stalenessThreshold);
+
+    // Heart rate stream: derived beacon selecting the appropriate device, with staleness detection
+    _heartRateBeacon = Beacon.derived(() {
+      final heartRateSource = _heartRateSourceBeacon.value?.connectedDevice;
+      return heartRateSource?.heartRateStream?.value;
+    }).withStalenessDetection(threshold: _stalenessThreshold);
+  }
 
   /// Finds a device by ID or throws [ArgumentError] if not found.
   FitnessDevice _findDevice(String deviceId) {
@@ -848,6 +862,12 @@ class DeviceManager {
     _assignmentsPersistenceUnsubscribe?.call();
     _assignmentsPersistenceUnsubscribe = null;
 
+    // Dispose staleness-aware beacons (cancels subscriptions and timers)
+    _powerBeacon.dispose();
+    _cadenceBeacon.dispose();
+    _speedBeacon.dispose();
+    _heartRateBeacon.dispose();
+
     // Disconnect all devices via BlePlatform
     await Future.wait(
       _devices.map((device) async {
@@ -858,12 +878,6 @@ class DeviceManager {
         }
       }),
     );
-
-    // Dispose aggregated data beacons
-    _powerBeacon.dispose();
-    _cadenceBeacon.dispose();
-    _speedBeacon.dispose();
-    _heartRateBeacon.dispose();
 
     // Dispose state beacons
     _devicesBeacon.dispose();

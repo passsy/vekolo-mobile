@@ -1,6 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vekolo/ble/ble_scanner.dart';
 import 'package:vekolo/ble/ftms_ble_transport.dart';
 import 'package:vekolo/ble/heart_rate_ble_transport.dart';
@@ -49,7 +48,7 @@ void main() {
         await deps.manager.initialize();
 
         expect(deps.manager.devices, isEmpty);
-        expect(deps.manager.primaryTrainer, isNull);
+        expect(deps.manager.primaryTrainerBeacon.value, isNull);
       });
 
       test('connects to already discovered devices', () async {
@@ -86,7 +85,7 @@ void main() {
         await Future.delayed(const Duration(milliseconds: 200));
 
         expect(newDeps.manager.devices, hasLength(1));
-        expect(newDeps.manager.primaryTrainer?.deviceId, equals('trainer-1'));
+        expect(newDeps.manager.primaryTrainerBeacon.value?.deviceId, equals('trainer-1'));
       });
 
       test('starts scanning for missing devices', () async {
@@ -128,7 +127,7 @@ void main() {
 
         // Device should be connected and assigned
         expect(newDeps.manager.devices, hasLength(1));
-        expect(newDeps.manager.primaryTrainer?.deviceId, equals('trainer-1'));
+        expect(newDeps.manager.primaryTrainerBeacon.value?.deviceId, equals('trainer-1'));
 
         // Scanning should stop after device is found
         await Future.delayed(const Duration(milliseconds: 200));
@@ -182,8 +181,8 @@ void main() {
         await pumpEventQueue();
 
         expect(newDeps.manager.devices, hasLength(2));
-        expect(newDeps.manager.primaryTrainer?.deviceId, equals('trainer-1'));
-        expect(newDeps.manager.heartRateSource?.deviceId, equals(hrDeviceId));
+        expect(newDeps.manager.primaryTrainerBeacon.value?.deviceId, equals('trainer-1'));
+        expect(newDeps.manager.heartRateSourceBeacon.value?.deviceId, equals(hrDeviceId));
       });
     });
 
@@ -278,11 +277,11 @@ void main() {
         await Future.delayed(const Duration(milliseconds: 200));
 
         // Verify all sensors are assigned
-        expect(newDeps.manager.primaryTrainer, isNotNull);
-        expect(newDeps.manager.powerSource, isNotNull);
-        expect(newDeps.manager.cadenceSource, isNotNull);
-        expect(newDeps.manager.speedSource, isNotNull);
-        expect(newDeps.manager.heartRateSource, isNotNull);
+        expect(newDeps.manager.primaryTrainerBeacon.value, isNotNull);
+        expect(newDeps.manager.powerSourceBeacon.value, isNotNull);
+        expect(newDeps.manager.cadenceSourceBeacon.value, isNotNull);
+        expect(newDeps.manager.speedSourceBeacon.value, isNotNull);
+        expect(newDeps.manager.heartRateSourceBeacon.value, isNotNull);
 
         // Verify scanning stopped when all sensors were assigned
         expect(newDeps.scanner.isScanning.value, isFalse);
@@ -432,7 +431,7 @@ void main() {
         await newDeps.manager.initialize();
         await Future.delayed(const Duration(milliseconds: 500));
 
-        expect(newDeps.manager.primaryTrainer?.deviceId, equals('trainer-1'));
+        expect(newDeps.manager.primaryTrainerBeacon.value?.deviceId, equals('trainer-1'));
       });
 
       test('restores multiple role assignments for same device', () async {
@@ -457,9 +456,9 @@ void main() {
         await newDeps.manager.initialize();
         await Future.delayed(const Duration(milliseconds: 500));
 
-        expect(newDeps.manager.primaryTrainer?.deviceId, equals('trainer-1'));
-        expect(newDeps.manager.powerSource?.deviceId, equals('trainer-1'));
-        expect(newDeps.manager.cadenceSource?.deviceId, equals('trainer-1'));
+        expect(newDeps.manager.primaryTrainerBeacon.value?.deviceId, equals('trainer-1'));
+        expect(newDeps.manager.powerSourceBeacon.value?.deviceId, equals('trainer-1'));
+        expect(newDeps.manager.cadenceSourceBeacon.value?.deviceId, equals('trainer-1'));
       });
     });
   });

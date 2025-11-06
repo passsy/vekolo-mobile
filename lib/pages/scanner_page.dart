@@ -550,29 +550,29 @@ class _DeviceConnectingDialogState extends State<_DeviceConnectingDialog> {
 
       // Auto-assign all capabilities that are not already assigned
       // Check after connection so supportsErgMode and capabilities are accurate
-      if (fitnessDevice.supportsErgMode && deviceManager.primaryTrainer == null) {
+      if (fitnessDevice.supportsErgMode && deviceManager.primaryTrainerBeacon.value == null) {
         deviceManager.assignPrimaryTrainer(fitnessDevice.id);
         autoAssignments.add('primary trainer');
       }
 
-      if (fitnessDevice.capabilities.contains(device_info.DeviceDataType.power) && deviceManager.powerSource == null) {
+      if (fitnessDevice.capabilities.contains(device_info.DeviceDataType.power) && deviceManager.powerSourceBeacon.value == null) {
         deviceManager.assignPowerSource(fitnessDevice.id);
         autoAssignments.add('power source');
       }
 
       if (fitnessDevice.capabilities.contains(device_info.DeviceDataType.cadence) &&
-          deviceManager.cadenceSource == null) {
+          deviceManager.cadenceSourceBeacon.value == null) {
         deviceManager.assignCadenceSource(fitnessDevice.id);
         autoAssignments.add('cadence source');
       }
 
-      if (fitnessDevice.capabilities.contains(device_info.DeviceDataType.speed) && deviceManager.speedSource == null) {
+      if (fitnessDevice.capabilities.contains(device_info.DeviceDataType.speed) && deviceManager.speedSourceBeacon.value == null) {
         deviceManager.assignSpeedSource(fitnessDevice.id);
         autoAssignments.add('speed source');
       }
 
       if (fitnessDevice.capabilities.contains(device_info.DeviceDataType.heartRate) &&
-          deviceManager.heartRateSource == null) {
+          deviceManager.heartRateSourceBeacon.value == null) {
         deviceManager.assignHeartRateSource(fitnessDevice.id);
         autoAssignments.add('heart rate source');
       }

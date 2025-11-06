@@ -101,6 +101,9 @@ class WorkoutPlayerService {
   final int _ftp;
   final WorkoutSyncService _syncService;
 
+  /// The workout plan being executed.
+  WorkoutPlan get workoutPlan => _workoutPlan;
+
   // ==========================================================================
   // Flattened Workout Data
   // ==========================================================================

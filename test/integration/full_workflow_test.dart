@@ -13,7 +13,6 @@
 /// - Error handling and recovery
 import 'package:clock/clock.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vekolo/domain/devices/device_manager.dart';
 import 'package:vekolo/domain/mocks/device_simulator.dart';
 import 'package:vekolo/domain/models/erg_command.dart';
@@ -88,9 +87,9 @@ void main() {
       deviceManager.assignHeartRateSource(hrMonitor.id);
 
       // Verify assignments
-      expect(deviceManager.primaryTrainer?.deviceId, equals(trainer.id));
-      expect(deviceManager.powerSource?.deviceId, equals(powerMeter.id));
-      expect(deviceManager.heartRateSource?.deviceId, equals(hrMonitor.id));
+      expect(deviceManager.primaryTrainerBeacon.value?.deviceId, equals(trainer.id));
+      expect(deviceManager.powerSourceBeacon.value?.deviceId, equals(powerMeter.id));
+      expect(deviceManager.heartRateSourceBeacon.value?.deviceId, equals(hrMonitor.id));
 
       // Wait for beacons to update
       await Future<void>.delayed(const Duration(milliseconds: 600));
@@ -280,11 +279,11 @@ void main() {
       await Future<void>.delayed(const Duration(milliseconds: 600));
 
       // Power data should now come from power meter, not trainer
-      expect(deviceManager.powerSource?.deviceId, equals(powerMeter.id));
+      expect(deviceManager.powerSourceBeacon.value?.deviceId, equals(powerMeter.id));
       expect(deviceManager.powerStream.value, isNotNull);
 
       // Cadence should still come from trainer (no reassignment)
-      expect(deviceManager.cadenceSource, isNull); // Falls back to trainer
+      expect(deviceManager.cadenceSourceBeacon.value, isNull); // Falls back to trainer
       expect(deviceManager.cadenceStream.value, isNotNull);
     });
 
