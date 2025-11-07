@@ -150,6 +150,39 @@ class FakeAuthService implements AuthService {
     methodCalls.clear();
   }
 
+  /// Set up a fake logged-in user for testing.
+  ///
+  /// Creates a test user with default values and saves auth tokens.
+  /// This simulates a user who has successfully logged in.
+  ///
+  /// Example:
+  /// ```dart
+  /// final authService = FakeAuthService();
+  /// await authService.setUpLoggedInUser();
+  /// // User is now authenticated with default test values
+  /// ```
+  Future<void> setUpLoggedInUser({
+    String id = 'test-user-123',
+    String email = 'test@vekolo.test',
+    String name = 'Test User',
+    int ftp = 200,
+  }) async {
+    final testUser = User.create(
+      id: id,
+      email: email,
+      emailVerified: true,
+      name: name,
+      ftp: ftp,
+    );
+    final accessToken = createFakeAccessToken(testUser);
+    final refreshToken = RefreshToken('fake_refresh_token_$id');
+
+    await saveTokens(
+      accessToken: accessToken,
+      refreshToken: refreshToken,
+    );
+  }
+
   // Properties not directly exposed by AuthService but needed for interface compatibility
   // These return no-op implementations since they're not used in typical tests
 

@@ -19,6 +19,7 @@ import 'package:vekolo/services/device_assignment_persistence.dart';
 import '../ble/fake_ble_platform.dart';
 import '../fake/fake_auth_service.dart';
 import '../fake/fake_vekolo_api_client.dart';
+import '../helpers/path_provider_helper.dart';
 import '../helpers/shared_preferences_helper.dart';
 import 'robot_test_fn.dart';
 
@@ -57,6 +58,10 @@ class VekoloRobot {
     // This ensures data persists across app restarts within the same test
     createTestSharedPreferencesAsync();
     FlutterSecureStorage.setMockInitialValues({});
+
+    // Setup path_provider for workout session persistence
+    // This is needed for tests that emit power data and trigger workout recording
+    await setupPathProvider();
 
     _isSetup = true;
   }
@@ -100,6 +105,11 @@ class VekoloRobot {
     final fakeAuthService = FakeAuthService();
     final fakeApiClient = FakeVekoloApiClient();
 
+    // If loggedIn is requested, set up authentication before building the app
+    if (loggedIn) {
+      await fakeAuthService.setUpLoggedInUser();
+    }
+
     final app = ContextPlus.root(
       child: Builder(
         builder: (context) {
@@ -115,11 +125,6 @@ class VekoloRobot {
 
     await tester.pumpWidget(app);
     await idle();
-
-    // If loggedIn is requested, perform the login after the app is built
-    if (loggedIn) {
-      // TODO
-    }
 
     // If devices were pre-paired, wait for auto-connect to complete
     if (pairedDevices.isNotEmpty) {
@@ -167,11 +172,7 @@ class VekoloRobot {
     // Heart rate device assignment (optional)
     DeviceAssignment? hrAssignment;
     if (hrDevice != null) {
-      hrAssignment = DeviceAssignment(
-        deviceId: hrDevice.id,
-        deviceName: hrDevice.name,
-        transport: 'heart-rate',
-      );
+      hrAssignment = DeviceAssignment(deviceId: hrDevice.id, deviceName: hrDevice.name, transport: 'heart-rate');
     }
 
     await persistence.saveAssignments(
