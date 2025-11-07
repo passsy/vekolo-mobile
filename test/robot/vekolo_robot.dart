@@ -2,11 +2,14 @@ import 'package:clock/clock.dart' show clock;
 import 'package:context_plus/context_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart' as fbp;
+import 'package:talker/talker.dart' show LogLevel;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:spot/spot.dart';
+import 'package:talker_flutter/talker_flutter.dart';
 import 'package:vekolo/app/app.dart';
+import 'package:vekolo/app/logger.dart';
 import 'package:vekolo/app/refs.dart';
 import 'package:vekolo/domain/models/device_info.dart';
 import 'package:vekolo/pages/devices_page.dart';
@@ -204,6 +207,7 @@ class VekoloRobot {
   }
 
   Future<void> openManageDevicesPage() async {
+    talker.log('[Robot] open DevicesPage', logLevel: LogLevel.info, pen: AnsiPen()..green(bold: true));
     final button = spot<IconButton>().withChild(spotIcon(Icons.devices));
     await act.tap(button);
     await idle(500);
@@ -260,6 +264,7 @@ class VekoloRobot {
   }
 
   Future<void> startWorkout() async {
+    talker.logCustom(TalkerLog('[Robot] starting workout', pen: AnsiPen()..green(bold: true)));
     spotText('Start Workout').existsAtLeastOnce();
     await act.tap(spotText('Start Workout'));
     await idle(500);

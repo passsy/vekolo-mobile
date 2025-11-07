@@ -21,18 +21,23 @@ class SimpleLoggerFormatter implements LoggerFormatter {
     return coloredLines.join('\n');
   }
 
-  /// Reformats timestamp to align milliseconds
-  /// Example: "[info] | 13:42:35 971ms" -> "[info] | 13:42:35 971 ms"
+  /// Reformats timestamp to align milliseconds and log level
+  /// Example: "[info] | 1:42:35 971ms" -> "[info ] | 1:42:35 971 ms"
   String _formatTimestamp(String msg) {
-    // Pattern: [level] | HH:MM:SS <1-3 digits>ms
-    final timestampPattern = RegExp(r'(\[.*?\]\s*\|\s*\d{2}:\d{2}:\d{2})\s+(\d{1,3})ms');
+    // Pattern: [level] | H:MM:SS <1-3 digits>ms or HH:MM:SS
+    final timestampPattern = RegExp(r'\[(.*?)](\s*\|\s*\d{1,2}:\d{2}:\d{2})\s+(\d{1,3})ms');
 
     return msg.replaceAllMapped(timestampPattern, (match) {
-      final prefix = match.group(1)!;
-      final milliseconds = match.group(2)!;
+      final level = match.group(1)!;
+      final timeAndSeparator = match.group(2)!;
+      final milliseconds = match.group(3)!;
+
+      // Pad log level to 5 characters (to accommodate "warning" or "critical")
+      final paddedLevel = level.padRight(5);
       // Pad milliseconds to 3 characters (0-999)
       final paddedMs = milliseconds.padLeft(3);
-      return '$prefix $paddedMs ms';
+
+      return '$paddedLevel$timeAndSeparator $paddedMs ms';
     });
   }
 }
