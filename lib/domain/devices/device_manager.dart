@@ -850,6 +850,7 @@ class DeviceManager {
   ///
   /// Call this when the manager is no longer needed to prevent memory leaks.
   Future<void> dispose() async {
+    talker.info('[DeviceManager] dispose()');
     // Stop auto-connect scanning
     if (_autoConnectScanToken != null) {
       scanner.stopScan(_autoConnectScanToken!);
@@ -872,9 +873,9 @@ class DeviceManager {
     await Future.wait(
       _devices.map((device) async {
         try {
-          await platform.disconnect(device.id);
-        } catch (_) {
-          // Ignore errors - disconnect is safe to call even if not connected
+          await device.disconnect();
+        } catch (e, stack) {
+          talker.error('Failed to disconnect device ${device.name}', e, stack);
         }
       }),
     );

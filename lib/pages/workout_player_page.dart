@@ -110,11 +110,7 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
         }
       }
 
-      final playerService = WorkoutPlayerService(
-        workoutPlan: workoutPlan,
-        deviceManager: deviceManager,
-        ftp: ftp,
-      );
+      final playerService = WorkoutPlayerService(workoutPlan: workoutPlan, deviceManager: deviceManager, ftp: ftp);
 
       // Initialize recording service
       final recordingService = WorkoutRecordingService(
@@ -960,36 +956,30 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
     final targetWatts = (powerPercent * ftp * scaleFactor).round();
     final percentDisplay = (powerPercent * 100).toStringAsFixed(0);
 
-    final textStyle = isSecondary
-        ? TextStyle(fontSize: 14, color: Colors.grey[700])
-        : const TextStyle(fontSize: 16);
+    final textStyle = isSecondary ? TextStyle(fontSize: 14, color: Colors.grey[700]) : const TextStyle(fontSize: 16);
 
-    return Text(
-      'Power: $targetWatts W ($percentDisplay% FTP)',
-      style: textStyle,
-    );
+    return Text('Power: $targetWatts W ($percentDisplay% FTP)', style: textStyle);
   }
 
-  Widget _buildRampPowerTarget(double powerStartPercent, double powerEndPercent, int ftp, double scaleFactor, {bool isSecondary = false}) {
+  Widget _buildRampPowerTarget(
+    double powerStartPercent,
+    double powerEndPercent,
+    int ftp,
+    double scaleFactor, {
+    bool isSecondary = false,
+  }) {
     final startWatts = (powerStartPercent * ftp * scaleFactor).round();
     final endWatts = (powerEndPercent * ftp * scaleFactor).round();
     final startPercent = (powerStartPercent * 100).toStringAsFixed(0);
     final endPercent = (powerEndPercent * 100).toStringAsFixed(0);
 
-    final textStyle = isSecondary
-        ? TextStyle(fontSize: 14, color: Colors.grey[700])
-        : const TextStyle(fontSize: 16);
+    final textStyle = isSecondary ? TextStyle(fontSize: 14, color: Colors.grey[700]) : const TextStyle(fontSize: 16);
 
-    return Text(
-      'Power: $startWatts → $endWatts W ($startPercent% → $endPercent% FTP)',
-      style: textStyle,
-    );
+    return Text('Power: $startWatts → $endWatts W ($startPercent% → $endPercent% FTP)', style: textStyle);
   }
 
   Widget _buildCadenceTarget(int? cadence, int? cadenceLow, int? cadenceHigh, {bool isSecondary = false}) {
-    final textStyle = isSecondary
-        ? TextStyle(fontSize: 14, color: Colors.grey[700])
-        : const TextStyle(fontSize: 16);
+    final textStyle = isSecondary ? TextStyle(fontSize: 14, color: Colors.grey[700]) : const TextStyle(fontSize: 16);
 
     String cadenceText;
     if (cadence != null) {

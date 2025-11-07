@@ -255,7 +255,11 @@ class WorkoutSyncService {
       _retryCount = 0;
     } catch (e, stackTrace) {
       // Log error with full stack trace for debugging
-      talker.error('[WorkoutSyncService.syncTargetToDevice] Failed to set target power to ${command.targetWatts}W', e, stackTrace);
+      talker.error(
+        '[WorkoutSyncService.syncTargetToDevice] Failed to set target power to ${command.targetWatts}W',
+        e,
+        stackTrace,
+      );
 
       // Check if it's a "device not connected" error - don't retry those
       if (e is StateError && e.message == 'Device not connected') {
@@ -270,7 +274,9 @@ class WorkoutSyncService {
         final delay = _retryCount; // 1s, 2s, 3s for retries 1-3
         syncError.value = 'Retry $_retryCount/$_maxRetries';
 
-        talker.warning('[WorkoutSyncService.syncTargetToDevice] Retrying in ${delay}s (attempt $_retryCount/$_maxRetries)');
+        talker.warning(
+          '[WorkoutSyncService.syncTargetToDevice] Retrying in ${delay}s (attempt $_retryCount/$_maxRetries)',
+        );
 
         // Wait and retry
         await Future.delayed(Duration(seconds: delay));

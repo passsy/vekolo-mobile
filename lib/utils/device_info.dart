@@ -39,11 +39,7 @@ class DeviceInfoUtil {
         return linuxInfo.prettyName;
       }
     } catch (e, stackTrace) {
-      talker.error(
-        'Error getting device info: $e',
-        e,
-        stackTrace,
-      );
+      talker.error('Error getting device info: $e', e, stackTrace);
     }
 
     // Fallback

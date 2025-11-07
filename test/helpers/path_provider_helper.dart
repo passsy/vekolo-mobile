@@ -45,9 +45,7 @@ class FakePathProviderPlatform extends PathProviderPlatform {
   }
 
   @override
-  Future<List<String>?> getExternalStoragePaths({
-    StorageDirectory? type,
-  }) async {
+  Future<List<String>?> getExternalStoragePaths({StorageDirectory? type}) async {
     final path = _setUpPath('externalStorage').path;
     return <String>[path];
   }

@@ -146,12 +146,7 @@ class SimulationParameters {
   }
 
   @override
-  int get hashCode => Object.hash(
-        windSpeed,
-        grade,
-        rollingResistance,
-        windResistanceCoefficient,
-      );
+  int get hashCode => Object.hash(windSpeed, grade, rollingResistance, windResistanceCoefficient);
 
   @override
   String toString() {

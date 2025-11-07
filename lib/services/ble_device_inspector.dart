@@ -183,11 +183,7 @@ class BleDeviceInspector {
                 talker.info('[BleDeviceInspector] Read ${value.length} byte(s) from descriptor ${descriptor.uuid}');
               }
             } catch (e, stackTrace) {
-              talker.error(
-                '[BleDeviceInspector] Failed to read descriptor ${descriptor.uuid}: $e',
-                e,
-                stackTrace,
-              );
+              talker.error('[BleDeviceInspector] Failed to read descriptor ${descriptor.uuid}: $e', e, stackTrace);
               descriptorReadError = e.toString();
             }
 
@@ -238,11 +234,7 @@ class BleDeviceInspector {
       }
       return (value: null, error: null);
     } catch (e, stackTrace) {
-      talker.error(
-        '[BleDeviceInspector] Failed to read characteristic ${characteristic.uuid}: $e',
-        e,
-        stackTrace,
-      );
+      talker.error('[BleDeviceInspector] Failed to read characteristic ${characteristic.uuid}: $e', e, stackTrace);
       return (value: null, error: e.toString());
     }
   }

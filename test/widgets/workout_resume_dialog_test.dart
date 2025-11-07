@@ -24,9 +24,7 @@ void main() {
     testWidgets('shows workout information', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
-          home: Scaffold(
-            body: WorkoutResumeDialog(session: testSession),
-          ),
+          home: Scaffold(body: WorkoutResumeDialog(session: testSession)),
         ),
       );
 
@@ -43,9 +41,7 @@ void main() {
     testWidgets('has three action buttons', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
-          home: Scaffold(
-            body: WorkoutResumeDialog(session: testSession),
-          ),
+          home: Scaffold(body: WorkoutResumeDialog(session: testSession)),
         ),
       );
 
@@ -163,9 +159,7 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
-          home: Scaffold(
-            body: WorkoutResumeDialog(session: session),
-          ),
+          home: Scaffold(body: WorkoutResumeDialog(session: session)),
         ),
       );
 
@@ -185,9 +179,7 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
-          home: Scaffold(
-            body: WorkoutResumeDialog(session: session),
-          ),
+          home: Scaffold(body: WorkoutResumeDialog(session: session)),
         ),
       );
 

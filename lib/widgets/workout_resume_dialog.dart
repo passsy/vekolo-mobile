@@ -22,10 +22,7 @@ enum ResumeChoice {
 ///
 /// Returns [ResumeChoice] or null if dismissed.
 class WorkoutResumeDialog extends StatelessWidget {
-  const WorkoutResumeDialog({
-    required this.session,
-    super.key,
-  });
+  const WorkoutResumeDialog({required this.session, super.key});
 
   final WorkoutSession session;
 
@@ -47,10 +44,7 @@ class WorkoutResumeDialog extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'We found an incomplete workout session from earlier.',
-            style: TextStyle(fontSize: 16),
-          ),
+          const Text('We found an incomplete workout session from earlier.', style: TextStyle(fontSize: 16)),
           const SizedBox(height: 16),
           _buildInfoRow(
             icon: Icons.timer,
@@ -58,11 +52,7 @@ class WorkoutResumeDialog extends StatelessWidget {
             value: '$minutes:${seconds.toString().padLeft(2, '0')}',
           ),
           const SizedBox(height: 8),
-          _buildInfoRow(
-            icon: Icons.calendar_today,
-            label: 'Started',
-            value: _formatTimestamp(session.startTime),
-          ),
+          _buildInfoRow(icon: Icons.calendar_today, label: 'Started', value: _formatTimestamp(session.startTime)),
           const SizedBox(height: 16),
           const Text(
             'Would you like to resume where you left off?',
@@ -75,46 +65,24 @@ class WorkoutResumeDialog extends StatelessWidget {
           onPressed: () => Navigator.of(context).pop(ResumeChoice.startFresh),
           child: const Text('Start Fresh'),
         ),
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(ResumeChoice.discard),
-          child: const Text('Discard'),
-        ),
+        TextButton(onPressed: () => Navigator.of(context).pop(ResumeChoice.discard), child: const Text('Discard')),
         ElevatedButton.icon(
           onPressed: () => Navigator.of(context).pop(ResumeChoice.resume),
           icon: const Icon(Icons.play_arrow),
           label: const Text('Resume'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.blue,
-            foregroundColor: Colors.white,
-          ),
+          style: ElevatedButton.styleFrom(backgroundColor: Colors.blue, foregroundColor: Colors.white),
         ),
       ],
     );
   }
 
-  Widget _buildInfoRow({
-    required IconData icon,
-    required String label,
-    required String value,
-  }) {
+  Widget _buildInfoRow({required IconData icon, required String label, required String value}) {
     return Row(
       children: [
         Icon(icon, size: 16, color: Colors.grey[600]),
         const SizedBox(width: 8),
-        Text(
-          '$label: ',
-          style: TextStyle(
-            fontSize: 14,
-            color: Colors.grey[700],
-          ),
-        ),
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
+        Text('$label: ', style: TextStyle(fontSize: 14, color: Colors.grey[700])),
+        Text(value, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
       ],
     );
   }

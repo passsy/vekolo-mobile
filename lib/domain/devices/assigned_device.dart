@@ -40,12 +40,7 @@ class AssignedDevice {
   /// Used when assigning a device that's already connected.
   factory AssignedDevice.fromDevice(FitnessDevice device) {
     final transport = device.transportIds.isNotEmpty ? device.transportIds.first : 'unknown';
-    return AssignedDevice(
-      deviceId: device.id,
-      deviceName: device.name,
-      transport: transport,
-      connectedDevice: device,
-    );
+    return AssignedDevice(deviceId: device.id, deviceName: device.name, transport: transport, connectedDevice: device);
   }
 
   /// Device ID.

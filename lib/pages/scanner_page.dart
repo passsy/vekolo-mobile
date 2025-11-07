@@ -504,9 +504,7 @@ class _DeviceConnectingDialogState extends State<_DeviceConnectingDialog> {
           deviceId: widget.device.deviceId,
         );
 
-        talker.info(
-          '[DeviceConnectingDialog] Found ${transports.length} compatible transport(s)',
-        );
+        talker.info('[DeviceConnectingDialog] Found ${transports.length} compatible transport(s)');
 
         if (transports.isEmpty) {
           throw Exception(
@@ -555,7 +553,8 @@ class _DeviceConnectingDialogState extends State<_DeviceConnectingDialog> {
         autoAssignments.add('primary trainer');
       }
 
-      if (fitnessDevice.capabilities.contains(device_info.DeviceDataType.power) && deviceManager.powerSourceBeacon.value == null) {
+      if (fitnessDevice.capabilities.contains(device_info.DeviceDataType.power) &&
+          deviceManager.powerSourceBeacon.value == null) {
         deviceManager.assignPowerSource(fitnessDevice.id);
         autoAssignments.add('power source');
       }
@@ -566,7 +565,8 @@ class _DeviceConnectingDialogState extends State<_DeviceConnectingDialog> {
         autoAssignments.add('cadence source');
       }
 
-      if (fitnessDevice.capabilities.contains(device_info.DeviceDataType.speed) && deviceManager.speedSourceBeacon.value == null) {
+      if (fitnessDevice.capabilities.contains(device_info.DeviceDataType.speed) &&
+          deviceManager.speedSourceBeacon.value == null) {
         deviceManager.assignSpeedSource(fitnessDevice.id);
         autoAssignments.add('speed source');
       }

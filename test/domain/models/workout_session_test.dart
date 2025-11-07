@@ -12,10 +12,7 @@ void main() {
     });
 
     test('fromString throws on invalid value', () {
-      expect(
-        () => SessionStatus.fromString('invalid'),
-        throwsArgumentError,
-      );
+      expect(() => SessionStatus.fromString('invalid'), throwsArgumentError);
     });
 
     test('value property returns correct string', () {
@@ -136,15 +133,7 @@ void main() {
   });
 
   group('WorkoutSession', () {
-    final testWorkoutPlan = WorkoutPlan(
-      plan: [
-        const PowerBlock(
-          id: 'warmup',
-          duration: 300000,
-          power: 0.5,
-        ),
-      ],
-    );
+    final testWorkoutPlan = WorkoutPlan(plan: [const PowerBlock(id: 'warmup', duration: 300000, power: 0.5)]);
 
     final testMetadata = WorkoutSessionMetadata(
       workoutId: 'V1StGXR8_Z5jdHi6B-myT',

@@ -16,10 +16,7 @@ void main() {
 
   /// Creates test dependencies. Call this at the start of each test.
   /// Automatically registers cleanup with addTearDown.
-  ({
-    DeviceManager deviceManager,
-    FakeFitnessDevice fakeDevice,
-  }) createTestDependencies() {
+  ({DeviceManager deviceManager, FakeFitnessDevice fakeDevice}) createTestDependencies() {
     final platform = FakeBlePlatform();
     final scanner = BleScanner(platform: platform, permissions: FakeBlePermissions());
     scanner.initialize();
@@ -41,10 +38,7 @@ void main() {
       await deviceManager.dispose();
     });
 
-    return (
-      deviceManager: deviceManager,
-      fakeDevice: fakeDevice,
-    );
+    return (deviceManager: deviceManager, fakeDevice: fakeDevice);
   }
 
   group('Stale Data Detection - Power', () {

@@ -1,10 +1,8 @@
 import 'dart:io';
 
-import 'package:clock/clock.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vekolo/domain/devices/device_manager.dart';
 import 'package:vekolo/domain/models/workout/workout_models.dart';
 import 'package:vekolo/domain/models/workout_session.dart';
@@ -19,9 +17,7 @@ import 'package:vekolo/ble/ble_scanner.dart';
 import 'package:vekolo/ble/transport_registry.dart';
 
 /// Fake PathProviderPlatform for testing
-class FakePathProviderPlatform extends Fake
-    with MockPlatformInterfaceMixin
-    implements PathProviderPlatform {
+class FakePathProviderPlatform extends Fake with MockPlatformInterfaceMixin implements PathProviderPlatform {
   final Directory tempDir;
 
   FakePathProviderPlatform(this.tempDir);
@@ -78,11 +74,7 @@ void main() {
       );
 
       // === PHASE 1: Start workout and record ===
-      final player1 = WorkoutPlayerService(
-        workoutPlan: plan,
-        deviceManager: deviceManager,
-        ftp: 200,
-      );
+      final player1 = WorkoutPlayerService(workoutPlan: plan, deviceManager: deviceManager, ftp: 200);
 
       final recorder1 = WorkoutRecordingService(
         playerService: player1,
@@ -131,11 +123,7 @@ void main() {
       expect(crashedSession.currentBlockIndex, 1);
 
       // === PHASE 3: App restart and resume ===
-      final player2 = WorkoutPlayerService(
-        workoutPlan: plan,
-        deviceManager: deviceManager,
-        ftp: 200,
-      );
+      final player2 = WorkoutPlayerService(workoutPlan: plan, deviceManager: deviceManager, ftp: 200);
 
       final recorder2 = WorkoutRecordingService(
         playerService: player2,
@@ -144,10 +132,7 @@ void main() {
       );
 
       // Restore player state
-      player2.restoreState(
-        elapsedMs: crashedSession.elapsedMs,
-        currentBlockIndex: crashedSession.currentBlockIndex,
-      );
+      player2.restoreState(elapsedMs: crashedSession.elapsedMs, currentBlockIndex: crashedSession.currentBlockIndex);
 
       // Verify state restored
       expect(player2.elapsedTime$.value, 65000);

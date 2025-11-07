@@ -37,12 +37,7 @@ void main() {
     );
 
     await robot.launchApp(pairedDevices: [kickrCore], loggedIn: true);
-
-    addRobotEvent('App launched');
-
-    // Navigate to workout player
-    await act.tap(spotText('Start Workout'));
-    await robot.idle(1000);
+    await robot.startWorkout();
 
     // Verify initial state - workout not started
     spotText('Start pedaling to begin workout').existsAtLeastOnce();
@@ -78,10 +73,7 @@ void main() {
     );
 
     await robot.launchApp(pairedDevices: [kickrCore], loggedIn: true);
-
-    // Navigate to workout player
-    await act.tap(spotText('Start Workout'));
-    await robot.idle(1000);
+    await robot.startWorkout();
 
     addRobotEvent('Workout player loaded');
 
@@ -119,10 +111,10 @@ void main() {
     );
 
     await robot.launchApp(pairedDevices: [kickrCore], loggedIn: true);
+    await robot.startWorkout();
 
-    // Navigate to workout player
-    await act.tap(spotText('Start Workout'));
-    await robot.idle(1000);
+    // Wait for workout player to fully load
+    spotText('CURRENT BLOCK').existsAtLeastOnce();
 
     // Start workout with specific power and cadence values
     final indoorBikeDataUuid = fbp.Guid('00002AD2-0000-1000-8000-00805f9b34fb');

@@ -37,7 +37,6 @@ class _VekoloAppState extends State<VekoloApp> {
 
   /// Perform async initialization of services before mounting the main app / drawing the first frame
   Future<void> _initialize(BuildContext context) async {
-    talker.debug('[VekoloApp] _initialize starting');
     if (!mounted) return;
     try {
       // Initialize SharedPreferences first (required by other services)
@@ -45,9 +44,6 @@ class _VekoloAppState extends State<VekoloApp> {
 
       // Disable verbose flutter_blue_plus logging
       Refs.blePlatform.of(context).setLogLevel(LogLevel.none);
-
-      // State holders are already initialized above via Refs
-      talker.info('[VekoloApp] State holders initialized');
 
       // Capture references before async operations
       final deviceManager = Refs.deviceManager.of(context);
@@ -70,7 +66,6 @@ class _VekoloAppState extends State<VekoloApp> {
 
       // Mark initialization as complete
       if (mounted) {
-        talker.debug('[VekoloApp] _initialized = true');
         setState(() {
           _initialized = true;
           _initializationError = null;
@@ -90,12 +85,10 @@ class _VekoloAppState extends State<VekoloApp> {
 
   @override
   Widget build(BuildContext context) {
-    talker.debug('[VekoloApp] build: initialized=$_initialized');
     return ContextPlus.root(
       child: AppRestart(
         onStop: () {
           setState(() {
-            talker.debug('[VekoloApp] reset _initialized');
             _initialized = false;
           });
         },

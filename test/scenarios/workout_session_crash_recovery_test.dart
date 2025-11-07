@@ -21,28 +21,16 @@ void main() {
     // Setup: Create trainer device with power/HR/cadence capabilities
     final kickrCore = robot.aether.createDevice(
       name: 'Kickr Core',
-      capabilities: {
-        DeviceDataType.power,
-        DeviceDataType.cadence,
-        DeviceDataType.speed,
-      },
+      capabilities: {DeviceDataType.power, DeviceDataType.cadence, DeviceDataType.speed},
     );
 
-    final hrMonitor = robot.aether.createDevice(
-      name: 'HR Monitor',
-      capabilities: {DeviceDataType.heartRate},
-    );
+    final hrMonitor = robot.aether.createDevice(name: 'HR Monitor', capabilities: {DeviceDataType.heartRate});
 
-    await robot.launchApp(
-      pairedDevices: [kickrCore, hrMonitor],
-      loggedIn: true,
-    );
+    await robot.launchApp(pairedDevices: [kickrCore, hrMonitor], loggedIn: true);
 
     addRobotEvent('App launched with paired devices');
 
-    // Navigate to workout player
-    await act.tap(spotText('Start Workout'));
-    await robot.idle(1000);
+    await robot.startWorkout();
 
     // Verify workout player page loaded
     spotText('CURRENT BLOCK').existsAtLeastOnce();
@@ -59,10 +47,10 @@ void main() {
 
     // Emit power at 150W, cadence at 90 RPM
     final powerData = FtmsDataBuilder()
-      .withPower(150)
-      .withCadence(180) // 180 * 0.5 = 90 RPM
-      .withSpeed(3000) // 30 km/h
-      .build();
+        .withPower(150)
+        .withCadence(180) // 180 * 0.5 = 90 RPM
+        .withSpeed(3000) // 30 km/h
+        .build();
 
     // Emit data to trigger workout start
     kickrCore.emitCharacteristic(indoorBikeDataUuid, powerData);
@@ -96,23 +84,14 @@ void main() {
     // Setup: Create trainer device
     final kickrCore = robot.aether.createDevice(
       name: 'Kickr Core',
-      capabilities: {
-        DeviceDataType.power,
-        DeviceDataType.cadence,
-        DeviceDataType.speed,
-      },
+      capabilities: {DeviceDataType.power, DeviceDataType.cadence, DeviceDataType.speed},
     );
 
-    await robot.launchApp(
-      pairedDevices: [kickrCore],
-      loggedIn: true,
-    );
+    await robot.launchApp(pairedDevices: [kickrCore], loggedIn: true);
 
     addRobotEvent('App launched with paired devices');
 
-    // Navigate to workout player
-    await act.tap(spotText('Start Workout'));
-    await robot.idle(1000);
+    await robot.startWorkout();
 
     spotText('CURRENT BLOCK').existsAtLeastOnce();
     spotText('Start pedaling to begin workout').existsAtLeastOnce();
@@ -122,10 +101,10 @@ void main() {
     // Emit power data to start workout
     final indoorBikeDataUuid = fbp.Guid('00002AD2-0000-1000-8000-00805f9b34fb');
     final powerData = FtmsDataBuilder()
-      .withPower(150)
-      .withCadence(180) // 90 RPM
-      .withSpeed(3000) // 30 km/h
-      .build();
+        .withPower(150)
+        .withCadence(180) // 90 RPM
+        .withSpeed(3000) // 30 km/h
+        .build();
 
     // Start workout by emitting power
     kickrCore.emitCharacteristic(indoorBikeDataUuid, powerData);
@@ -164,8 +143,7 @@ void main() {
     addRobotEvent('Resume dialog displayed');
 
     // Choose Resume
-    await act.tap(spotText('Resume'));
-    await robot.idle(1000);
+    await robot.resumeWorkout();
 
     addRobotEvent('User chose to resume workout');
 
@@ -185,34 +163,22 @@ void main() {
     // Setup: Create trainer device
     final kickrCore = robot.aether.createDevice(
       name: 'Kickr Core',
-      capabilities: {
-        DeviceDataType.power,
-        DeviceDataType.cadence,
-        DeviceDataType.speed,
-      },
+      capabilities: {DeviceDataType.power, DeviceDataType.cadence, DeviceDataType.speed},
     );
 
-    await robot.launchApp(
-      pairedDevices: [kickrCore],
-      loggedIn: true,
-    );
+    await robot.launchApp(pairedDevices: [kickrCore], loggedIn: true);
 
     addRobotEvent('App launched with paired devices');
 
     // Navigate to workout player and start workout
-    await act.tap(spotText('Start Workout'));
-    await robot.idle(1000);
+    await robot.startWorkout();
 
     spotText('Start pedaling to begin workout').existsAtLeastOnce();
     addRobotEvent('Workout player loaded');
 
     // Emit power data to start workout
     final indoorBikeDataUuid = fbp.Guid('00002AD2-0000-1000-8000-00805f9b34fb');
-    final powerData = FtmsDataBuilder()
-      .withPower(150)
-      .withCadence(180)
-      .withSpeed(3000)
-      .build();
+    final powerData = FtmsDataBuilder().withPower(150).withCadence(180).withSpeed(3000).build();
 
     // Run workout for a few seconds
     for (int i = 0; i < 3; i++) {
@@ -236,8 +202,7 @@ void main() {
     spotText('Resume Workout?').existsAtLeastOnce();
 
     // Choose Discard
-    await act.tap(spotText('Discard'));
-    await robot.idle(500);
+    await robot.discardWorkout();
 
     addRobotEvent('User chose to discard workout');
 
@@ -248,8 +213,7 @@ void main() {
     addRobotEvent('Back at home page - workout discarded');
 
     // Verify can start a new workout
-    await act.tap(spotText('Start Workout'));
-    await robot.idle(1000);
+    await robot.startWorkout();
 
     spotText('Start pedaling to begin workout').existsAtLeastOnce();
 
@@ -262,34 +226,22 @@ void main() {
     // Setup: Create trainer device
     final kickrCore = robot.aether.createDevice(
       name: 'Kickr Core',
-      capabilities: {
-        DeviceDataType.power,
-        DeviceDataType.cadence,
-        DeviceDataType.speed,
-      },
+      capabilities: {DeviceDataType.power, DeviceDataType.cadence, DeviceDataType.speed},
     );
 
-    await robot.launchApp(
-      pairedDevices: [kickrCore],
-      loggedIn: true,
-    );
+    await robot.launchApp(pairedDevices: [kickrCore], loggedIn: true);
 
     addRobotEvent('App launched with paired devices');
 
     // Navigate to workout player and start workout
-    await act.tap(spotText('Start Workout'));
-    await robot.idle(1000);
+    await robot.startWorkout();
 
     spotText('Start pedaling to begin workout').existsAtLeastOnce();
     addRobotEvent('Workout player loaded');
 
     // Emit power data to start workout
     final indoorBikeDataUuid = fbp.Guid('00002AD2-0000-1000-8000-00805f9b34fb');
-    final powerData = FtmsDataBuilder()
-      .withPower(150)
-      .withCadence(180)
-      .withSpeed(3000)
-      .build();
+    final powerData = FtmsDataBuilder().withPower(150).withCadence(180).withSpeed(3000).build();
 
     // Run workout for a few seconds
     for (int i = 0; i < 3; i++) {
@@ -313,8 +265,7 @@ void main() {
     spotText('Resume Workout?').existsAtLeastOnce();
 
     // Choose Start Fresh
-    await act.tap(spotText('Start Fresh'));
-    await robot.idle(1000);
+    await robot.startFreshWorkout();
 
     addRobotEvent('User chose to start fresh');
 
@@ -337,34 +288,22 @@ void main() {
     // Setup: Create trainer device
     final kickrCore = robot.aether.createDevice(
       name: 'Kickr Core',
-      capabilities: {
-        DeviceDataType.power,
-        DeviceDataType.cadence,
-        DeviceDataType.speed,
-      },
+      capabilities: {DeviceDataType.power, DeviceDataType.cadence, DeviceDataType.speed},
     );
 
-    await robot.launchApp(
-      pairedDevices: [kickrCore],
-      loggedIn: true,
-    );
+    await robot.launchApp(pairedDevices: [kickrCore], loggedIn: true);
 
     addRobotEvent('App launched with paired devices');
 
     // Navigate to workout player
-    await act.tap(spotText('Start Workout'));
-    await robot.idle(1000);
+    await robot.startWorkout();
 
     spotText('Start pedaling to begin workout').existsAtLeastOnce();
     addRobotEvent('Workout player loaded');
 
     // Emit power data to start workout
     final indoorBikeDataUuid = fbp.Guid('00002AD2-0000-1000-8000-00805f9b34fb');
-    final powerData = FtmsDataBuilder()
-      .withPower(150)
-      .withCadence(180)
-      .withSpeed(3000)
-      .build();
+    final powerData = FtmsDataBuilder().withPower(150).withCadence(180).withSpeed(3000).build();
 
     // Start workout with power streaming
     kickrCore.emitCharacteristic(indoorBikeDataUuid, powerData);

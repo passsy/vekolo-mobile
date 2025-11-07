@@ -203,20 +203,12 @@ class BleDevice extends FitnessDevice {
           final canSupport = transport.canSupport(discoveredDevice);
           if (canSupport) {
             phase1VerifiedTransports.add(transport);
-            talker.info(
-              '[BleDevice] Transport ${transport.runtimeType} passed Phase 1 (canSupport)',
-            );
+            talker.info('[BleDevice] Transport ${transport.runtimeType} passed Phase 1 (canSupport)');
           } else {
-            talker.info(
-              '[BleDevice] Transport ${transport.runtimeType} failed Phase 1 (canSupport)',
-            );
+            talker.info('[BleDevice] Transport ${transport.runtimeType} failed Phase 1 (canSupport)');
           }
         } catch (e, stackTrace) {
-          talker.error(
-            '[BleDevice] Phase 1 verification failed for ${transport.runtimeType}: $e',
-            e,
-            stackTrace,
-          );
+          talker.error('[BleDevice] Phase 1 verification failed for ${transport.runtimeType}: $e', e, stackTrace);
         }
       }
 
@@ -230,20 +222,12 @@ class BleDevice extends FitnessDevice {
           final isCompatible = await transport.verifyCompatibility(device: device, services: services);
           if (isCompatible) {
             verifiedTransports.add(transport);
-            talker.info(
-              '[BleDevice] Transport ${transport.runtimeType} passed Phase 2 (verifyCompatibility)',
-            );
+            talker.info('[BleDevice] Transport ${transport.runtimeType} passed Phase 2 (verifyCompatibility)');
           } else {
-            talker.info(
-              '[BleDevice] Transport ${transport.runtimeType} failed Phase 2 (verifyCompatibility)',
-            );
+            talker.info('[BleDevice] Transport ${transport.runtimeType} failed Phase 2 (verifyCompatibility)');
           }
         } catch (e, stackTrace) {
-          talker.error(
-            '[BleDevice] Phase 2 verification failed for ${transport.runtimeType}: $e',
-            e,
-            stackTrace,
-          );
+          talker.error('[BleDevice] Phase 2 verification failed for ${transport.runtimeType}: $e', e, stackTrace);
         }
       }
 
@@ -266,11 +250,7 @@ class BleDevice extends FitnessDevice {
           attachedCount++;
           talker.info('[BleDevice] Successfully attached ${transport.runtimeType}');
         } catch (e, stackTrace) {
-          talker.error(
-            '[BleDevice] Transport attachment failed for ${transport.runtimeType}: $e',
-            e,
-            stackTrace,
-          );
+          talker.error('[BleDevice] Transport attachment failed for ${transport.runtimeType}: $e', e, stackTrace);
           // Don't remove - just let it stay detached
           // Error is stored in transport.lastAttachError
         }

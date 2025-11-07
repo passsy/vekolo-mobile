@@ -771,9 +771,7 @@ void main() {
 
       test('restoreState with zero elapsed time starts from beginning', () async {
         final deviceManager = await createDeviceManager();
-        final plan = WorkoutPlan(
-          plan: [PowerBlock(id: 'block1', duration: 60000, power: 0.5)],
-        );
+        final plan = WorkoutPlan(plan: [PowerBlock(id: 'block1', duration: 60000, power: 0.5)]);
 
         final player = WorkoutPlayerService(workoutPlan: plan, deviceManager: deviceManager, ftp: 200);
 

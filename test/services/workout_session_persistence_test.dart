@@ -27,10 +27,7 @@ void main() {
 
   /// Creates test dependencies. Call this at the start of each test.
   /// Automatically registers cleanup with addTearDown.
-  Future<({
-    Directory tempDir,
-    WorkoutSessionPersistence persistence,
-  })> createTestDependencies() async {
+  Future<({Directory tempDir, WorkoutSessionPersistence persistence})> createTestDependencies() async {
     // Create temporary directory for test files
     final tempDir = await Directory.systemTemp.createTemp('workout_session_test_');
 
@@ -41,9 +38,7 @@ void main() {
     createTestSharedPreferencesAsync();
 
     // Setup persistence
-    final persistence = WorkoutSessionPersistence(
-      prefs: SharedPreferencesAsync(),
-    );
+    final persistence = WorkoutSessionPersistence(prefs: SharedPreferencesAsync());
 
     // Register cleanup
     addTearDown(() async {
@@ -160,11 +155,7 @@ void main() {
     test('updateSessionStatus updates metadata and clears active flag', () async {
       final deps = await createTestDependencies();
 
-      final workoutId = await deps.persistence.createSession(
-        'Test Workout',
-        testWorkoutPlan,
-        ftp: 200,
-      );
+      final workoutId = await deps.persistence.createSession('Test Workout', testWorkoutPlan, ftp: 200);
 
       // Update to completed
       await deps.persistence.updateSessionStatus(workoutId, SessionStatus.completed);
@@ -182,11 +173,7 @@ void main() {
     test('updateSessionStatus to abandoned clears active flag', () async {
       final deps = await createTestDependencies();
 
-      final workoutId = await deps.persistence.createSession(
-        'Test Workout',
-        testWorkoutPlan,
-        ftp: 200,
-      );
+      final workoutId = await deps.persistence.createSession('Test Workout', testWorkoutPlan, ftp: 200);
 
       await deps.persistence.updateSessionStatus(workoutId, SessionStatus.abandoned);
 
@@ -198,11 +185,7 @@ void main() {
     test('deleteSession removes entire workout folder', () async {
       final deps = await createTestDependencies();
 
-      final workoutId = await deps.persistence.createSession(
-        'Test Workout',
-        testWorkoutPlan,
-        ftp: 200,
-      );
+      final workoutId = await deps.persistence.createSession('Test Workout', testWorkoutPlan, ftp: 200);
 
       // Verify folder exists
       final workoutDir = await deps.persistence.getWorkoutDirectory(workoutId);
@@ -240,9 +223,7 @@ void main() {
   });
 
   group('Sample Storage (JSONL)', () {
-    final testWorkoutPlan = WorkoutPlan(
-      plan: [const PowerBlock(id: 'test', duration: 300000, power: 0.5)],
-    );
+    final testWorkoutPlan = WorkoutPlan(plan: [const PowerBlock(id: 'test', duration: 300000, power: 0.5)]);
 
     test('appendSample buffers and writes samples', () async {
       final deps = await createTestDependencies();
@@ -370,9 +351,7 @@ void main() {
   });
 
   group('Directory Management', () {
-    final testWorkoutPlan = WorkoutPlan(
-      plan: [const PowerBlock(id: 'test', duration: 300000, power: 0.5)],
-    );
+    final testWorkoutPlan = WorkoutPlan(plan: [const PowerBlock(id: 'test', duration: 300000, power: 0.5)]);
 
     test('listWorkoutIds returns empty list when no workouts', () async {
       final deps = await createTestDependencies();

@@ -5,10 +5,7 @@ import 'package:vekolo/ble/ble_transport.dart';
 
 /// Registry entry for a transport implementation.
 class TransportRegistration {
-  const TransportRegistration({
-    required this.name,
-    required this.factory,
-  });
+  const TransportRegistration({required this.name, required this.factory});
 
   /// Human-readable name for this transport (e.g., "FTMS", "Heart Rate Service")
   final String name;
@@ -76,9 +73,7 @@ class TransportRegistry {
   /// The transport's `canSupport()` method will be called during detection
   /// to check compatibility with discovered devices.
   void register(TransportRegistration registration) {
-    talker.info(
-      '[TransportRegistry] Registering transport: ${registration.name}',
-    );
+    talker.info('[TransportRegistry] Registering transport: ${registration.name}');
     _registrations.add(registration);
   }
 
@@ -128,13 +123,8 @@ class TransportRegistry {
   ///   throw UnsupportedDeviceException('No compatible transports found');
   /// }
   /// ```
-  List<BleTransport> detectCompatibleTransports(
-    DiscoveredDevice discovered, {
-    required String deviceId,
-  }) {
-    talker.info(
-      '[TransportRegistry] Detecting transports for device: ${discovered.name} (${discovered.deviceId})',
-    );
+  List<BleTransport> detectCompatibleTransports(DiscoveredDevice discovered, {required String deviceId}) {
+    talker.info('[TransportRegistry] Detecting transports for device: ${discovered.name} (${discovered.deviceId})');
 
     final compatibleTransports = <BleTransport>[];
 
@@ -147,29 +137,19 @@ class TransportRegistry {
         final isCompatible = transport.canSupport(discovered);
 
         if (isCompatible) {
-          talker.info(
-            '[TransportRegistry] ✓ ${registration.name} is compatible',
-          );
+          talker.info('[TransportRegistry] ✓ ${registration.name} is compatible');
           compatibleTransports.add(transport);
         } else {
-          talker.info(
-            '[TransportRegistry] ✗ ${registration.name} is not compatible',
-          );
+          talker.info('[TransportRegistry] ✗ ${registration.name} is not compatible');
           // Dispose transport since we won't use it
           transport.dispose();
         }
       } catch (e, stackTrace) {
-        talker.info(
-          '[TransportRegistry] Error checking ${registration.name} compatibility: $e',
-          e,
-          stackTrace,
-        );
+        talker.info('[TransportRegistry] Error checking ${registration.name} compatibility: $e', e, stackTrace);
       }
     }
 
-    talker.info(
-      '[TransportRegistry] Found ${compatibleTransports.length} compatible transport(s)',
-    );
+    talker.info('[TransportRegistry] Found ${compatibleTransports.length} compatible transport(s)');
 
     return compatibleTransports;
   }

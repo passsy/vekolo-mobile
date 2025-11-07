@@ -167,20 +167,11 @@ class FakeAuthService implements AuthService {
     String name = 'Test User',
     int ftp = 200,
   }) async {
-    final testUser = User.create(
-      id: id,
-      email: email,
-      emailVerified: true,
-      name: name,
-      ftp: ftp,
-    );
+    final testUser = User.create(id: id, email: email, emailVerified: true, name: name, ftp: ftp);
     final accessToken = createFakeAccessToken(testUser);
     final refreshToken = RefreshToken('fake_refresh_token_$id');
 
-    await saveTokens(
-      accessToken: accessToken,
-      refreshToken: refreshToken,
-    );
+    await saveTokens(accessToken: accessToken, refreshToken: refreshToken);
   }
 
   // Properties not directly exposed by AuthService but needed for interface compatibility

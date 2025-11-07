@@ -140,18 +140,12 @@ class HomePage extends StatelessWidget {
               if (user != null) ...[
                 Text(
                   'Welcome back, ${user.name}!',
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 8),
               ],
-              Text(
-                'Ready to train?',
-                style: Theme.of(context).textTheme.titleMedium,
-                textAlign: TextAlign.center,
-              ),
+              Text('Ready to train?', style: Theme.of(context).textTheme.titleMedium, textAlign: TextAlign.center),
               const SizedBox(height: 32),
 
               // Sample Workout Card
@@ -164,11 +158,7 @@ class HomePage extends StatelessWidget {
                     children: [
                       Row(
                         children: [
-                          Icon(
-                            Icons.fitness_center,
-                            size: 32,
-                            color: Theme.of(context).colorScheme.primary,
-                          ),
+                          Icon(Icons.fitness_center, size: 32, color: Theme.of(context).colorScheme.primary),
                           const SizedBox(width: 12),
                           Expanded(
                             child: Column(
@@ -176,15 +166,13 @@ class HomePage extends StatelessWidget {
                               children: [
                                 Text(
                                   'Sweet Spot Workout',
-                                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                        fontWeight: FontWeight.bold,
-                                      ),
+                                  style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                                 ),
                                 Text(
                                   _formatDuration(totalDuration),
-                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                        color: Theme.of(context).colorScheme.secondary,
-                                      ),
+                                  style: Theme.of(
+                                    context,
+                                  ).textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.secondary),
                                 ),
                               ],
                             ),
@@ -248,9 +236,7 @@ class HomePage extends StatelessWidget {
               // Quick actions
               Text(
                 'Quick Actions',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 16),
               Wrap(
@@ -284,15 +270,9 @@ class HomePage extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    OutlinedButton(
-                      onPressed: () => context.push('/login'),
-                      child: const Text('Login'),
-                    ),
+                    OutlinedButton(onPressed: () => context.push('/login'), child: const Text('Login')),
                     const SizedBox(width: 16),
-                    ElevatedButton(
-                      onPressed: () => context.push('/signup'),
-                      child: const Text('Sign Up'),
-                    ),
+                    ElevatedButton(onPressed: () => context.push('/signup'), child: const Text('Sign Up')),
                   ],
                 ),
               ],
@@ -314,10 +294,7 @@ class HomePage extends StatelessWidget {
       children: [
         Container(
           padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(8),
-          ),
+          decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
           child: Icon(icon, color: color, size: 20),
         ),
         const SizedBox(width: 12),
@@ -325,18 +302,8 @@ class HomePage extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                title,
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-              ),
-              Text(
-                subtitle,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Colors.grey[600],
-                    ),
-              ),
+              Text(title, style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
+              Text(subtitle, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey[600])),
             ],
           ),
         ),

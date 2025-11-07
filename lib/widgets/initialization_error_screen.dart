@@ -2,12 +2,7 @@ import 'package:flutter/material.dart';
 
 /// Shown when app initialization fails.
 class InitializationErrorScreen extends StatelessWidget {
-  const InitializationErrorScreen({
-    super.key,
-    required this.error,
-    this.stackTrace,
-    this.onRetry,
-  });
+  const InitializationErrorScreen({super.key, required this.error, this.stackTrace, this.onRetry});
 
   final String error;
   final String? stackTrace;
@@ -26,10 +21,7 @@ class InitializationErrorScreen extends StatelessWidget {
               const SizedBox(height: 24),
               const Icon(Icons.error_outline, size: 64, color: Colors.red),
               const SizedBox(height: 24),
-              const Text(
-                'Initialization Failed',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
+              const Text('Initialization Failed', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
               const SizedBox(height: 16),
               Container(
                 padding: const EdgeInsets.all(12),
@@ -52,11 +44,7 @@ class InitializationErrorScreen extends StatelessWidget {
                       const SizedBox(height: 8),
                       const Text(
                         'Stack Trace:',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.red,
-                          fontSize: 12,
-                        ),
+                        style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red, fontSize: 12),
                       ),
                       const SizedBox(height: 4),
                       Text(
@@ -87,5 +75,3 @@ class InitializationErrorScreen extends StatelessWidget {
     );
   }
 }
-
-

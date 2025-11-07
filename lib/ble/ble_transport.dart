@@ -123,8 +123,7 @@ abstract interface class BleTransport {
   Future<bool> verifyCompatibility({
     required fbp.BluetoothDevice device,
     required List<fbp.BluetoothService> services,
-  }) async =>
-      true;
+  }) async => true;
 
   // ============================================================================
   // Service Attachment
@@ -140,10 +139,7 @@ abstract interface class BleTransport {
   /// characteristics, and subscribes to notifications.
   ///
   /// Throws exception if the required service or characteristics are not found.
-  Future<void> attach({
-    required fbp.BluetoothDevice device,
-    required List<fbp.BluetoothService> services,
-  });
+  Future<void> attach({required fbp.BluetoothDevice device, required List<fbp.BluetoothService> services});
 
   /// Detach from the BLE service.
   ///

@@ -393,10 +393,7 @@ class WorkoutPlayerService {
   /// // Now resume playback
   /// player.start();
   /// ```
-  void restoreState({
-    required int elapsedMs,
-    required int currentBlockIndex,
-  }) {
+  void restoreState({required int elapsedMs, required int currentBlockIndex}) {
     talker.info(
       '[WorkoutPlayerService] Restoring state: elapsedMs=$elapsedMs, '
       'currentBlockIndex=$currentBlockIndex',

@@ -1,8 +1,8 @@
 import 'package:clock/clock.dart' show clock;
 import 'package:context_plus/context_plus.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_blue_plus/flutter_blue_plus.dart' as fbp;
-import 'package:talker/talker.dart' show LogLevel;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -36,6 +36,12 @@ class VekoloRobot {
   VekoloRobot({required this.tester}) {
     addFlutterTearDown(() {
       _blePlatform.dispose();
+    });
+
+    addTearDown(() {
+      // Clear rootBundle cache to prevent hangs in subsequent tests caused by rootBundle.loadString('file');
+      // See: https://github.com/flutter/flutter/issues/96123
+      rootBundle.clear();
     });
   }
 
@@ -208,7 +214,7 @@ class VekoloRobot {
   }
 
   Future<void> openManageDevicesPage() async {
-    talker.log('[Robot] open DevicesPage', logLevel: LogLevel.info, pen: AnsiPen()..green(bold: true));
+    logRobot('open DevicesPage');
     final button = spot<IconButton>().withChild(spotIcon(Icons.devices));
     await act.tap(button);
     await idle(500);
@@ -216,18 +222,21 @@ class VekoloRobot {
   }
 
   Future<void> openScanner() async {
+    logRobot('open ScannerPage');
     await act.tap(spotText('Scan'));
     await idle(500);
     spot<ScannerPage>().existsOnce();
   }
 
   Future<void> selectDeviceInScanner(String name) async {
+    logRobot('select device in scanner: $name');
     final deviceTile = spot<ListTile>().withChild(spotText(name));
     await act.tap(deviceTile);
     await idle(500);
   }
 
   Future<void> waitUntilConnected() async {
+    logRobot('waiting until connected');
     final connected = spot<AlertDialog>().spotText('Connected!');
     await tester.verify.waitUntilExistsAtLeastOnce(connected);
     // wait another 1s for the dialog to disappear
@@ -265,10 +274,40 @@ class VekoloRobot {
   }
 
   Future<void> startWorkout() async {
-    talker.logCustom(TalkerLog('[Robot] starting workout', pen: AnsiPen()..green(bold: true)));
+    logRobot('starting workout');
     spotText('Start Workout').existsAtLeastOnce();
     await act.tap(spotText('Start Workout'));
+
+    // Wait for workout player page to fully load by waiting for a key indicator
+    await tester.verify.waitUntilExistsAtLeastOnce(spotText('CURRENT BLOCK'), timeout: const Duration(seconds: 5));
+
+    await idle(100); // Small additional wait for stability
+  }
+
+  Future<void> resumeWorkout() async {
+    logRobot('resuming workout from crash recovery dialog');
+    spotText('Resume').existsAtLeastOnce();
+    await act.tap(spotText('Resume'));
+    await idle(1000);
+  }
+
+  Future<void> discardWorkout() async {
+    logRobot('discarding workout from crash recovery dialog');
+    spotText('Discard').existsAtLeastOnce();
+    await act.tap(spotText('Discard'));
     await idle(500);
+  }
+
+  Future<void> startFreshWorkout() async {
+    logRobot('starting fresh workout from crash recovery dialog');
+    spotText('Start Fresh').existsAtLeastOnce();
+    await act.tap(spotText('Start Fresh'));
+    await idle(1000);
+  }
+
+  void logRobot(Object? msg) {
+    talker.logCustom(TalkerLog('[Robot] ${msg}', pen: AnsiPen()..green(bold: true)));
+    timeline.addEvent(details: '$msg', eventType: 'Robot');
   }
 }
 

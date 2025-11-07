@@ -263,9 +263,7 @@ class FtmsBleTransport
       final indoorBikeDataChar = indoorBikeDataChars.isNotEmpty ? indoorBikeDataChars.first : null;
 
       if (indoorBikeDataChar == null) {
-        talker.info(
-          '[FtmsBleTransport] Indoor bike data characteristic not found - data reading will be unavailable',
-        );
+        talker.info('[FtmsBleTransport] Indoor bike data characteristic not found - data reading will be unavailable');
       }
 
       // Find control point characteristic (optional)
@@ -273,9 +271,7 @@ class FtmsBleTransport
       final controlPointChar = controlPointChars.isNotEmpty ? controlPointChars.first : null;
 
       if (controlPointChar == null) {
-        talker.info(
-          '[FtmsBleTransport] Control point characteristic not found - device control will be unavailable',
-        );
+        talker.info('[FtmsBleTransport] Control point characteristic not found - device control will be unavailable');
       }
 
       // Verify at least one characteristic exists
@@ -294,11 +290,7 @@ class FtmsBleTransport
             _parseIndoorBikeData(Uint8List.fromList(data));
           },
           onError: (e, stackTrace) {
-            talker.info(
-              '[FtmsBleTransport] Indoor bike data error: $e',
-              e,
-              stackTrace as StackTrace?,
-            );
+            talker.info('[FtmsBleTransport] Indoor bike data error: $e', e, stackTrace as StackTrace?);
           },
         );
       }
@@ -311,20 +303,12 @@ class FtmsBleTransport
             _handleControlPointResponse(Uint8List.fromList(data));
           },
           onError: (e, stackTrace) {
-            talker.info(
-              '[FtmsBleTransport] Control point error: $e',
-              e,
-              stackTrace as StackTrace?,
-            );
+            talker.info('[FtmsBleTransport] Control point error: $e', e, stackTrace as StackTrace?);
           },
         );
       }
     } catch (e, stackTrace) {
-      talker.info(
-        '[FtmsBleTransport] Failed to setup characteristics: $e',
-        e,
-        stackTrace,
-      );
+      talker.info('[FtmsBleTransport] Failed to setup characteristics: $e', e, stackTrace);
       rethrow;
     }
   }
@@ -492,9 +476,7 @@ class FtmsBleTransport
     // Find control point characteristic from stored services
     final controlPointChar = _getControlPointCharacteristic();
     if (controlPointChar == null) {
-      talker.info(
-        '[FtmsBleTransport] Cannot sync device state - control point characteristic not available',
-      );
+      talker.info('[FtmsBleTransport] Cannot sync device state - control point characteristic not available');
       return;
     }
 
@@ -693,10 +675,7 @@ class FtmsBleTransport
 /// ```dart
 /// registry.register(ftmsTransportRegistration);
 /// ```
-final ftmsTransportRegistration = TransportRegistration(
-  name: 'FTMS',
-  factory: _createFtmsTransport,
-);
+final ftmsTransportRegistration = TransportRegistration(name: 'FTMS', factory: _createFtmsTransport);
 
 /// Factory function for creating FTMS transport instances.
 BleTransport _createFtmsTransport(String deviceId) {

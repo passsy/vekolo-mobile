@@ -62,22 +62,22 @@ class FtmsDataBuilder {
 
     // Bit 0: More Data (0 = speed present, 1 = speed not present)
     if (_instantaneousSpeed == null) {
-      flags |= (1 << 0);
+      flags |= 1 << 0;
     }
 
     // Bit 2: Instantaneous Cadence Present
     if (_instantaneousCadence != null) {
-      flags |= (1 << 2);
+      flags |= 1 << 2;
     }
 
     // Bit 6: Instantaneous Power Present
     if (_instantaneousPower != null) {
-      flags |= (1 << 6);
+      flags |= 1 << 6;
     }
 
     // Bit 9: Heart Rate Present
     if (_heartRate != null) {
-      flags |= (1 << 9);
+      flags |= 1 << 9;
     }
 
     // Build the packet

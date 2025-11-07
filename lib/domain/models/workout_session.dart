@@ -68,9 +68,7 @@ class WorkoutSessionMetadata {
     return WorkoutSessionMetadata(
       workoutId: pick(json, 'workoutId').asStringOrThrow(),
       workoutName: pick(json, 'workoutName').asStringOrThrow(),
-      workoutPlan: WorkoutPlan.fromJson(
-        pick(json, 'workoutPlanJson').asMapOrThrow<String, dynamic>(),
-      ),
+      workoutPlan: WorkoutPlan.fromJson(pick(json, 'workoutPlanJson').asMapOrThrow<String, dynamic>()),
       startTime: DateTime.parse(pick(json, 'startTime').asStringOrThrow()),
       endTime: pick(json, 'endTime').letOrNull((p) => DateTime.parse(p.asStringOrThrow())),
       status: SessionStatus.fromString(pick(json, 'status').asStringOrThrow()),
