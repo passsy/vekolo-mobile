@@ -2,7 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:spot/spot.dart';
 import 'package:vekolo/domain/models/device_info.dart';
 
-import '../robot/robot_test_fn.dart';
+import '../robot/robot_kit.dart';
 
 void main() {
   robotTest('auto connect to device on app start', (robot) async {

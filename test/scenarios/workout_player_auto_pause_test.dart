@@ -3,7 +3,7 @@ import 'package:spot/spot.dart';
 import 'package:vekolo/domain/models/device_info.dart';
 
 import '../helpers/ftms_data_builder.dart';
-import '../robot/robot_test_fn.dart';
+import '../robot/robot_kit.dart';
 
 void main() {
   robotTest('workout player shows initial state correctly', (robot) async {

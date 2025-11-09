@@ -54,7 +54,12 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
   @override
   void dispose() {
     _powerSubscription?.call();
+
+    // Call dispose immediately - the async operations inside will complete
+    // even after the widget is disposed. This is okay because dispose() only
+    // flushes data and doesn't interact with the widget.
     _recordingService?.dispose();
+
     _playerService?.dispose();
     super.dispose();
   }
@@ -204,18 +209,26 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
         talker.info('[WorkoutPlayerPage] Auto-starting workout - power detected: ${currentPower}W');
         playerService.start();
 
-        // Start recording when workout starts
+        // Mark as started immediately to prevent duplicate startRecording() calls
+        _hasStarted = true;
+
+        // Start recording when workout starts (fire-and-forget)
         final authService = Refs.authService.of(context);
         final user = authService.currentUser.value;
         final ftp = user?.ftp ?? ProfileDefaults.ftp;
-        _recordingService?.startRecording(
-          'Workout', // TODO: Get workout name from route params or metadata
-          userId: user?.id,
-          ftp: ftp,
-        );
+        if (_recordingService != null) {
+          talker.info('[WorkoutPlayerPage] Calling startRecording()');
+          // Fire and forget - the async operation will complete in the background
+          // ignore: unawaited_futures
+          _recordingService!.startRecording(
+            'Workout', // TODO: Get workout name from route params or metadata
+            userId: user?.id,
+            ftp: ftp,
+          );
+        }
 
+        if (!mounted) return;
         setState(() {
-          _hasStarted = true;
           _lowPowerStartTime = null; // Reset low power timer
         });
 
@@ -459,7 +472,7 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
             _buildPlaybackControls(
               isPaused: isPaused,
               isComplete: isComplete,
-              onPlayPause: () {
+              onPlayPause: () async {
                 if (isPaused) {
                   player.start();
                   if (!_hasStarted) {
@@ -467,11 +480,13 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
                     final authService = Refs.authService.of(context);
                     final user = authService.currentUser.value;
                     final ftp = user?.ftp ?? ProfileDefaults.ftp;
-                    _recordingService?.startRecording(
-                      'Workout', // TODO: Get workout name from route params or metadata
-                      userId: user?.id,
-                      ftp: ftp,
-                    );
+                    if (_recordingService != null) {
+                      await _recordingService!.startRecording(
+                        'Workout', // TODO: Get workout name from route params or metadata
+                        userId: user?.id,
+                        ftp: ftp,
+                      );
+                    }
                     setState(() {
                       _hasStarted = true;
                       _isManualPause = false;

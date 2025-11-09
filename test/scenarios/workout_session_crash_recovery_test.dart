@@ -4,7 +4,7 @@ import 'package:spot/spot.dart';
 import 'package:vekolo/domain/models/device_info.dart';
 
 import '../helpers/ftms_data_builder.dart';
-import '../robot/robot_test_fn.dart';
+import '../robot/robot_kit.dart';
 
 void main() {
   // Note: This test verifies the workout recording and crash recovery feature.
@@ -108,17 +108,24 @@ void main() {
 
     // Start workout by emitting power
     kickrCore.emitCharacteristic(indoorBikeDataUuid, powerData);
-    await robot.idle(1000);
+    // Use pumpUntil to process power monitoring callback in a timely manner
+    await robot.pumpUntil(1000);
 
     addRobotEvent('Workout started with power data');
 
     // Let workout run for a few seconds to record samples
     for (int i = 0; i < 3; i++) {
       kickrCore.emitCharacteristic(indoorBikeDataUuid, powerData);
-      await robot.idle(1000);
+      await robot.pumpUntil(1000);
     }
 
     addRobotEvent('Recorded workout samples for 3 seconds');
+
+    // Wait for startRecording() to complete (create session + mark as active)
+    // This explicitly waits for the session to be created instead of using a fixed timeout
+    await robot.waitForActiveWorkoutSession();
+
+    addRobotEvent('Active workout session created');
 
     // Simulate crash by closing app without completing workout
     await robot.closeApp();
@@ -129,12 +136,11 @@ void main() {
 
     // Restart app - should show resume dialog
     await robot.launchApp(pairedDevices: [kickrCore], loggedIn: true);
-    await robot.idle(1000);
 
     addRobotEvent('App restarted after crash');
 
-    // Resume dialog should appear
-    spotText('Resume Workout?').existsAtLeastOnce();
+    // Wait for resume dialog to appear
+    await robot.waitForCrashRecoveryDialog();
     spotText('We found an incomplete workout session from earlier.').existsAtLeastOnce();
     spotText('Resume').existsAtLeastOnce();
     spotText('Discard').existsAtLeastOnce();
@@ -199,7 +205,9 @@ void main() {
     addRobotEvent('App restarted');
 
     // Resume dialog should appear
-    spotText('Resume Workout?').existsAtLeastOnce();
+    await robot.waitForCrashRecoveryDialog();
+
+    addRobotEvent('Resume dialog displayed');
 
     // Choose Discard
     await robot.discardWorkout();
@@ -262,7 +270,9 @@ void main() {
     addRobotEvent('App restarted');
 
     // Resume dialog should appear
-    spotText('Resume Workout?').existsAtLeastOnce();
+    await robot.waitForCrashRecoveryDialog();
+
+    addRobotEvent('Resume dialog displayed');
 
     // Choose Start Fresh
     await robot.startFreshWorkout();

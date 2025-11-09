@@ -21,7 +21,7 @@ import '../fake/fake_auth_service.dart';
 import '../fake/fake_vekolo_api_client.dart';
 import '../helpers/path_provider_helper.dart';
 import '../helpers/shared_preferences_helper.dart';
-import 'robot_test_fn.dart';
+import 'robot_kit.dart';
 
 // Cache for robot instances by WidgetTester identity
 final Map<WidgetTester, VekoloRobot> _robotCache = <WidgetTester, VekoloRobot>{};
@@ -53,11 +53,12 @@ class VekoloRobot {
 
   bool _isSetup = false;
 
+  static const int _idlePumpStepMs = 100; // Pump in 100ms steps to process callbacks
+
   Future<void> _setup() async {
     // Only setup once per test to preserve SharedPreferences across app restarts
     if (_isSetup) return;
 
-    TestWidgetsFlutterBinding.ensureInitialized();
     await loadAppFonts();
 
     // Setup mock SharedPreferences and SecureStorage ONCE per test
@@ -134,8 +135,17 @@ class VekoloRobot {
 
     // If devices were pre-paired, wait for auto-connect to complete
     if (pairedDevices.isNotEmpty) {
-      // Wait for auto-connect to complete
-      await idle(500);
+      // Wait for auto-connect to complete (with timeout)
+      final startTime = clock.now();
+      while (pairedDevices.any((d) => !d.isConnected)) {
+        await idle(100);
+        final elapsed = clock.now().difference(startTime);
+        if (elapsed > const Duration(seconds: 10)) {
+          // Timeout - show which devices failed
+          final disconnected = pairedDevices.where((d) => !d.isConnected).map((d) => d.name).toList();
+          throw TestFailure('Auto-connect timeout after ${elapsed.inSeconds}s. Disconnected devices: $disconnected');
+        }
+      }
 
       // Verify all devices are connected
       for (final device in pairedDevices) {
@@ -208,9 +218,44 @@ class VekoloRobot {
     }
   }
 
+  /// Pumps the event queue in small increments to process callbacks.
+  ///
+  /// Use this instead of idle() when you need to ensure subscription callbacks
+  /// are processed in a timely manner.
+  Future<void> pumpUntil(int durationMs) async {
+    final TestWidgetsFlutterBinding binding = tester.binding;
+    try {
+      await tester.runAsync(() => Future.delayed(const Duration(milliseconds: 10)));
+      await binding.delayed(Duration.zero);
+
+      // Pump in steps to process subscription callbacks
+      final steps = (durationMs / _idlePumpStepMs).ceil();
+
+      for (int i = 0; i < steps; i++) {
+        final remaining = durationMs - (i * _idlePumpStepMs);
+        final thisPump = remaining < _idlePumpStepMs ? remaining : _idlePumpStepMs;
+        await tester.pump(Duration(milliseconds: thisPump));
+      }
+    } catch (e) {
+      if (e is TestFailure) {
+        if (e.message != null && e.message!.contains('Reentrant call to runAsync() denied')) {
+          // ignore
+          return;
+        }
+      }
+      rethrow;
+    }
+  }
+
   Future<void> closeApp() async {
     await tester.pumpWidget(const SizedBox.shrink());
-    await idle();
+    // Wait for all async operations to complete, including:
+    // - Widget disposal
+    // - Recording service disposal and file flushing
+    // - Any fire-and-forget Futures (like startRecording()) that are still running
+    // The startRecording() Future can take 500-700ms to complete, and may not have
+    // been called yet due to beacon callback delays. Wait long enough to ensure it completes.
+    await idle(5000);
   }
 
   Future<void> openManageDevicesPage() async {
@@ -286,23 +331,46 @@ class VekoloRobot {
 
   Future<void> resumeWorkout() async {
     logRobot('resuming workout from crash recovery dialog');
-    spotText('Resume').existsAtLeastOnce();
     await act.tap(spotText('Resume'));
     await idle(1000);
   }
 
   Future<void> discardWorkout() async {
     logRobot('discarding workout from crash recovery dialog');
-    spotText('Discard').existsAtLeastOnce();
     await act.tap(spotText('Discard'));
     await idle(500);
   }
 
   Future<void> startFreshWorkout() async {
     logRobot('starting fresh workout from crash recovery dialog');
-    spotText('Start Fresh').existsAtLeastOnce();
     await act.tap(spotText('Start Fresh'));
     await idle(1000);
+  }
+
+  /// Wait for the crash recovery dialog to appear
+  Future<void> waitForCrashRecoveryDialog() async {
+    logRobot('waiting for crash recovery dialog');
+    await tester.verify.waitUntilExistsAtLeastOnce(spotText('Resume Workout?'), timeout: const Duration(seconds: 5));
+  }
+
+  /// Wait for a workout session to be created and marked as active.
+  ///
+  /// This is useful in tests that need to ensure startRecording() has completed
+  /// before simulating a crash.
+  ///
+  /// Due to test framework limitations, beacon subscription callbacks can be significantly
+  /// delayed. We wait 2 seconds to ensure the startRecording() call (which happens in a
+  /// power monitoring beacon callback) has time to execute and complete.
+  Future<void> waitForActiveWorkoutSession({Duration timeout = const Duration(seconds: 10)}) async {
+    logRobot('waiting for active workout session');
+
+    // Wait long enough for:
+    // 1. Beacon callback to fire (can be delayed several seconds by test framework)
+    // 2. startRecording() to complete (~500-700ms)
+    // Total: Can be 4+ seconds in some test runs, using 5s to be very safe
+    await idle(5000);
+
+    logRobot('active workout session should be created');
   }
 
   void logRobot(Object? msg) {

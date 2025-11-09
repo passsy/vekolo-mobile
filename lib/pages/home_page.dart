@@ -2,16 +2,66 @@ import 'package:context_plus/context_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:state_beacon/state_beacon.dart';
+import 'package:vekolo/app/logger.dart';
 import 'package:vekolo/app/refs.dart';
+import 'package:vekolo/domain/models/workout_session.dart';
 import 'package:vekolo/widgets/user_avatar.dart';
+import 'package:vekolo/widgets/workout_resume_dialog.dart';
 import 'package:vekolo/domain/models/workout/workout_models.dart';
 
 /// Entry point after app startup.
 ///
 /// Shows login/signup buttons for unauthenticated users and a sample workout
 /// that can be started in the player.
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   const HomePage({super.key});
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkForIncompleteWorkout();
+    });
+  }
+
+  Future<void> _checkForIncompleteWorkout() async {
+    if (!mounted) return;
+
+    talker.info('[HomePage] Checking for incomplete workout');
+    final persistence = Refs.workoutSessionPersistence.of(context);
+    final incompleteSession = await persistence.getActiveSession();
+    talker.info('[HomePage] Incomplete session: ${incompleteSession?.id ?? "none"}');
+
+    if (incompleteSession != null && mounted) {
+      talker.info('[HomePage] Showing resume dialog for session: ${incompleteSession.id}');
+      final choice = await showDialog<ResumeChoice>(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => WorkoutResumeDialog(session: incompleteSession),
+      );
+
+      if (!mounted) return;
+
+      if (choice == ResumeChoice.resume) {
+        // Navigate to workout player - it will handle resuming
+        context.push('/workout-player');
+      } else if (choice == ResumeChoice.discard) {
+        await persistence.updateSessionStatus(incompleteSession.id, SessionStatus.abandoned);
+        await persistence.clearActiveWorkout();
+      } else if (choice == ResumeChoice.startFresh) {
+        await persistence.deleteSession(incompleteSession.id);
+        await persistence.clearActiveWorkout();
+        // Navigate to workout player to start fresh
+        if (!mounted) return;
+        context.push('/workout-player');
+      }
+    }
+  }
 
   /// Sample workout for demonstration.
   static WorkoutPlan _getSampleWorkout() {
