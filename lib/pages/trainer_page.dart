@@ -90,7 +90,7 @@ class _TrainerPageState extends State<TrainerPage> {
         await _connectionOperation!.value;
       }
 
-      talker.info('[TrainerPage] Device connected successfully, starting power updates');
+      logClass('Device connected successfully, starting power updates');
 
       final supportsErgMode = device.supportsErgMode;
 
@@ -103,7 +103,7 @@ class _TrainerPageState extends State<TrainerPage> {
         _sendTargetPower();
       }
     } catch (e, stackTrace) {
-      talker.error('[TrainerPage] Connection failed', e, stackTrace);
+      logClass('Connection failed', e: e, stack: stackTrace, level: LogLevel.error);
       if (mounted) {
         setState(() {
           _errorMessage = 'Connection failed: $e';
@@ -177,10 +177,10 @@ class _TrainerPageState extends State<TrainerPage> {
   }
 
   void _sendTargetPower() {
-    talker.info('[TrainerPage] Initial target power: ${_targetPower}W');
+    logClass('Initial target power: ${_targetPower}W');
     unawaited(
       _device?.setTargetPower(_targetPower).catchError((Object error, StackTrace stackTrace) {
-        talker.error('[TrainerPage] Failed to set target power', error, stackTrace);
+        logClass('Failed to set target power', e: error, stack: stackTrace, level: LogLevel.error);
         if (!mounted) return;
         setState(() {
           _errorMessage = 'Failed to set target power: $error';
@@ -193,13 +193,13 @@ class _TrainerPageState extends State<TrainerPage> {
     setState(() {
       _targetPower = power.round();
     });
-    talker.info('[TrainerPage] Setting target power to ${_targetPower}W');
+    logClass('Setting target power to ${_targetPower}W');
     if (!_supportsErgMode) {
       return;
     }
     unawaited(
       _device?.setTargetPower(_targetPower).catchError((Object error, StackTrace stackTrace) {
-        talker.error('[TrainerPage] Failed to set target power', error, stackTrace);
+        logClass('Failed to set target power', e: error, stack: stackTrace, level: LogLevel.error);
         if (!mounted) return;
         setState(() {
           _errorMessage = 'Failed to set target power: $error';

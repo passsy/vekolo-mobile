@@ -5,10 +5,10 @@ import 'package:vekolo/app/logger.dart';
 class BlePermissions {
   /// Request all necessary BLE permissions based on Android version
   static Future<bool> requestPermissions() async {
-    talker.info('[BlePermissions] Requesting BLE permissions');
+    BlePermissions().logClass('Requesting BLE permissions');
 
     if (!Platform.isAndroid) {
-      talker.info('[BlePermissions] Not Android, no permission request needed');
+      BlePermissions().logClass('Not Android, no permission request needed');
       return true;
     }
 
@@ -20,12 +20,12 @@ class BlePermissions {
 
     // For Android 12+ (API 31+)
     if (await _isAndroid12OrHigher()) {
-      talker.info('[BlePermissions] Android 12+, requesting BLUETOOTH_SCAN and BLUETOOTH_CONNECT');
+      BlePermissions().logClass('Android 12+, requesting BLUETOOTH_SCAN and BLUETOOTH_CONNECT');
       permissionsToRequest.add(Permission.bluetoothScan);
       permissionsToRequest.add(Permission.bluetoothConnect);
     } else {
       // For Android 11 and below
-      talker.info('[BlePermissions] Android 11 or below, requesting LOCATION permissions');
+      BlePermissions().logClass('Android 11 or below, requesting LOCATION permissions');
       permissionsToRequest.add(Permission.locationWhenInUse);
     }
 
@@ -37,20 +37,20 @@ class BlePermissions {
     for (final entry in statuses.entries) {
       final permission = entry.key;
       final status = entry.value;
-      talker.info('[BlePermissions] $permission: $status');
+      BlePermissions().logClass('$permission: $status');
 
       if (!status.isGranted) {
         allGranted = false;
         if (status.isPermanentlyDenied) {
-          talker.info('[BlePermissions] $permission is permanently denied');
+          BlePermissions().logClass('$permission is permanently denied');
         }
       }
     }
 
     if (allGranted) {
-      talker.info('[BlePermissions] All permissions granted ✅');
+      BlePermissions().logClass('All permissions granted ✅');
     } else {
-      talker.info('[BlePermissions] Some permissions denied ❌');
+      BlePermissions().logClass('Some permissions denied ❌');
     }
 
     return allGranted;
@@ -100,7 +100,7 @@ class BlePermissions {
 
   /// Open app settings for manual permission grant
   static Future<void> openSettings() async {
-    talker.info('[BlePermissions] Opening app settings');
+    BlePermissions().logClass('Opening app settings');
     await openAppSettings();
   }
 }

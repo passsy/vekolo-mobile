@@ -91,7 +91,7 @@ class WorkoutSessionPersistence {
   /// Call this when a workout starts recording.
   Future<void> setActiveWorkout(String workoutId) async {
     await _prefs.setString(_activeWorkoutKey, workoutId);
-    talker.info('[WorkoutSession] Set active workout: $workoutId');
+    logClass('Set active workout: $workoutId');
   }
 
   /// Clear the active workout ID (for crash detection).
@@ -99,7 +99,7 @@ class WorkoutSessionPersistence {
   /// Call this when a workout completes, is abandoned, or is discarded.
   Future<void> clearActiveWorkout() async {
     await _prefs.remove(_activeWorkoutKey);
-    talker.info('[WorkoutSession] Cleared active workout');
+    logClass('Cleared active workout');
   }
 
   /// Get the active workout session (for crash recovery).
@@ -115,13 +115,13 @@ class WorkoutSessionPersistence {
       return null;
     }
 
-    talker.info('[WorkoutSession] Found active workout ID: $workoutId');
+    logClass('Found active workout ID: $workoutId');
 
     // Load metadata from file
     final metadata = await loadSessionMetadata(workoutId);
     if (metadata == null) {
       // Metadata file missing - cleanup orphaned active flag
-      talker.warning('[WorkoutSession] Metadata file missing for active workout $workoutId, cleaning up');
+      logClass('Metadata file missing for active workout $workoutId, cleaning up', level: LogLevel.warning);
       await clearActiveWorkout();
       return null;
     }
@@ -144,7 +144,7 @@ class WorkoutSessionPersistence {
   Future<String> createSession(String workoutName, WorkoutPlan plan, {String? userId, required int ftp}) async {
     // Generate unique ID using nanoid
     final workoutId = nanoid();
-    talker.info('[WorkoutSession] Creating session: $workoutId ($workoutName)');
+    logClass('Creating session: $workoutId ($workoutName)');
 
     // Create workout directory
     final workoutDir = await getWorkoutDirectory(workoutId);
@@ -171,7 +171,7 @@ class WorkoutSessionPersistence {
     // Mark as active in SharedPreferences
     await setActiveWorkout(workoutId);
 
-    talker.info('[WorkoutSession] Session created: $workoutId');
+    logClass('Session created: $workoutId');
     return workoutId;
   }
 
@@ -182,7 +182,7 @@ class WorkoutSessionPersistence {
     final metadataFile = await getMetadataFile(workoutId);
 
     if (!await metadataFile.exists()) {
-      talker.warning('[WorkoutSession] Metadata file not found: $workoutId');
+      logClass('Metadata file not found: $workoutId', level: LogLevel.warning);
       return null;
     }
 
@@ -191,7 +191,7 @@ class WorkoutSessionPersistence {
       final json = jsonDecode(jsonString) as Map<String, dynamic>;
       return WorkoutSessionMetadata.fromJson(json);
     } catch (e, stackTrace) {
-      talker.error('[WorkoutSession] Failed to load metadata for $workoutId: $e', e, stackTrace);
+      logClass('Failed to load metadata for $workoutId: $e', e: e, stack: stackTrace, level: LogLevel.error);
       return null;
     }
   }
@@ -200,11 +200,11 @@ class WorkoutSessionPersistence {
   ///
   /// Updates the status in metadata.json and clears active flag if completed/abandoned.
   Future<void> updateSessionStatus(String workoutId, SessionStatus status) async {
-    talker.info('[WorkoutSession] Updating session $workoutId status to ${status.value}');
+    logClass('Updating session $workoutId status to ${status.value}');
 
     final metadata = await loadSessionMetadata(workoutId);
     if (metadata == null) {
-      talker.warning('[WorkoutSession] Cannot update status - metadata not found: $workoutId');
+      logClass('Cannot update status - metadata not found: $workoutId', level: LogLevel.warning);
       return;
     }
 
@@ -233,12 +233,12 @@ class WorkoutSessionPersistence {
   ///
   /// Removes the entire workout folder (metadata + samples).
   Future<void> deleteSession(String workoutId) async {
-    talker.info('[WorkoutSession] Deleting session: $workoutId');
+    logClass('Deleting session: $workoutId');
 
     final workoutDir = await getWorkoutDirectory(workoutId);
     if (await workoutDir.exists()) {
       await workoutDir.delete(recursive: true);
-      talker.info('[WorkoutSession] Session deleted: $workoutId');
+      logClass('Session deleted: $workoutId');
     }
 
     // Clear active flag if this was the active workout
@@ -291,7 +291,7 @@ class WorkoutSessionPersistence {
     // Ensure parent directory exists before writing
     final parentDir = samplesFile.parent;
     if (!await parentDir.exists()) {
-      talker.warning('[WorkoutSession] Parent directory for samples does not exist, skipping write for $workoutId');
+      logClass('Parent directory for samples does not exist, skipping write for $workoutId', level: LogLevel.warning);
       return;
     }
 
@@ -318,7 +318,7 @@ class WorkoutSessionPersistence {
     final buffer = _sampleBuffers[workoutId];
     if (buffer == null || buffer.isEmpty) return;
 
-    talker.debug('[WorkoutSession] Flushing ${buffer.length} samples for $workoutId');
+    logClass('Flushing ${buffer.length} samples for $workoutId');
     await appendSamples(workoutId, buffer);
     buffer.clear();
   }
@@ -364,7 +364,7 @@ class WorkoutSessionPersistence {
         final json = jsonDecode(line) as Map<String, dynamic>;
         yield WorkoutSample.fromJson(json);
       } catch (e, stackTrace) {
-        talker.error('[WorkoutSession] Failed to parse sample line: $e', e, stackTrace);
+        logClass('Failed to parse sample line: $e', e: e, stack: stackTrace, level: LogLevel.error);
       }
     }
   }

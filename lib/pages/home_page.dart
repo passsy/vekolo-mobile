@@ -32,13 +32,13 @@ class _HomePageState extends State<HomePage> {
   Future<void> _checkForIncompleteWorkout() async {
     if (!mounted) return;
 
-    talker.info('[HomePage] Checking for incomplete workout');
+    logClass('Checking for incomplete workout');
     final persistence = Refs.workoutSessionPersistence.of(context);
     final incompleteSession = await persistence.getActiveSession();
-    talker.info('[HomePage] Incomplete session: ${incompleteSession?.id ?? "none"}');
+    logClass('Incomplete session: ${incompleteSession?.id ?? "none"}');
 
     if (incompleteSession != null && mounted) {
-      talker.info('[HomePage] Showing resume dialog for session: ${incompleteSession.id}');
+      logClass('Showing resume dialog for session: ${incompleteSession.id}');
       final choice = await showDialog<ResumeChoice>(
         context: context,
         barrierDismissible: false,

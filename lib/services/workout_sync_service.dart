@@ -255,10 +255,11 @@ class WorkoutSyncService {
       _retryCount = 0;
     } catch (e, stackTrace) {
       // Log error with full stack trace for debugging
-      talker.error(
-        '[WorkoutSyncService.syncTargetToDevice] Failed to set target power to ${command.targetWatts}W',
-        e,
-        stackTrace,
+      logClass(
+        'Failed to set target power to ${command.targetWatts}W',
+        e: e,
+        stack: stackTrace,
+        level: LogLevel.error,
       );
 
       // Check if it's a "device not connected" error - don't retry those
@@ -274,8 +275,9 @@ class WorkoutSyncService {
         final delay = _retryCount; // 1s, 2s, 3s for retries 1-3
         syncError.value = 'Retry $_retryCount/$_maxRetries';
 
-        talker.warning(
-          '[WorkoutSyncService.syncTargetToDevice] Retrying in ${delay}s (attempt $_retryCount/$_maxRetries)',
+        logClass(
+          'Retrying in ${delay}s (attempt $_retryCount/$_maxRetries)',
+          level: LogLevel.warning,
         );
 
         // Wait and retry
@@ -289,7 +291,7 @@ class WorkoutSyncService {
         // All retries exhausted
         syncError.value = 'Failed after $_maxRetries retries';
         _retryCount = 0;
-        talker.error('[WorkoutSyncService.syncTargetToDevice] Giving up after $_maxRetries failed attempts');
+        logClass('Giving up after $_maxRetries failed attempts', level: LogLevel.error);
       }
     }
   }
@@ -318,15 +320,15 @@ class WorkoutSyncService {
     // Cancel any existing timer
     _refreshTimer?.cancel();
 
-    talker.info(
-      '[WorkoutSyncService.startRefreshTimer] Starting periodic refresh every ${trainer.refreshInterval.inSeconds}s',
+    logClass(
+      'Starting periodic refresh every ${trainer.refreshInterval.inSeconds}s',
     );
 
     // Create periodic timer at trainer's preferred interval
     _refreshTimer = Timer.periodic(trainer.refreshInterval, (timer) {
       // Re-send last command if we're syncing and have a command to send
       if (_lastSentCommand != null && isSyncing.value) {
-        talker.debug('[WorkoutSyncService.refreshTimer] Refreshing target: ${_lastSentCommand!.targetWatts}W');
+        logClass('Refreshing target: ${_lastSentCommand!.targetWatts}W');
         _syncTargetToDevice(_lastSentCommand!);
       }
     });

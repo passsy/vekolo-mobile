@@ -5,7 +5,7 @@ import 'package:async/async.dart';
 import 'package:clock/clock.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart' as fbp;
 import 'package:state_beacon/state_beacon.dart';
-import 'package:vekolo/ble/ble_platform.dart';
+import 'package:vekolo/ble/ble_platform.dart' hide LogLevel;
 import 'package:vekolo/ble/ble_scanner.dart';
 import 'package:vekolo/ble/ble_transport.dart';
 import 'package:vekolo/ble/transport_capabilities.dart';
@@ -157,7 +157,7 @@ class BleDevice extends FitnessDevice {
     return CancelableOperation.fromFuture(
       _connectImpl(),
       onCancel: () async {
-        talker.info('[BleDevice] Connection cancelled for $name');
+        logClass('Connection cancelled for $name');
         // Detach all transports on cancel
         await Future.wait(_transports.map((t) => t.detach()));
       },
@@ -166,12 +166,12 @@ class BleDevice extends FitnessDevice {
 
   Future<void> _connectImpl() async {
     try {
-      talker.info('[BleDevice] Connecting device: $name');
+      logClass('Connecting device: $name');
 
       // Connect via BlePlatform abstraction (works with FakeBlePlatform in tests)
-      talker.info('[BleDevice] Connecting to physical device');
+      logClass('Connecting to physical device');
       await _platform.connect(_id, timeout: const Duration(seconds: 15));
-      talker.info('[BleDevice] Connected');
+      logClass('Connected');
 
       // Get the device object via platform abstraction
       final device = _platform.getDevice(_id);
@@ -179,55 +179,55 @@ class BleDevice extends FitnessDevice {
       // Request larger MTU for better performance (optional, non-fatal if it fails)
       try {
         final mtu = await _platform.requestMtu(_id);
-        talker.info('[BleDevice] MTU negotiated: $mtu bytes');
+        logClass('MTU negotiated: $mtu bytes');
       } catch (e) {
         // MTU negotiation can fail on some devices or platforms (iOS handles automatically)
         // This is non-fatal, continue with default MTU
-        talker.info('[BleDevice] MTU negotiation failed, using default: $e');
+        logClass('MTU negotiation failed, using default: $e');
       }
 
       // Discover services once via platform abstraction
-      talker.info('[BleDevice] Discovering services');
+      logClass('Discovering services');
       final services = await _platform.discoverServices(_id);
-      talker.info('[BleDevice] Discovered ${services.length} services');
+      logClass('Discovered ${services.length} services');
 
       // Create DiscoveredDevice for Phase 1 checks if not provided
       final discoveredDevice = _discoveredDevice ?? _createDiscoveredDeviceFromServices(device, services);
 
       // Phase 1: Verify canSupport for all transports (fast compatibility check)
       // This uses advertising data to verify transports can potentially work with the device
-      talker.info('[BleDevice] Verifying Phase 1 transport compatibility (canSupport)');
+      logClass('Verifying Phase 1 transport compatibility (canSupport)');
       final phase1VerifiedTransports = <BleTransport>[];
       for (final transport in _transports) {
         try {
           final canSupport = transport.canSupport(discoveredDevice);
           if (canSupport) {
             phase1VerifiedTransports.add(transport);
-            talker.info('[BleDevice] Transport ${transport.runtimeType} passed Phase 1 (canSupport)');
+            logClass('Transport ${transport.runtimeType} passed Phase 1 (canSupport)');
           } else {
-            talker.info('[BleDevice] Transport ${transport.runtimeType} failed Phase 1 (canSupport)');
+            logClass('Transport ${transport.runtimeType} failed Phase 1 (canSupport)');
           }
         } catch (e, stackTrace) {
-          talker.error('[BleDevice] Phase 1 verification failed for ${transport.runtimeType}: $e', e, stackTrace);
+          logClass('Phase 1 verification failed for ${transport.runtimeType}: $e', e: e, stack: stackTrace, level: LogLevel.error);
         }
       }
 
       // Phase 2: Verify verifyCompatibility for Phase 1 verified transports (deep compatibility check)
       // This allows transports to perform deep checks on the connected device
       // Process serially to avoid overwhelming the BLE stack
-      talker.info('[BleDevice] Verifying Phase 2 transport compatibility (verifyCompatibility)');
+      logClass('Verifying Phase 2 transport compatibility (verifyCompatibility)');
       final verifiedTransports = <BleTransport>[];
       for (final transport in phase1VerifiedTransports) {
         try {
           final isCompatible = await transport.verifyCompatibility(device: device, services: services);
           if (isCompatible) {
             verifiedTransports.add(transport);
-            talker.info('[BleDevice] Transport ${transport.runtimeType} passed Phase 2 (verifyCompatibility)');
+            logClass('Transport ${transport.runtimeType} passed Phase 2 (verifyCompatibility)');
           } else {
-            talker.info('[BleDevice] Transport ${transport.runtimeType} failed Phase 2 (verifyCompatibility)');
+            logClass('Transport ${transport.runtimeType} failed Phase 2 (verifyCompatibility)');
           }
         } catch (e, stackTrace) {
-          talker.error('[BleDevice] Phase 2 verification failed for ${transport.runtimeType}: $e', e, stackTrace);
+          logClass('Phase 2 verification failed for ${transport.runtimeType}: $e', e: e, stack: stackTrace, level: LogLevel.error);
         }
       }
 
@@ -236,8 +236,8 @@ class BleDevice extends FitnessDevice {
         throw Exception('No compatible transports found for device $name');
       }
 
-      talker.info(
-        '[BleDevice] ${verifiedTransports.length}/${_transports.length} transport(s) verified, now attaching',
+      logClass(
+        '${verifiedTransports.length}/${_transports.length} transport(s) verified, now attaching',
       );
 
       // Try to attach only verified transports with the connected device and discovered services
@@ -248,9 +248,9 @@ class BleDevice extends FitnessDevice {
         try {
           await transport.attach(device: device, services: services);
           attachedCount++;
-          talker.info('[BleDevice] Successfully attached ${transport.runtimeType}');
+          logClass('Successfully attached ${transport.runtimeType}');
         } catch (e, stackTrace) {
-          talker.error('[BleDevice] Transport attachment failed for ${transport.runtimeType}: $e', e, stackTrace);
+          logClass('Transport attachment failed for ${transport.runtimeType}: $e', e: e, stack: stackTrace, level: LogLevel.error);
           // Don't remove - just let it stay detached
           // Error is stored in transport.lastAttachError
         }
@@ -261,8 +261,8 @@ class BleDevice extends FitnessDevice {
         throw Exception('All transports failed to attach for device $name');
       }
 
-      talker.info(
-        '[BleDevice] Device connected successfully with $attachedCount/${_transports.length} transport(s) attached',
+      logClass(
+        'Device connected successfully with $attachedCount/${_transports.length} transport(s) attached',
       );
 
       _lastConnectionError = null;
@@ -279,7 +279,7 @@ class BleDevice extends FitnessDevice {
 
   @override
   Future<void> disconnect() async {
-    talker.info('[BleDevice] Disconnecting device: $name');
+    logClass('Disconnecting device: $name');
 
     // Detach all transports in parallel
     await Future.wait(_transports.map((t) => t.detach()));
@@ -404,7 +404,7 @@ class BleDevice extends FitnessDevice {
   ///
   /// Must be called when this device is no longer needed to prevent memory leaks.
   Future<void> dispose() async {
-    talker.info('[BleDevice] Disposing device: $name');
+    logClass('Disposing device: $name');
 
     // Unsubscribe from all beacon subscriptions
     for (final unsubscribe in _transportStateUnsubscribers) {

@@ -229,16 +229,16 @@ class FtmsBleTransport
   @override
   Future<void> attach({required fbp.BluetoothDevice device, required List<fbp.BluetoothService> services}) async {
     try {
-      talker.info('[FtmsBleTransport] Attaching to FTMS service on device: $deviceId');
+      logClass('Attaching to FTMS service on device: $deviceId');
       _stateBeacon.value = TransportState.attaching;
       _lastAttachError = null; // Clear any previous error
 
       _services = services;
       await _setupCharacteristics(services: services);
       _stateBeacon.value = TransportState.attached;
-      talker.info('[FtmsBleTransport] FTMS service attached successfully');
+      logClass('FTMS service attached successfully');
     } catch (e, stackTrace) {
-      talker.error('[FtmsBleTransport] Failed to attach to FTMS service', e, stackTrace);
+      logClass('Failed to attach to FTMS service', e: e, stack: stackTrace, level: LogLevel.error);
       _lastAttachError = ConnectionError(
         message: 'Failed to attach to FTMS service: $e',
         timestamp: clock.now(),
@@ -263,7 +263,7 @@ class FtmsBleTransport
       final indoorBikeDataChar = indoorBikeDataChars.isNotEmpty ? indoorBikeDataChars.first : null;
 
       if (indoorBikeDataChar == null) {
-        talker.info('[FtmsBleTransport] Indoor bike data characteristic not found - data reading will be unavailable');
+        logClass('Indoor bike data characteristic not found - data reading will be unavailable');
       }
 
       // Find control point characteristic (optional)
@@ -271,7 +271,7 @@ class FtmsBleTransport
       final controlPointChar = controlPointChars.isNotEmpty ? controlPointChars.first : null;
 
       if (controlPointChar == null) {
-        talker.info('[FtmsBleTransport] Control point characteristic not found - device control will be unavailable');
+        logClass('Control point characteristic not found - device control will be unavailable');
       }
 
       // Verify at least one characteristic exists
@@ -290,7 +290,7 @@ class FtmsBleTransport
             _parseIndoorBikeData(Uint8List.fromList(data));
           },
           onError: (e, stackTrace) {
-            talker.info('[FtmsBleTransport] Indoor bike data error: $e', e, stackTrace as StackTrace?);
+            logClass('Indoor bike data error: $e', e: e, stack: stackTrace as StackTrace?);
           },
         );
       }
@@ -303,12 +303,12 @@ class FtmsBleTransport
             _handleControlPointResponse(Uint8List.fromList(data));
           },
           onError: (e, stackTrace) {
-            talker.info('[FtmsBleTransport] Control point error: $e', e, stackTrace as StackTrace?);
+            logClass('Control point error: $e', e: e, stack: stackTrace as StackTrace?);
           },
         );
       }
     } catch (e, stackTrace) {
-      talker.info('[FtmsBleTransport] Failed to setup characteristics: $e', e, stackTrace);
+      logClass('Failed to setup characteristics: $e', e: e, stack: stackTrace);
       rethrow;
     }
   }
@@ -404,7 +404,7 @@ class FtmsBleTransport
         _speedBeacon.value = SpeedData(kmh: speed, timestamp: timestamp);
       }
     } catch (e, stackTrace) {
-      talker.error('[FtmsBleTransport] Error parsing indoor bike data', e, stackTrace);
+      logClass('Error parsing indoor bike data', e: e, stack: stackTrace, level: LogLevel.error);
     }
   }
 
@@ -443,8 +443,9 @@ class FtmsBleTransport
         }
         // Add more op codes as needed
       } else {
-        talker.warning(
-          '[FtmsBleTransport] FTMS operation 0x${requestOpCode.toRadixString(16)} failed with result: 0x${resultCode.toRadixString(16)}',
+        logClass(
+          'FTMS operation 0x${requestOpCode.toRadixString(16)} failed with result: 0x${resultCode.toRadixString(16)}',
+          level: LogLevel.warning,
         );
 
         // Lost control or failed to apply state
@@ -476,7 +477,7 @@ class FtmsBleTransport
     // Find control point characteristic from stored services
     final controlPointChar = _getControlPointCharacteristic();
     if (controlPointChar == null) {
-      talker.info('[FtmsBleTransport] Cannot sync device state - control point characteristic not available');
+      logClass('Cannot sync device state - control point characteristic not available');
       return;
     }
 
@@ -543,7 +544,7 @@ class FtmsBleTransport
         // Add more modes here as needed (speed, inclination, HR, cadence, etc.)
       }
     } catch (e, stackTrace) {
-      talker.error('[FtmsBleTransport] Error during state sync', e, stackTrace);
+      logClass('Error during state sync', e: e, stack: stackTrace, level: LogLevel.error);
       _hasControl = false; // Assume we lost control on error
     } finally {
       // Always reset syncing flag so subsequent syncs can proceed
@@ -578,7 +579,7 @@ class FtmsBleTransport
         : state;
 
     if (clampedState.targetPower != state.targetPower) {
-      talker.info('[FtmsBleTransport] Power clamped from ${state.targetPower}W to ${clampedState.targetPower}W');
+      logClass('Power clamped from ${state.targetPower}W to ${clampedState.targetPower}W');
     }
 
     // Update desired state
@@ -592,7 +593,7 @@ class FtmsBleTransport
   }
 
   void _handleDisconnection() {
-    talker.info('[FtmsBleTransport] Device disconnected');
+    logClass('Device disconnected');
     _connectionSubscription?.cancel();
     _indoorBikeDataSubscription?.cancel();
     _controlPointSubscription?.cancel();

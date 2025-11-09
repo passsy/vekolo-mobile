@@ -70,11 +70,11 @@ class WorkoutRecordingService {
   /// Returns the generated session ID.
   Future<String> startRecording(String workoutName, {String? userId, required int ftp}) async {
     if (_isRecording) {
-      talker.warning('[WorkoutRecording] Already recording session: $_sessionId');
+      logClass('Already recording session: $_sessionId', level: LogLevel.warning);
       return _sessionId!;
     }
 
-    talker.info('[WorkoutRecording] Starting recording: $workoutName');
+    logClass('Starting recording: $workoutName');
 
     // Create new session
     _sessionId = await _persistence.createSession(workoutName, _playerService.workoutPlan, userId: userId, ftp: ftp);
@@ -82,7 +82,7 @@ class WorkoutRecordingService {
     // Start sampling
     _startSampling();
 
-    talker.info('[WorkoutRecording] Recording started: $_sessionId');
+    logClass('Recording started: $_sessionId');
     return _sessionId!;
   }
 
@@ -91,11 +91,11 @@ class WorkoutRecordingService {
   /// Used for crash recovery - continues recording to an existing session.
   Future<void> resumeRecording({required String sessionId}) async {
     if (_isRecording) {
-      talker.warning('[WorkoutRecording] Already recording session: $_sessionId');
+      logClass('Already recording session: $_sessionId', level: LogLevel.warning);
       return;
     }
 
-    talker.info('[WorkoutRecording] Resuming recording: $sessionId');
+    logClass('Resuming recording: $sessionId');
 
     // Verify session exists
     final metadata = await _persistence.loadSessionMetadata(sessionId);
@@ -111,7 +111,7 @@ class WorkoutRecordingService {
     // Start sampling
     _startSampling();
 
-    talker.info('[WorkoutRecording] Recording resumed: $_sessionId');
+    logClass('Recording resumed: $_sessionId');
   }
 
   /// Stop recording.
@@ -121,11 +121,11 @@ class WorkoutRecordingService {
   /// false when abandoned or stopped early.
   Future<void> stopRecording({required bool completed}) async {
     if (!_isRecording) {
-      talker.warning('[WorkoutRecording] Not recording, nothing to stop');
+      logClass('Not recording, nothing to stop', level: LogLevel.warning);
       return;
     }
 
-    talker.info('[WorkoutRecording] Stopping recording (completed: $completed)');
+    logClass('Stopping recording (completed: $completed)');
 
     // Stop sampling timer
     _recordingTimer?.cancel();
@@ -143,14 +143,14 @@ class WorkoutRecordingService {
       );
     }
 
-    talker.info('[WorkoutRecording] Recording stopped: $_sessionId');
+    logClass('Recording stopped: $_sessionId');
     _sessionId = null;
   }
 
   /// Start the 1Hz sampling timer.
   void _startSampling() {
     if (_recordingTimer != null) {
-      talker.warning('[WorkoutRecording] Sampling already started');
+      logClass('Sampling already started', level: LogLevel.warning);
       return;
     }
 
@@ -161,7 +161,7 @@ class WorkoutRecordingService {
       _recordSample();
     });
 
-    talker.info('[WorkoutRecording] Sampling started (1Hz)');
+    logClass('Sampling started (1Hz)');
   }
 
   /// Record a single sample.
@@ -169,7 +169,7 @@ class WorkoutRecordingService {
   /// Reads current values from beacons (no subscriptions!) and writes to persistence.
   void _recordSample() {
     if (_sessionId == null) {
-      talker.warning('[WorkoutRecording] Cannot record sample - no session ID');
+      logClass('Cannot record sample - no session ID', level: LogLevel.warning);
       return;
     }
 
@@ -224,7 +224,7 @@ class WorkoutRecordingService {
   /// IMPORTANT: Always call this when done with the service.
   /// Stops recording and flushes pending samples.
   Future<void> dispose() async {
-    talker.info('[WorkoutRecording] Disposing');
+    logClass('Disposing');
 
     // Stop timer
     _recordingTimer?.cancel();
@@ -249,6 +249,6 @@ class WorkoutRecordingService {
     _isRecording = false;
     _sessionId = null;
 
-    talker.info('[WorkoutRecording] Disposed');
+    logClass('Disposed');
   }
 }

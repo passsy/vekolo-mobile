@@ -61,7 +61,7 @@ class _UnknownDeviceReportPageState extends State<UnknownDeviceReportPage> {
   @override
   void initState() {
     super.initState();
-    talker.info('[UnknownDeviceReportPage] Initializing page');
+    logClass('Initializing page');
 
     // Initialize form with notes field
     _form = FormGroup({'notes': FormControl<String>(value: '')});
@@ -72,14 +72,14 @@ class _UnknownDeviceReportPageState extends State<UnknownDeviceReportPage> {
 
   @override
   void dispose() {
-    talker.info('[UnknownDeviceReportPage] Disposing page');
+    logClass('Disposing page');
     _stopScan();
     super.dispose();
   }
 
   /// Starts real BLE scanning for all devices
   Future<void> _startScan() async {
-    talker.info('[UnknownDeviceReportPage] Starting real BLE scan');
+    logClass('Starting real BLE scan');
 
     setState(() {
       _pageState = UnknownDevicePageState.scanning;
@@ -136,7 +136,7 @@ class _UnknownDeviceReportPageState extends State<UnknownDeviceReportPage> {
           }
         },
         onError: (Object e, StackTrace stackTrace) {
-          talker.error('[UnknownDeviceReportPage] Scan error', e, stackTrace);
+          logClass('Scan error', e: e, stack: stackTrace, level: LogLevel.error);
           if (mounted) {
             setState(() {
               _errorMessage = 'Failed to scan for devices: $e';
@@ -146,9 +146,9 @@ class _UnknownDeviceReportPageState extends State<UnknownDeviceReportPage> {
         },
       );
 
-      talker.info('[UnknownDeviceReportPage] Scan started, waiting for devices...');
+      logClass('Scan started, waiting for devices...');
     } catch (e, stackTrace) {
-      talker.error('[UnknownDeviceReportPage] Failed to start scan', e, stackTrace);
+      logClass('Failed to start scan', e: e, stack: stackTrace, level: LogLevel.error);
       if (mounted) {
         setState(() {
           _errorMessage =
@@ -163,7 +163,7 @@ class _UnknownDeviceReportPageState extends State<UnknownDeviceReportPage> {
   Future<void> _stopScan() async {
     if (!_isScanning) return;
 
-    talker.info('[UnknownDeviceReportPage] Stopping scan');
+    logClass('Stopping scan');
     await _scanSubscription?.cancel();
     _scanSubscription = null;
     await fbp.FlutterBluePlus.stopScan();
@@ -177,7 +177,7 @@ class _UnknownDeviceReportPageState extends State<UnknownDeviceReportPage> {
 
   /// Connects to device and collects data
   Future<void> _onDeviceSelected(_SimpleDevice device) async {
-    talker.info('[UnknownDeviceReportPage] Device selected: ${device.id}');
+    logClass('Device selected: ${device.id}');
 
     // Get current user from AuthService before async operations
     final authService = Refs.authService.of(context);
@@ -204,12 +204,12 @@ class _UnknownDeviceReportPageState extends State<UnknownDeviceReportPage> {
           // Connect to the device
           await bleDevice.connect();
 
-          talker.info('[UnknownDeviceReportPage] Connected to device: ${device.id}');
+          logClass('Connected to device: ${device.id}');
 
           // Discover services
           final services = await bleDevice.discoverServices();
 
-          talker.info('[UnknownDeviceReportPage] Discovered ${services.length} services');
+          logClass('Discovered ${services.length} services');
 
           // Store for later regeneration with user info
           _selectedBleDevice = bleDevice;
@@ -252,7 +252,7 @@ class _UnknownDeviceReportPageState extends State<UnknownDeviceReportPage> {
         }),
       ]);
     } on TimeoutException catch (e, stackTrace) {
-      talker.error('[UnknownDeviceReportPage] Connection timeout', e, stackTrace);
+      logClass('Connection timeout', e: e, stack: stackTrace, level: LogLevel.error);
 
       if (mounted) {
         setState(() {
@@ -261,7 +261,7 @@ class _UnknownDeviceReportPageState extends State<UnknownDeviceReportPage> {
         });
       }
     } catch (e, stackTrace) {
-      talker.error('[UnknownDeviceReportPage] Connection error', e, stackTrace);
+      logClass('Connection error', e: e, stack: stackTrace, level: LogLevel.error);
 
       if (mounted) {
         setState(() {
@@ -331,7 +331,7 @@ class _UnknownDeviceReportPageState extends State<UnknownDeviceReportPage> {
               }
             } catch (e) {
               buffer.writeln('     Value: (read failed: $e)');
-              talker.info('[UnknownDeviceReportPage] Failed to read characteristic ${characteristic.uuid}: $e');
+              logClass('Failed to read characteristic ${characteristic.uuid}: $e');
             }
           }
         }
@@ -345,7 +345,7 @@ class _UnknownDeviceReportPageState extends State<UnknownDeviceReportPage> {
       buffer.writeln('Connection Parameters:');
       buffer.writeln('- MTU: $mtu bytes');
     } catch (e) {
-      talker.info('[UnknownDeviceReportPage] Could not read MTU: $e');
+      logClass('Could not read MTU: $e');
     }
     buffer.writeln();
 
@@ -373,7 +373,7 @@ class _UnknownDeviceReportPageState extends State<UnknownDeviceReportPage> {
 
   /// Handles form submission - sends report via email
   Future<void> _submitReport() async {
-    talker.info('[UnknownDeviceReportPage] Submitting report');
+    logClass('Submitting report');
 
     try {
       // Get current user
@@ -391,7 +391,7 @@ class _UnknownDeviceReportPageState extends State<UnknownDeviceReportPage> {
       }
 
       final notes = _form.control('notes').value as String?;
-      talker.info('[UnknownDeviceReportPage] Additional notes: ${notes ?? "(none)"}');
+      logClass('Additional notes: ${notes ?? "(none)"}');
 
       // Build email content
       final emailBody = StringBuffer();
@@ -410,7 +410,7 @@ class _UnknownDeviceReportPageState extends State<UnknownDeviceReportPage> {
 
       final mailtoUrl = Uri.parse('mailto:$emailAddress?subject=$subject&body=$body');
 
-      talker.info('[UnknownDeviceReportPage] Opening email client with mailto URL');
+      logClass('Opening email client with mailto URL');
 
       // Launch email client
       if (await canLaunchUrl(mailtoUrl)) {
@@ -426,7 +426,7 @@ class _UnknownDeviceReportPageState extends State<UnknownDeviceReportPage> {
         throw Exception('Could not launch email client');
       }
     } catch (e, stackTrace) {
-      talker.error('[UnknownDeviceReportPage] Error sending email', e, stackTrace);
+      logClass('Error sending email', e: e, stack: stackTrace, level: LogLevel.error);
 
       if (mounted) {
         setState(() {

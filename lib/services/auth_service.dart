@@ -30,7 +30,7 @@ class SecureTokenStorage extends TokenStorage<VekoloToken> {
         refreshToken: RefreshToken(data['refreshToken'] as String),
       );
     } catch (e, stackTrace) {
-      talker.error('[SecureTokenStorage] Failed to parse token', e, stackTrace);
+      logClass('Failed to parse token', e: e, stack: stackTrace, level: LogLevel.error);
       return null;
     }
   }
@@ -111,7 +111,7 @@ class AuthService {
     try {
       return User.init.fromAccessToken(accessToken);
     } catch (e, stackTrace) {
-      talker.error('[AuthService] Failed to parse user data', e, stackTrace);
+      logClass('Failed to parse user data', e: e, stack: stackTrace, level: LogLevel.error);
       return null;
     }
   }

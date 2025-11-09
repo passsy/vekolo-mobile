@@ -98,6 +98,7 @@ class VekoloRobot {
   /// // kickrCore is now connected and ready to use
   /// ```
   Future<void> launchApp({bool loggedIn = false, List<FakeDevice> pairedDevices = const []}) async {
+    logRobot('Launching the app (loggedIn=$loggedIn, devices=${pairedDevices.map((it) => it.name).join(", ")})');
     await _setup();
 
     // If devices should be pre-paired, save assignments before launching app

@@ -73,7 +73,6 @@ class TransportRegistry {
   /// The transport's `canSupport()` method will be called during detection
   /// to check compatibility with discovered devices.
   void register(TransportRegistration registration) {
-    talker.info('[TransportRegistry] Registering transport: ${registration.name}');
     _registrations.add(registration);
   }
 
@@ -81,7 +80,6 @@ class TransportRegistry {
   ///
   /// Useful for testing or dynamically enabling/disabling transports.
   void unregister(String name) {
-    talker.info('[TransportRegistry] Unregistering transport: $name');
     _registrations.removeWhere((r) => r.name == name);
   }
 
@@ -89,7 +87,6 @@ class TransportRegistry {
   ///
   /// Useful for testing.
   void clear() {
-    talker.info('[TransportRegistry] Clearing all transports');
     _registrations.clear();
   }
 
@@ -124,7 +121,7 @@ class TransportRegistry {
   /// }
   /// ```
   List<BleTransport> detectCompatibleTransports(DiscoveredDevice discovered, {required String deviceId}) {
-    talker.info('[TransportRegistry] Detecting transports for device: ${discovered.name} (${discovered.deviceId})');
+    logClass('Detecting transports for device: ${discovered.name} (${discovered.deviceId})');
 
     final compatibleTransports = <BleTransport>[];
 
@@ -137,19 +134,19 @@ class TransportRegistry {
         final isCompatible = transport.canSupport(discovered);
 
         if (isCompatible) {
-          talker.info('[TransportRegistry] ✓ ${registration.name} is compatible');
+          logClass('✓ ${registration.name} is compatible');
           compatibleTransports.add(transport);
         } else {
-          talker.info('[TransportRegistry] ✗ ${registration.name} is not compatible');
+          logClass('✗ ${registration.name} is not compatible');
           // Dispose transport since we won't use it
           transport.dispose();
         }
       } catch (e, stackTrace) {
-        talker.info('[TransportRegistry] Error checking ${registration.name} compatibility: $e', e, stackTrace);
+        logClass('Error checking ${registration.name} compatibility: $e', e: e, stack: stackTrace);
       }
     }
 
-    talker.info('[TransportRegistry] Found ${compatibleTransports.length} compatible transport(s)');
+    logClass('Found ${compatibleTransports.length} compatible transport(s)');
 
     return compatibleTransports;
   }

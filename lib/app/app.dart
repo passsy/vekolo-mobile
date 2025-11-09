@@ -6,7 +6,7 @@ import 'package:vekolo/api/pretty_log_interceptor.dart';
 import 'package:vekolo/api/vekolo_api_client.dart';
 import 'package:vekolo/app/refs.dart';
 import 'package:vekolo/ble/ble_permissions.dart';
-import 'package:vekolo/ble/ble_platform.dart';
+import 'package:vekolo/ble/ble_platform.dart' hide LogLevel;
 import 'package:vekolo/ble/ble_scanner.dart';
 import 'package:vekolo/ble/ftms_ble_transport.dart';
 import 'package:vekolo/ble/heart_rate_ble_transport.dart';
@@ -22,6 +22,7 @@ import 'package:vekolo/services/workout_sync_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vekolo/widgets/initialization_error_screen.dart';
 import 'package:vekolo/widgets/splash_screen.dart';
+import 'package:flutter_blue_plus/flutter_blue_plus.dart' as fbp show LogLevel;
 
 class VekoloApp extends StatefulWidget {
   const VekoloApp({super.key});
@@ -43,7 +44,7 @@ class _VekoloAppState extends State<VekoloApp> {
       if (!mounted) return;
 
       // Disable verbose flutter_blue_plus logging
-      Refs.blePlatform.of(context).setLogLevel(LogLevel.none);
+      Refs.blePlatform.of(context).setLogLevel(fbp.LogLevel.none);
 
       // Capture references before async operations
       final deviceManager = Refs.deviceManager.of(context);
@@ -53,7 +54,7 @@ class _VekoloAppState extends State<VekoloApp> {
       try {
         await deviceManager.initialize();
       } catch (e, stackTrace) {
-        talker.error('[VekoloApp] Failed to initialize DeviceManager auto-connect: $e', e, stackTrace);
+        logClass('Failed to initialize DeviceManager auto-connect: $e', e: e, stack: stackTrace, level: LogLevel.error);
       }
 
       // Run async initialization (load user from secure storage)
@@ -61,7 +62,7 @@ class _VekoloAppState extends State<VekoloApp> {
       try {
         await authService.refreshAccessToken();
       } catch (e, stack) {
-        talker.error('[VekoloApp] No valid refresh token found during initialization', e, stack);
+        logClass('No valid refresh token found during initialization', e: e, stack: stack, level: LogLevel.error);
       }
 
       // Mark initialization as complete
@@ -73,7 +74,7 @@ class _VekoloAppState extends State<VekoloApp> {
         });
       }
     } catch (e, stack) {
-      talker.error('[VekoloApp] Initialization failed: $e', e, stack);
+      logClass('Initialization failed: $e', e: e, stack: stack, level: LogLevel.error);
       if (mounted) {
         setState(() {
           _initializationError = e.toString();

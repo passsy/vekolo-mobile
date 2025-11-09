@@ -76,6 +76,8 @@ class FakeBlePlatform implements BlePlatform {
     }
     // Default implementation
     _isScanning = false;
+    // Clear scan results when scanning stops
+    _scanResultsBeacon.value = [];
   }
 
   Future<void> Function(String deviceId, {Duration timeout})? overrideConnect;
@@ -278,12 +280,14 @@ class FakeBlePlatform implements BlePlatform {
   /// Change the Bluetooth adapter state.
   ///
   /// Updates the [adapterState] beacon. If the adapter is turned off
-  /// while scanning, the scan automatically stops.
+  /// while scanning, the scan automatically stops and scan results are cleared.
   void setAdapterState(BluetoothAdapterState state) {
     _adapterStateBeacon.value = state;
 
     if (state != BluetoothAdapterState.on && _isScanning) {
       _isScanning = false;
+      // Clear scan results when Bluetooth turns off
+      _scanResultsBeacon.value = [];
     }
   }
 
@@ -338,10 +342,14 @@ class FakeBlePlatform implements BlePlatform {
 
   /// Emit current scan results for all advertising devices.
   ///
-  /// Only includes devices that are turned on. Devices continue to appear
-  /// in results even when not actively scanning (matching FlutterBluePlus
-  /// behavior which caches discovered devices).
+  /// Only emits results when actively scanning. Only includes devices that
+  /// are turned on.
   void _emitScanResults() {
+    // Only emit scan results when actively scanning
+    if (!_isScanning) {
+      return;
+    }
+
     final activeDevices = _devices.values
         .where((device) => device._isAdvertising)
         .map((device) => device._toScanResult())

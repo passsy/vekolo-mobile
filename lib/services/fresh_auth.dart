@@ -42,7 +42,7 @@ Fresh<VekoloToken> createFreshAuth({required VekoloApiClient Function() apiClien
           }
         }
       } catch (e) {
-        talker.info('[Fresh] Error checking shouldRefresh: $e');
+        _FreshAuthLogger().logClass('Error checking shouldRefresh: $e');
       }
       return false;
     },
@@ -69,4 +69,10 @@ class VekoloToken extends Token {
   DateTime get expiresAt {
     return typedAccessToken.expiryDate;
   }
+}
+
+/// Helper class to provide context for logging in top-level functions
+class _FreshAuthLogger {
+  @override
+  String toString() => 'FreshAuth';
 }

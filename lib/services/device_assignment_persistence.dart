@@ -51,6 +51,14 @@ class DeviceAssignments {
   final DeviceAssignment? cadenceSource;
   final DeviceAssignment? speedSource;
   final DeviceAssignment? heartRateSource;
+
+  bool get isEmpty {
+    return primaryTrainer == null &&
+        powerSource == null &&
+        cadenceSource == null &&
+        speedSource == null &&
+        heartRateSource == null;
+  }
 }
 
 /// Service for persisting device assignments.
@@ -125,7 +133,7 @@ class DeviceAssignmentPersistence {
     final json = jsonEncode(data);
     await _prefs.setString(_storageKey, json);
 
-    talker.info('[DeviceAssignments] Saved ${assignments.length} assignment(s)');
+    logClass('Saved ${assignments.length} assignment(s)');
   }
 
   /// Load saved device assignments.
@@ -134,7 +142,7 @@ class DeviceAssignmentPersistence {
   Future<DeviceAssignments> loadAssignments() async {
     final json = await _prefs.getString(_storageKey);
     if (json == null) {
-      talker.info('[DeviceAssignments] No saved assignments found');
+      logClass('No saved assignments found');
       return const DeviceAssignments();
     }
 
@@ -144,12 +152,12 @@ class DeviceAssignmentPersistence {
       // Check version
       final version = pick(data, 'version').asIntOrNull();
       if (version == null) {
-        talker.info('[DeviceAssignments] No version field, ignoring');
+        logClass('No version field, ignoring');
         return const DeviceAssignments();
       }
 
       if (version != _currentVersion) {
-        talker.info('[DeviceAssignments] Unknown version $version (expected $_currentVersion), ignoring');
+        logClass('Unknown version $version (expected $_currentVersion), ignoring');
         // Future: handle version migration here if needed
         return const DeviceAssignments();
       }
@@ -157,7 +165,7 @@ class DeviceAssignmentPersistence {
       // Parse assignments list
       final assignmentsList = pick(data, 'assignments').asListOrNull<dynamic>((p) => p.value);
       if (assignmentsList == null) {
-        talker.info('[DeviceAssignments] No assignments list found');
+        logClass('No assignments list found');
         return const DeviceAssignments();
       }
 
@@ -188,15 +196,15 @@ class DeviceAssignmentPersistence {
             case 'heartRateSource':
               heartRateSource = assignment;
             default:
-              talker.info('[DeviceAssignments] Unknown role: $role');
+              logClass('Unknown role: $role');
           }
         } catch (e) {
           // Skip invalid assignments
-          talker.info('[DeviceAssignments] Skipping invalid assignment: $e');
+          logClass('Skipping invalid assignment: $e');
         }
       }
 
-      talker.info('[DeviceAssignments] Loaded assignments');
+      logClass('Loaded assignments');
 
       return DeviceAssignments(
         primaryTrainer: primaryTrainer,
@@ -206,7 +214,7 @@ class DeviceAssignmentPersistence {
         heartRateSource: heartRateSource,
       );
     } catch (e, stackTrace) {
-      talker.error('[DeviceAssignments] Failed to load assignments, resetting', e, stackTrace);
+      logClass('Failed to load assignments, resetting', e: e, stack: stackTrace, level: LogLevel.error);
       return const DeviceAssignments();
     }
   }
@@ -216,6 +224,6 @@ class DeviceAssignmentPersistence {
   /// Useful for testing or when user wants to reset device connections.
   Future<void> clearAssignments() async {
     await _prefs.remove(_storageKey);
-    talker.info('[DeviceAssignments] Cleared all assignments');
+    logClass('Cleared all assignments');
   }
 }

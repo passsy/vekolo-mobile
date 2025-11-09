@@ -37,7 +37,7 @@ import 'package:flutter/foundation.dart';
 import 'package:state_beacon/state_beacon.dart';
 import 'package:vekolo/app/logger.dart';
 import 'package:vekolo/ble/ble_device.dart';
-import 'package:vekolo/ble/ble_platform.dart';
+import 'package:vekolo/ble/ble_platform.dart' hide LogLevel;
 import 'package:vekolo/ble/ble_scanner.dart';
 import 'package:vekolo/ble/transport_registry.dart';
 import 'package:vekolo/domain/beacons/staleness_beacon.dart';
@@ -566,7 +566,7 @@ class DeviceManager {
         heartRateSource: assignments.heartRateSource,
       );
     } catch (e, stack) {
-      talker.error('[DeviceManager] Failed to persist assignments: $e', e, stack);
+      logClass('Failed to persist assignments: $e', e: e, stack: stack, level: LogLevel.error);
     }
   }
 
@@ -604,10 +604,12 @@ class DeviceManager {
     }
 
     final deviceIds = _extractDeviceIds(assignments);
-    _autoConnectDeviceIds.addAll(deviceIds);
+    if (deviceIds.isNotEmpty) {
+      _autoConnectDeviceIds.addAll(deviceIds);
 
-    talker.info('[DeviceManager] Found ${deviceIds.length} device(s) to auto-connect');
-    _startAutoConnectScanning();
+      logClass('Found ${deviceIds.length} device(s) to auto-connect');
+      _startAutoConnectScanning();
+    }
   }
 
   /// Connects to a device during auto-connect.
@@ -657,6 +659,10 @@ class DeviceManager {
   /// Iterates through all saved assignments and attempts to restore them for
   /// devices that are already connected. Used during initialization.
   void _restoreAssignments(DeviceAssignments assignments) {
+    if (assignments.isEmpty) {
+      logClass('No need to restore (empty) assignments');
+      return;
+    }
     // Create AssignedDevice wrappers from persisted assignments
     // Devices are not connected yet, so connectedDevice will be null
     // These will be updated with actual device references in _restoreAssignmentsForDevice
@@ -711,7 +717,7 @@ class DeviceManager {
       _heartRateSourceBeacon.value = _heartRateSource;
     }
 
-    talker.info('[DeviceManager] Restored assignments from persistence (devices not yet connected)');
+    logClass('Restored assignments from persistence (devices not yet connected)');
   }
 
   /// Restores role assignments for a specific device that was just connected during auto-connect.
@@ -725,31 +731,31 @@ class DeviceManager {
     if (_primaryTrainer?.deviceId == deviceId) {
       _primaryTrainer = _primaryTrainer!.withConnectedDevice(device);
       _primaryTrainerBeacon.value = _primaryTrainer;
-      talker.info('[DeviceManager] Updated primaryTrainer with connected device');
+      logClass('Updated primaryTrainer with connected device');
     }
 
     if (_powerSource?.deviceId == deviceId) {
       _powerSource = _powerSource!.withConnectedDevice(device);
       _powerSourceBeacon.value = _powerSource;
-      talker.info('[DeviceManager] Updated powerSource with connected device');
+      logClass('Updated powerSource with connected device');
     }
 
     if (_cadenceSource?.deviceId == deviceId) {
       _cadenceSource = _cadenceSource!.withConnectedDevice(device);
       _cadenceSourceBeacon.value = _cadenceSource;
-      talker.info('[DeviceManager] Updated cadenceSource with connected device');
+      logClass('Updated cadenceSource with connected device');
     }
 
     if (_speedSource?.deviceId == deviceId) {
       _speedSource = _speedSource!.withConnectedDevice(device);
       _speedSourceBeacon.value = _speedSource;
-      talker.info('[DeviceManager] Updated speedSource with connected device');
+      logClass('Updated speedSource with connected device');
     }
 
     if (_heartRateSource?.deviceId == deviceId) {
       _heartRateSource = _heartRateSource!.withConnectedDevice(device);
       _heartRateSourceBeacon.value = _heartRateSource;
-      talker.info('[DeviceManager] Updated heartRateSource with connected device');
+      logClass('Updated heartRateSource with connected device');
     }
   }
 
@@ -759,7 +765,7 @@ class DeviceManager {
       return; // Already scanning
     }
 
-    talker.info('[DeviceManager] Starting scan for ${_autoConnectDeviceIds.length} device(s)');
+    logClass('Starting scan for ${_autoConnectDeviceIds.length} device(s)');
 
     _autoConnectScanToken = scanner.startScan();
 
@@ -783,7 +789,7 @@ class DeviceManager {
 
           // Found a device we're looking for - mark as connecting and connect it
           _connectingDeviceIds.add(discovered.deviceId);
-          talker.info('[DeviceManager] Starting connection to ${discovered.deviceId}');
+          logClass('Starting connection to ${discovered.deviceId}');
 
           _connectAndRestoreDevice(discovered.deviceId)
               .then((_) {
@@ -800,16 +806,17 @@ class DeviceManager {
                   _autoConnectScanToken = null;
                   _scannerDevicesUnsubscribe?.call();
                   _scannerDevicesUnsubscribe = null;
-                  talker.info('[DeviceManager] All devices connected or sensors assigned, stopping scan');
+                  logClass('All devices connected or sensors assigned, stopping scan');
                 }
               })
               .catchError((error, stackTrace) {
                 // Remove from connecting set on error
                 _connectingDeviceIds.remove(discovered.deviceId);
-                talker.error(
-                  '[DeviceManager] Failed to auto-connect ${discovered.deviceId}: $error',
-                  error,
-                  stackTrace as StackTrace?,
+                logClass(
+                  'Failed to auto-connect ${discovered.deviceId}: $error',
+                  e: error,
+                  stack: stackTrace as StackTrace?,
+                  level: LogLevel.error,
                 );
               });
         }
@@ -850,7 +857,7 @@ class DeviceManager {
   ///
   /// Call this when the manager is no longer needed to prevent memory leaks.
   Future<void> dispose() async {
-    talker.info('[DeviceManager] dispose()');
+    logClass('dispose()');
     // Stop auto-connect scanning
     if (_autoConnectScanToken != null) {
       scanner.stopScan(_autoConnectScanToken!);
@@ -875,7 +882,7 @@ class DeviceManager {
         try {
           await device.disconnect();
         } catch (e, stack) {
-          talker.error('Failed to disconnect device ${device.name}', e, stack);
+          logClass('Failed to disconnect device ${device.name}', e: e, stack: stack, level: LogLevel.error);
         }
       }),
     );

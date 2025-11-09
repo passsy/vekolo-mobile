@@ -250,7 +250,7 @@ class BleScanner with WidgetsBindingObserver {
   /// testing more predictable.
   void initialize() {
     if (_disposed) {
-      talker.info('[BleScanner] Cannot initialize after disposal');
+      logClass('Cannot initialize after disposal');
       return;
     }
 
@@ -265,7 +265,7 @@ class BleScanner with WidgetsBindingObserver {
   void _startMonitoring() {
     // Subscribe to adapter state changes
     _adapterStateUnsubscribe = _platform.adapterState.subscribe((state) {
-      talker.info('[BleScanner] Adapter state changed to: $state');
+      logClass('Adapter state changed to: $state');
       _updateBluetoothState();
     });
 
@@ -305,18 +305,18 @@ class BleScanner with WidgetsBindingObserver {
       if (newState != _bluetoothStateBeacon.value) {
         _bluetoothStateBeacon.value = newState;
 
-        talker.info('[BleScanner] Bluetooth state updated: $newState');
+        logClass('Bluetooth state updated: $newState');
 
         // Clear devices and stop scanning when Bluetooth turns off or becomes unavailable
         if (!newState.isBluetoothOn) {
           if (_discoveredDevices.isNotEmpty) {
-            talker.info('[BleScanner] Bluetooth turned off, clearing ${_discoveredDevices.length} devices');
+            logClass('Bluetooth turned off, clearing ${_discoveredDevices.length} devices');
             _discoveredDevices.clear();
             _updateDevicesBeacon();
           }
           // Stop platform scanning if it's active
           if (_isScanningBeacon.value) {
-            talker.info('[BleScanner] Bluetooth turned off, stopping scan');
+            logClass('Bluetooth turned off, stopping scan');
             _stopPlatformScan();
           }
         }
@@ -324,8 +324,8 @@ class BleScanner with WidgetsBindingObserver {
         // Auto-restart scanning if conditions became favorable
         _maybeAutoRestartScanning();
       }
-    } catch (e, stackTrace) {
-      talker.info('[BleScanner] Error updating Bluetooth state: $e', e, stackTrace);
+    } catch (e, stack) {
+      logClass('Error updating Bluetooth state: $e', e: e, stack: stack);
     }
   }
 
@@ -365,16 +365,16 @@ class BleScanner with WidgetsBindingObserver {
 
       if (newRssi == null) {
         signalLostCount++;
-        talker.info(
-          '[BleScanner] Device lost signal: ${device.name ?? device.deviceId} '
+        logClass(
+          'Device lost signal: ${device.name ?? device.deviceId} '
           '(last seen ${timeSinceLastSeen.inSeconds}s ago, was ${device.rssi} dBm)',
         );
       }
 
       if (newRssi != null) {
         signalRestoredCount++;
-        talker.info(
-          '[BleScanner] Device signal restored: ${device.name ?? device.deviceId} '
+        logClass(
+          'Device signal restored: ${device.name ?? device.deviceId} '
           '(RSSI: $newRssi dBm)',
         );
       }
@@ -384,8 +384,8 @@ class BleScanner with WidgetsBindingObserver {
     }
 
     if (updated) {
-      talker.info(
-        '[BleScanner] Signal status updated: $signalLostCount lost, $signalRestoredCount restored '
+      logClass(
+        'Signal status updated: $signalLostCount lost, $signalRestoredCount restored '
         '(${_discoveredDevices.length} total devices)',
       );
       _updateDevicesBeacon();
@@ -409,7 +409,7 @@ class BleScanner with WidgetsBindingObserver {
       for (final id in expiredIds) {
         _discoveredDevices.remove(id);
       }
-      talker.info('[BleScanner] Removed ${expiredIds.length} expired devices');
+      logClass('Removed ${expiredIds.length} expired devices');
       _updateDevicesBeacon();
     }
   }
@@ -439,7 +439,7 @@ class BleScanner with WidgetsBindingObserver {
           rssi: result.rssi,
         );
         updated = true;
-        talker.info('[BleScanner] New device discovered: $deviceId (${result.advertisementData.advName})');
+        logClass('New device discovered: $deviceId (${result.advertisementData.advName})');
         continue;
       }
 
@@ -466,7 +466,7 @@ class BleScanner with WidgetsBindingObserver {
         !_isScanningBeacon.value &&
         !_isStartingScan &&
         _bluetoothStateBeacon.value.canScan) {
-      talker.info('[BleScanner] Auto-restarting scan (conditions now favorable)');
+      logClass('Auto-restarting scan (conditions now favorable)');
       _startPlatformScan();
     }
   }
@@ -490,7 +490,7 @@ class BleScanner with WidgetsBindingObserver {
     final token = ScanToken._();
     _activeTokens.add(token);
 
-    talker.info('[BleScanner] Start scan requested (${_activeTokens.length} active tokens)');
+    logClass('Start scan requested (${_activeTokens.length} active tokens)');
 
     // Start platform scan if not already scanning and conditions are met
     if (!_isScanningBeacon.value && !_isStartingScan) {
@@ -509,7 +509,7 @@ class BleScanner with WidgetsBindingObserver {
     final state = _bluetoothStateBeacon.value;
 
     if (!state.canScan) {
-      talker.info('[BleScanner] Cannot start scan: canScan=false (${state})');
+      logClass('Cannot start scan: canScan=false (${state})');
       return;
     }
 
@@ -520,10 +520,10 @@ class BleScanner with WidgetsBindingObserver {
       // Check disposed again after async operation
       if (!_disposed) {
         _isScanningBeacon.value = true;
-        talker.info('[BleScanner] Platform scan started successfully');
+        logClass('Platform scan started successfully');
       }
-    } catch (e, stackTrace) {
-      talker.info('[BleScanner] Failed to start platform scan: $e', e, stackTrace);
+    } catch (e, stack) {
+      logClass('Failed to start platform scan', e: e, stack: stack);
     } finally {
       _isStartingScan = false;
     }
@@ -548,7 +548,7 @@ class BleScanner with WidgetsBindingObserver {
     final wasRemoved = _activeTokens.remove(token);
 
     if (wasRemoved) {
-      talker.info('[BleScanner] Stop scan requested (${_activeTokens.length} active tokens remaining)');
+      logClass('Stop scan requested (${_activeTokens.length} active tokens remaining)');
 
       // Stop platform scan if no tokens remain
       if (_activeTokens.isEmpty && _isScanningBeacon.value) {
@@ -572,10 +572,10 @@ class BleScanner with WidgetsBindingObserver {
       // Check disposed again after async operation
       if (!_disposed) {
         _isScanningBeacon.value = false;
-        talker.info('[BleScanner] Platform scan stopped');
+        logClass('Platform scan stopped');
       }
-    } catch (e, stackTrace) {
-      talker.info('[BleScanner] Failed to stop platform scan: $e', e, stackTrace);
+    } catch (e, stack) {
+      logClass('Failed to stop platform scan', e: e, stack: stack);
     }
   }
 
@@ -587,13 +587,13 @@ class BleScanner with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (_disposed) return;
 
-    talker.info('[BleScanner] App lifecycle changed to: $state');
+    logClass('App lifecycle changed to: $state');
 
     switch (state) {
       case AppLifecycleState.resumed:
         // App came to foreground - resume scanning if we have active tokens
         if (_activeTokens.isNotEmpty && !_isScanningBeacon.value) {
-          talker.info('[BleScanner] App resumed, restarting scan');
+          logClass('App resumed, restarting scan');
           _startPlatformScan();
         }
 
@@ -601,7 +601,7 @@ class BleScanner with WidgetsBindingObserver {
       case AppLifecycleState.paused:
         // App going to background - stop scanning to save battery
         if (_isScanningBeacon.value) {
-          talker.info('[BleScanner] App backgrounded, stopping scan');
+          logClass('App backgrounded, stopping scan');
           _stopPlatformScan();
         }
 
@@ -609,7 +609,7 @@ class BleScanner with WidgetsBindingObserver {
       case AppLifecycleState.hidden:
         // App is detaching or hidden - ensure scan is stopped
         if (_isScanningBeacon.value) {
-          talker.info('[BleScanner] App detached/hidden, stopping scan');
+          logClass('App detached/hidden, stopping scan');
           _stopPlatformScan();
         }
     }
@@ -622,7 +622,7 @@ class BleScanner with WidgetsBindingObserver {
   void dispose() {
     if (_disposed) return;
 
-    talker.info('[BleScanner] Disposing scanner');
+    logClass('Disposing scanner');
 
     _disposed = true;
 
@@ -652,6 +652,6 @@ class BleScanner with WidgetsBindingObserver {
     _isScanningBeacon.dispose();
     _bluetoothStateBeacon.dispose();
 
-    talker.info('[BleScanner] Scanner disposed');
+    logClass('Scanner disposed');
   }
 }

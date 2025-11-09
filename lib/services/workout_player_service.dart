@@ -87,8 +87,8 @@ class WorkoutPlayerService {
     _updateCurrentAndNextBlock();
     _updateProgress();
 
-    talker.info(
-      'WorkoutPlayerService initialized: ${_flattenedPlan.length} blocks, '
+    logClass(
+      'Initialized: ${_flattenedPlan.length} blocks, '
       '${_totalDuration}ms duration, FTP ${_ftp}W',
     );
   }
@@ -249,16 +249,16 @@ class WorkoutPlayerService {
     }
 
     if (isComplete.value) {
-      talker.debug('[WorkoutPlayerService] Cannot start: workout is already complete');
+      logClass('Cannot start: workout is already complete');
       return;
     }
 
     if (_currentBlockIndex >= _flattenedPlan.length) {
-      talker.debug('[WorkoutPlayerService] Cannot start: no blocks remaining');
+      logClass('Cannot start: no blocks remaining');
       return;
     }
 
-    talker.debug('[WorkoutPlayerService] Starting workout');
+    logClass('Starting workout');
 
     // Mark as resumed
     _lastResumeTime = clock.now();
@@ -282,7 +282,7 @@ class WorkoutPlayerService {
       return; // Already paused
     }
 
-    talker.debug('[WorkoutPlayerService] Pausing workout');
+    logClass('Pausing workout');
 
     // Update elapsed time before pausing
     _updateGlobalElapsedTime();
@@ -308,11 +308,11 @@ class WorkoutPlayerService {
   void skip() {
     final currentBlock = currentBlock$.value;
     if (currentBlock == null) {
-      talker.debug('[WorkoutPlayerService] Cannot skip: no current block');
+      logClass('Cannot skip: no current block');
       return;
     }
 
-    talker.debug('[WorkoutPlayerService] Skipping block $_currentBlockIndex');
+    logClass('Skipping block $_currentBlockIndex');
 
     // Calculate how much time to add (remaining time in current block)
     final elapsedUntilCurrentBlock = _getWorkoutElapsedUntilCurrentBlock();
@@ -348,7 +348,7 @@ class WorkoutPlayerService {
   void setPowerScaleFactor(double factor) {
     final clampedFactor = factor.clamp(0.1, 5.0);
 
-    talker.debug('[WorkoutPlayerService] Setting power scale factor: ${clampedFactor.toStringAsFixed(2)}');
+    logClass('Setting power scale factor: ${clampedFactor.toStringAsFixed(2)}');
 
     powerScaleFactor.value = clampedFactor;
 
@@ -368,7 +368,7 @@ class WorkoutPlayerService {
   /// Use this when the user manually ends the workout before finishing
   /// all blocks.
   void completeEarly() {
-    talker.debug('[WorkoutPlayerService] Completing workout early at ${_workoutElapsedTime}ms');
+    logClass('Completing workout early at ${_workoutElapsedTime}ms');
 
     _updateGlobalElapsedTime();
     _completeWorkout();
@@ -394,16 +394,17 @@ class WorkoutPlayerService {
   /// player.start();
   /// ```
   void restoreState({required int elapsedMs, required int currentBlockIndex}) {
-    talker.info(
-      '[WorkoutPlayerService] Restoring state: elapsedMs=$elapsedMs, '
+    logClass(
+      'Restoring state: elapsedMs=$elapsedMs, '
       'currentBlockIndex=$currentBlockIndex',
     );
 
     // Validate block index
     if (currentBlockIndex < 0 || currentBlockIndex >= _flattenedPlan.length) {
-      talker.warning(
-        '[WorkoutPlayerService] Invalid block index $currentBlockIndex, '
+      logClass(
+        'Invalid block index $currentBlockIndex, '
         'clamping to valid range',
+        level: LogLevel.warning,
       );
       _currentBlockIndex = currentBlockIndex.clamp(0, _flattenedPlan.length - 1);
     } else {
@@ -425,7 +426,7 @@ class WorkoutPlayerService {
     isPaused.value = true;
     _lastResumeTime = null;
 
-    talker.info('[WorkoutPlayerService] State restored successfully');
+    logClass('State restored successfully');
   }
 
   /// Disposes of all resources used by this service.
@@ -433,7 +434,7 @@ class WorkoutPlayerService {
   /// Stops the timer, disposes all beacons, and cleans up the sync service.
   /// After calling this, the service should not be used anymore.
   void dispose() {
-    talker.debug('[WorkoutPlayerService] Disposing WorkoutPlayerService');
+    logClass('Disposing WorkoutPlayerService');
 
     _stopTimer();
     _syncService.dispose();
@@ -615,7 +616,7 @@ class WorkoutPlayerService {
         _triggeredEventController.add(flattenedEvent);
         _triggeredEventIds.add(eventId);
 
-        talker.debug('[WorkoutPlayerService] Triggered event: $eventId at ${globalElapsedTime}ms');
+        logClass('Triggered event: $eventId at ${globalElapsedTime}ms');
       }
     }
   }
@@ -670,7 +671,7 @@ class WorkoutPlayerService {
 
   /// Completes the workout.
   void _completeWorkout() {
-    talker.debug('[WorkoutPlayerService] Workout complete at ${_workoutElapsedTime}ms');
+    logClass('Workout complete at ${_workoutElapsedTime}ms');
 
     isPaused.value = true;
     isComplete.value = true;

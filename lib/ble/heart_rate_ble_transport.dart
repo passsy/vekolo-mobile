@@ -82,7 +82,7 @@ class HeartRateBleTransport implements BleTransport, HeartRateSource {
     try {
       _stateBeacon.value = TransportState.attaching;
       _lastAttachError = null; // Clear any previous error
-      talker.info('[HeartRateBleTransport] Attaching to Heart Rate service on $deviceId');
+      logClass('Attaching to Heart Rate service on $deviceId');
 
       // Find Heart Rate Service
       final hrService = services.firstWhere(
@@ -90,7 +90,7 @@ class HeartRateBleTransport implements BleTransport, HeartRateSource {
         orElse: () => throw Exception('Heart Rate Service not found'),
       );
 
-      talker.info('[HeartRateBleTransport] Found Heart Rate Service');
+      logClass('Found Heart Rate Service');
 
       // Find Heart Rate Measurement characteristic
       final hrMeasurementChar = hrService.characteristics.firstWhere(
@@ -98,17 +98,17 @@ class HeartRateBleTransport implements BleTransport, HeartRateSource {
         orElse: () => throw Exception('Heart Rate Measurement characteristic not found'),
       );
 
-      talker.info('[HeartRateBleTransport] Found Heart Rate Measurement characteristic');
+      logClass('Found Heart Rate Measurement characteristic');
 
       // Subscribe to heart rate notifications
       await hrMeasurementChar.setNotifyValue(true);
       _heartRateSubscription = hrMeasurementChar.onValueReceived.listen(_parseHeartRateMeasurement);
 
-      talker.info('[HeartRateBleTransport] Subscribed to heart rate notifications');
+      logClass('Subscribed to heart rate notifications');
 
       _stateBeacon.value = TransportState.attached;
     } catch (e, stackTrace) {
-      talker.info('[HeartRateBleTransport] Failed to attach to Heart Rate service: $e', e, stackTrace);
+      logClass('Failed to attach to Heart Rate service: $e', e: e, stack: stackTrace);
       _lastAttachError = ConnectionError(
         message: 'Failed to attach to Heart Rate service: $e',
         timestamp: clock.now(),
@@ -124,7 +124,7 @@ class HeartRateBleTransport implements BleTransport, HeartRateSource {
   @override
   Future<void> detach() async {
     try {
-      talker.info('[HeartRateBleTransport] Detaching from Heart Rate service on $deviceId');
+      logClass('Detaching from Heart Rate service on $deviceId');
 
       // Cancel subscriptions
       await _heartRateSubscription?.cancel();
@@ -132,7 +132,7 @@ class HeartRateBleTransport implements BleTransport, HeartRateSource {
 
       _stateBeacon.value = TransportState.detached;
     } catch (e, stackTrace) {
-      talker.info('[HeartRateBleTransport] Detach failed: $e', e, stackTrace);
+      logClass('Detach failed: $e', e: e, stack: stackTrace);
       _stateBeacon.value = TransportState.detached;
     }
   }
@@ -169,7 +169,7 @@ class HeartRateBleTransport implements BleTransport, HeartRateSource {
       final data = HeartRateData(bpm: bpm, timestamp: clock.now());
       _heartRateBeacon.value = data;
     } catch (e, stackTrace) {
-      talker.info('[HeartRateBleTransport] Failed to parse heart rate: $e', e, stackTrace);
+      logClass('Failed to parse heart rate: $e', e: e, stack: stackTrace);
     }
   }
 
