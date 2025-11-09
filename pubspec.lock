@@ -98,7 +98,7 @@ packages:
     source: hosted
     version: "1.1.2"
   collection:
-    dependency: transitive
+    dependency: "direct dev"
     description:
       name: collection
       sha256: "2f5709ae4d3d59dd8f7cd309b4e023046b57d8a6c82130785d2b0e5868084e76"
@@ -178,7 +178,7 @@ packages:
     source: hosted
     version: "1.0.2"
   dartx:
-    dependency: transitive
+    dependency: "direct dev"
     description:
       name: dartx
       sha256: "8b25435617027257d43e6508b5fe061012880ddfdaa75a71d607c3de2a13d244"
@@ -480,7 +480,7 @@ packages:
     source: hosted
     version: "0.6.7"
   leak_tracker:
-    dependency: transitive
+    dependency: "direct dev"
     description:
       name: leak_tracker
       sha256: "33e2e26bdd85a0112ec15400c8cbffea70d0f9c3407491f672a2fad47915e2de"
@@ -496,7 +496,7 @@ packages:
     source: hosted
     version: "3.0.10"
   leak_tracker_testing:
-    dependency: transitive
+    dependency: "direct dev"
     description:
       name: leak_tracker_testing
       sha256: "8d5a2d49f4a66b49744b23b018848400d23e54caf9463f4eb20df3eb8acb2eb1"
@@ -536,7 +536,7 @@ packages:
     source: hosted
     version: "1.3.0"
   matcher:
-    dependency: transitive
+    dependency: "direct dev"
     description:
       name: matcher
       sha256: dc58c723c3c24bf8d3e2d3ad3f2f9d7bd9cf43ec6feaa64181775e60190153f2
@@ -861,7 +861,7 @@ packages:
     source: hosted
     version: "7.0.0"
   stack_trace:
-    dependency: transitive
+    dependency: "direct dev"
     description:
       name: stack_trace
       sha256: "8b27215b45d22309b5cddda1aa2b19bdfec9df0e765f2de506401c071d38d1b1"

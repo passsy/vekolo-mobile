@@ -16,7 +16,7 @@ void main() {
     );
 
     await robot.launchApp(pairedDevices: [kickrCore], loggedIn: true);
-    await robot.startWorkout();
+    await robot.tapStartWorkout('Sweet Spot Workout');
 
     // Verify workout player page loaded
     spotText('CURRENT BLOCK').existsAtLeastOnce();
@@ -37,7 +37,7 @@ void main() {
     );
 
     await robot.launchApp(pairedDevices: [kickrCore], loggedIn: true);
-    await robot.startWorkout();
+    await robot.tapStartWorkout('Sweet Spot Workout');
 
     // Verify initial state - workout not started
     spotText('Start pedaling to begin workout').existsAtLeastOnce();
@@ -73,7 +73,7 @@ void main() {
     );
 
     await robot.launchApp(pairedDevices: [kickrCore], loggedIn: true);
-    await robot.startWorkout();
+    await robot.tapStartWorkout('Sweet Spot Workout');
 
     addRobotEvent('Workout player loaded');
 
@@ -111,7 +111,7 @@ void main() {
     );
 
     await robot.launchApp(pairedDevices: [kickrCore], loggedIn: true);
-    await robot.startWorkout();
+    await robot.tapStartWorkout('Sweet Spot Workout');
 
     // Wait for workout player to fully load
     spotText('CURRENT BLOCK').existsAtLeastOnce();

@@ -43,6 +43,12 @@ dev_dependencies:
   meta: any
   test_api: any
   shared_preferences_platform_interface: any
+  stack_trace: any
+  matcher: any
+  leak_tracker: any
+  leak_tracker_testing: any
+  collection: any
+  dartx: any
 dependency_overrides:
   fresh_dio:
     git:

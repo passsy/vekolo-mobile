@@ -252,7 +252,16 @@ class WorkoutSessionPersistence {
   Future<void> _saveMetadata(WorkoutSessionMetadata metadata) async {
     final metadataFile = await getMetadataFile(metadata.workoutId);
     final json = jsonEncode(metadata.toJson());
-    await metadataFile.writeAsString(json);
+
+    // Ensure parent directory exists before writing
+    final parentDir = metadataFile.parent;
+    if (!await parentDir.exists()) {
+      await parentDir.create(recursive: true);
+    }
+
+    // Use flush: true to ensure data is written to disk immediately
+    // This prevents race conditions in tests and crash scenarios
+    metadataFile.writeAsStringSync(json, flush: true);
   }
 
   // ==========================================================================
@@ -278,6 +287,14 @@ class WorkoutSessionPersistence {
     if (samples.isEmpty) return;
 
     final samplesFile = await getSamplesFile(workoutId);
+
+    // Ensure parent directory exists before writing
+    final parentDir = samplesFile.parent;
+    if (!await parentDir.exists()) {
+      talker.warning('[WorkoutSession] Parent directory for samples does not exist, skipping write for $workoutId');
+      return;
+    }
+
     final sink = samplesFile.openWrite(mode: FileMode.append);
 
     try {

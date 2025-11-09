@@ -121,11 +121,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  String _formatDuration(int milliseconds) {
-    final minutes = milliseconds ~/ 60000;
-    return '$minutes min';
-  }
-
   int _calculateTotalDuration(WorkoutPlan plan) {
     int total = 0;
     for (final item in plan.plan) {
@@ -199,86 +194,30 @@ class _HomePageState extends State<HomePage> {
               const SizedBox(height: 32),
 
               // Sample Workout Card
-              Card(
-                elevation: 4,
-                child: Padding(
-                  padding: const EdgeInsets.all(20.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(Icons.fitness_center, size: 32, color: Theme.of(context).colorScheme.primary),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Sweet Spot Workout',
-                                  style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-                                ),
-                                Text(
-                                  _formatDuration(totalDuration),
-                                  style: Theme.of(
-                                    context,
-                                  ).textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.secondary),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      const Divider(),
-                      const SizedBox(height: 16),
-
-                      // Workout structure
-                      _buildWorkoutBlock(
-                        context,
-                        icon: Icons.play_arrow,
-                        title: 'Warm-up',
-                        subtitle: '5 min at 60% FTP',
-                        color: Colors.green,
-                      ),
-                      const SizedBox(height: 12),
-                      _buildWorkoutBlock(
-                        context,
-                        icon: Icons.trending_up,
-                        title: 'Main Set',
-                        subtitle: '3x (3 min work, 2 min recovery)',
-                        color: Colors.orange,
-                      ),
-                      const SizedBox(height: 12),
-                      _buildWorkoutBlock(
-                        context,
-                        icon: Icons.done,
-                        title: 'Cool-down',
-                        subtitle: '5 min at 50% FTP',
-                        color: Colors.blue,
-                      ),
-                      const SizedBox(height: 24),
-
-                      // Start workout button
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          onPressed: () => context.push('/workout-player'),
-                          icon: const Icon(Icons.play_circle_filled, size: 28),
-                          label: const Text(
-                            'Start Workout',
-                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            backgroundColor: Theme.of(context).colorScheme.primary,
-                            foregroundColor: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ],
+              WorkoutCard(
+                name: 'Sweet Spot Workout',
+                duration: totalDuration,
+                blocks: [
+                  _WorkoutBlockInfo(
+                    icon: Icons.play_arrow,
+                    title: 'Warm-up',
+                    subtitle: '5 min at 60% FTP',
+                    color: Colors.green,
                   ),
-                ),
+                  _WorkoutBlockInfo(
+                    icon: Icons.trending_up,
+                    title: 'Main Set',
+                    subtitle: '3x (3 min work, 2 min recovery)',
+                    color: Colors.orange,
+                  ),
+                  _WorkoutBlockInfo(
+                    icon: Icons.done,
+                    title: 'Cool-down',
+                    subtitle: '5 min at 50% FTP',
+                    color: Colors.blue,
+                  ),
+                ],
+                onStart: () => context.push('/workout-player'),
               ),
 
               const SizedBox(height: 32),
@@ -332,6 +271,99 @@ class _HomePageState extends State<HomePage> {
       ),
     );
   }
+}
+
+/// Displays a workout card with name, duration, blocks, and a Start button.
+///
+/// This widget makes it easy to find and interact with workouts in tests.
+class WorkoutCard extends StatelessWidget {
+  const WorkoutCard({
+    super.key,
+    required this.name,
+    required this.duration,
+    required this.blocks,
+    required this.onStart,
+  });
+
+  final String name;
+  final int duration;
+  final List<_WorkoutBlockInfo> blocks;
+  final VoidCallback onStart;
+
+  String _formatDuration(int milliseconds) {
+    final minutes = milliseconds ~/ 60000;
+    return '$minutes min';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 4,
+      child: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.fitness_center, size: 32, color: Theme.of(context).colorScheme.primary),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        name,
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                      ),
+                      Text(
+                        _formatDuration(duration),
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: Theme.of(context).colorScheme.secondary,
+                            ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            const Divider(),
+            const SizedBox(height: 16),
+            // Workout blocks
+            ...blocks.expand((block) => [
+                  _buildWorkoutBlock(
+                    context,
+                    icon: block.icon,
+                    title: block.title,
+                    subtitle: block.subtitle,
+                    color: block.color,
+                  ),
+                  const SizedBox(height: 12),
+                ]),
+            const SizedBox(height: 12),
+            // Start button
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: onStart,
+                icon: const Icon(Icons.play_circle_filled, size: 28),
+                label: const Text(
+                  'Start',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  backgroundColor: Theme.of(context).colorScheme.primary,
+                  foregroundColor: Colors.white,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   Widget _buildWorkoutBlock(
     BuildContext context, {
@@ -344,7 +376,10 @@ class _HomePageState extends State<HomePage> {
       children: [
         Container(
           padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
           child: Icon(icon, color: color, size: 20),
         ),
         const SizedBox(width: 12),
@@ -352,12 +387,33 @@ class _HomePageState extends State<HomePage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(title, style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
-              Text(subtitle, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey[600])),
+              Text(
+                title,
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+              ),
+              Text(
+                subtitle,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
+              ),
             ],
           ),
         ),
       ],
     );
   }
+}
+
+/// Information about a workout block for display in WorkoutCard.
+class _WorkoutBlockInfo {
+  const _WorkoutBlockInfo({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.color,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final Color color;
 }

@@ -1,8 +1,8 @@
+// ignore_for_file: deprecated_member_use, overridden_fields
 // Copyright 2014 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library;
 
 import 'dart:async';
 import 'dart:ui' as ui;
@@ -396,10 +396,6 @@ class RobotTestWidgetsFlutterBinding extends TestWidgetsFlutterBinding {
       _focusedEditable = value;
       value?.requestKeyboard();
     }
-  }
-
-  void _resetFocusedEditable() {
-    _focusedEditable = null;
   }
 
   /// Returns the exception most recently caught by the Flutter framework.

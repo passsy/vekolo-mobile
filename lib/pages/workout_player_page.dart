@@ -576,27 +576,7 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
   Widget _buildTimerDisplay(int elapsedTime, int remainingTime) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceAround,
-      children: [_buildTimeColumn('ELAPSED', elapsedTime), _buildTimeColumn('REMAINING', remainingTime)],
-    );
-  }
-
-  Widget _buildTimeColumn(String label, int timeMs) {
-    final totalSeconds = (timeMs / 1000).floor();
-    final minutes = totalSeconds ~/ 60;
-    final seconds = totalSeconds % 60;
-
-    return Column(
-      children: [
-        Text(
-          label,
-          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}',
-          style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
-        ),
-      ],
+      children: [TimeColumn(label: 'ELAPSED', timeMs: elapsedTime), TimeColumn(label: 'REMAINING', timeMs: remainingTime)],
     );
   }
 
@@ -1019,5 +999,36 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
     }
 
     return Text(cadenceText, style: textStyle);
+  }
+}
+
+/// Displays a time value with a label (e.g., "ELAPSED", "REMAINING").
+///
+/// Shows time in MM:SS format.
+class TimeColumn extends StatelessWidget {
+  const TimeColumn({super.key, required this.label, required this.timeMs});
+
+  final String label;
+  final int timeMs;
+
+  @override
+  Widget build(BuildContext context) {
+    final totalSeconds = (timeMs / 1000).floor();
+    final minutes = totalSeconds ~/ 60;
+    final seconds = totalSeconds % 60;
+
+    return Column(
+      children: [
+        Text(
+          label,
+          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}',
+          style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+        ),
+      ],
+    );
   }
 }

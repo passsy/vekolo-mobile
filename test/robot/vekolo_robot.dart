@@ -13,6 +13,7 @@ import 'package:vekolo/app/logger.dart';
 import 'package:vekolo/app/refs.dart';
 import 'package:vekolo/domain/models/device_info.dart';
 import 'package:vekolo/pages/devices_page.dart';
+import 'package:vekolo/pages/home_page.dart';
 import 'package:vekolo/pages/scanner_page.dart';
 import 'package:vekolo/services/device_assignment_persistence.dart';
 
@@ -318,15 +319,20 @@ class VekoloRobot {
     return 'ftms';
   }
 
-  Future<void> startWorkout() async {
-    logRobot('starting workout');
-    spotText('Start Workout').existsAtLeastOnce();
-    await act.tap(spotText('Start Workout'));
+  Future<void> tapStartWorkout(String name) async {
+    logRobot('starting workout: $name');
+
+    // Find the WorkoutCard widget that contains the workout name
+    final workoutCard = spot<WorkoutCard>().withChild(spotText(name));
+
+    // Within that card, tap the Start button
+    final startButton = workoutCard.spotText('Start');
+    await act.tap(startButton);
+    await idle(300);
 
     // Wait for workout player page to fully load by waiting for a key indicator
     await tester.verify.waitUntilExistsAtLeastOnce(spotText('CURRENT BLOCK'), timeout: const Duration(seconds: 5));
-
-    await idle(100); // Small additional wait for stability
+    await idle(500);
   }
 
   Future<void> resumeWorkout() async {
@@ -354,6 +360,7 @@ class VekoloRobot {
   Future<void> waitForCrashRecoveryDialog() async {
     logRobot('waiting for crash recovery dialog');
     await tester.verify.waitUntilExistsAtLeastOnce(spotText('Resume Workout?'), timeout: const Duration(seconds: 5));
+    await idle(500); // wait for dialog to be faded in
   }
 
   /// Wait for a workout session to be created and marked as active.

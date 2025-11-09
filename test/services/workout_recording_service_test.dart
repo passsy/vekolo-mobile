@@ -125,7 +125,6 @@ void main() {
       expect(deps.recordingService.isRecording, isFalse);
       expect(deps.recordingService.sessionId, isNull);
 
-      await deps.recordingService.startRecording('Test Workout', ftp: 200, userId: 'user-123');
       final sessionId = await tester.runAsyncWithFakeTimers(
         () => deps.recordingService.startRecording('Test Workout', ftp: 200, userId: 'user-123'),
       );

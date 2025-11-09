@@ -1,3 +1,4 @@
+// ignore_for_file: deprecated_member_use, unnecessary_async
 import 'dart:async';
 
 import 'package:flutter/cupertino.dart';
@@ -5,11 +6,11 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
-import 'package:flutter/widgets.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:test_api/scaffolding.dart' as test_package;
 
+// ignore: depend_on_referenced_packages
 import 'package:matcher/expect.dart' as matcher_expect;
 // ignore: depend_on_referenced_packages
 import 'package:meta/meta.dart';
@@ -21,7 +22,9 @@ import 'package:test_api/src/backend/invoker.dart';
 
 import 'robot_binding.dart';
 import 'vekolo_robot.dart';
+// ignore: depend_on_referenced_packages
 import 'package:leak_tracker/leak_tracker.dart';
+// ignore: depend_on_referenced_packages
 import 'package:leak_tracker_testing/leak_tracker_testing.dart';
 
 /// If leak tracking is enabled, stops it and
@@ -70,7 +73,7 @@ void robotTest(
 
                 runApp(Container(key: UniqueKey()));
                 await tester.pump();
-              } catch (e, stack) {
+              } catch (e, _) {
                 // In case of an error, Flutter does not cleanup the widget tree.
                 // (see: TestWidgetsFlutterBinding._runTestBody)
                 // This is required, so that all widget dispose methods are called, and all subscriptions to plugins are canceled.
@@ -95,40 +98,40 @@ void robotTest(
       timeout: timeout ?? binding.defaultTestTimeout,
       tags: tags,
     );
+  } else {
+    testWidgets(
+      description,
+      (tester) async {
+        return runZoned(() async {
+          try {
+            final robot = VekoloRobot(tester: tester);
+            await callback(robot);
+
+            runApp(Container(key: UniqueKey()));
+            await tester.pump();
+            // await Future.delayed(Duration(milliseconds: 100));
+          } catch (e) {
+            // In case of an error, Flutter does not cleanup the widget tree.
+            // (see: TestWidgetsFlutterBinding._runTestBody)
+            // This is required, so that all widget dispose methods are called, and all subscriptions to plugins are canceled.
+            // Only then channel.setMockMethodCallHandler can be set to null. without causing all following test to fail
+
+            // Unmount any remaining widgets.
+            runApp(Container(key: UniqueKey(), child: _postTestErrorMessage(e)));
+            await tester.pump();
+            rethrow;
+          } finally {
+            await Invoker.current!.runTearDowns(flutterTearDowns);
+            flutterTearDowns.clear();
+          }
+        }, zoneValues: {#flutter_test.teardowns: flutterTearDowns});
+      },
+      skip: skip,
+      timeout: timeout,
+      semanticsEnabled: semanticsEnabled,
+      tags: tags,
+    );
   }
-
-  testWidgets(
-    description,
-    (tester) async {
-      return runZoned(() async {
-        try {
-          final robot = VekoloRobot(tester: tester);
-          await callback(robot);
-
-          runApp(Container(key: UniqueKey()));
-          await tester.pump();
-          // await Future.delayed(Duration(milliseconds: 100));
-        } catch (e) {
-          // In case of an error, Flutter does not cleanup the widget tree.
-          // (see: TestWidgetsFlutterBinding._runTestBody)
-          // This is required, so that all widget dispose methods are called, and all subscriptions to plugins are canceled.
-          // Only then channel.setMockMethodCallHandler can be set to null. without causing all following test to fail
-
-          // Unmount any remaining widgets.
-          runApp(Container(key: UniqueKey(), child: _postTestErrorMessage(e)));
-          await tester.pump();
-          rethrow;
-        } finally {
-          await Invoker.current!.runTearDowns(flutterTearDowns);
-          flutterTearDowns.clear();
-        }
-      }, zoneValues: {#flutter_test.teardowns: flutterTearDowns});
-    },
-    skip: skip,
-    timeout: timeout,
-    semanticsEnabled: semanticsEnabled,
-    tags: tags,
-  );
 }
 
 /// Class that programmatically interacts with widgets and the test environment.
@@ -173,6 +176,7 @@ class MyWidgetTester extends WidgetController implements HitTestDispatcher, Tick
   MyWidgetTester._(super.binding);
 
   /// The description string of the test currently being run.
+  @override
   String get testDescription => _testDescription;
   String _testDescription = '';
 
@@ -213,6 +217,7 @@ class MyWidgetTester extends WidgetController implements HitTestDispatcher, Tick
   ///
   /// See also [LiveTestWidgetsFlutterBindingFramePolicy], which affects how
   /// this method works when the test is run with `flutter run`.
+  @override
   Future<void> pumpWidget(
     Widget widget, {
     Duration? duration,
@@ -287,6 +292,7 @@ class MyWidgetTester extends WidgetController implements HitTestDispatcher, Tick
   ///
   /// Similarly to [pump], this doesn't actually wait for `duration`, just
   /// advances the clock.
+  @override
   Future<void> pumpBenchmark(Duration duration) async {
     assert(() {
       final TestWidgetsFlutterBinding widgetsBinding = binding;
@@ -355,6 +361,7 @@ class MyWidgetTester extends WidgetController implements HitTestDispatcher, Tick
   ///
   /// The `maxDuration` argument is required. The `interval` argument defaults to
   /// 16.683 milliseconds (59.94 FPS).
+  @override
   Future<void> pumpFrames(
     Widget target,
     Duration maxDuration, [
@@ -379,6 +386,7 @@ class MyWidgetTester extends WidgetController implements HitTestDispatcher, Tick
   /// [RestorationManager], takes down the widget tree to destroy all in-memory
   /// state, and then restores the widget tree from the serialized restoration
   /// data.
+  @override
   Future<void> restartAndRestore() async {
     assert(
       binding.restorationManager.debugRootBucketAccessed,
@@ -403,6 +411,7 @@ class MyWidgetTester extends WidgetController implements HitTestDispatcher, Tick
   /// The returned [TestRestorationData] describes the current state of the
   /// widget tree under test and can be provided to [restoreFrom] to restore
   /// the widget tree to the state described by this data.
+  @override
   Future<TestRestorationData> getRestorationData() async {
     assert(
       binding.restorationManager.debugRootBucketAccessed,
@@ -418,6 +427,7 @@ class MyWidgetTester extends WidgetController implements HitTestDispatcher, Tick
   ///
   /// The data provided to this method is usually obtained from
   /// [getRestorationData].
+  @override
   Future<void> restoreFrom(TestRestorationData data) {
     binding.restorationManager.restoreFrom(data);
     return pump();
@@ -455,6 +465,7 @@ class MyWidgetTester extends WidgetController implements HitTestDispatcher, Tick
   ///
   /// * Expose a [Future] in your application code that signals the readiness of
   ///   your widget tree, then await that future inside [callback].
+  @override
   Future<T?> runAsync<T>(
     Future<T> Function() callback, {
     @Deprecated(
@@ -478,14 +489,15 @@ class MyWidgetTester extends WidgetController implements HitTestDispatcher, Tick
   ///    pending. [SchedulerBinding.hasScheduledFrame] is made true when a
   ///    widget calls [State.setState], even if there are no transient callbacks
   ///    scheduled. This is what [pumpAndSettle] uses.
+  @override
   bool get hasRunningAnimations => binding.transientCallbackCount > 0;
 
   @override
   HitTestResult hitTestOnBinding(Offset location, {int? viewId}) {
     viewId ??= view.viewId;
     final RenderView renderView = binding.renderViews.firstWhere((RenderView r) => r.flutterView.viewId == viewId);
-    location = binding.localToGlobal(location, renderView);
-    return super.hitTestOnBinding(location, viewId: viewId);
+    final globalLocation = binding.localToGlobal(location, renderView);
+    return super.hitTestOnBinding(globalLocation, viewId: viewId);
   }
 
   @override
@@ -616,6 +628,7 @@ class MyWidgetTester extends WidgetController implements HitTestDispatcher, Tick
   /// Returns the exception most recently caught by the Flutter framework.
   ///
   /// See [TestWidgetsFlutterBinding.takeException] for details.
+  @override
   dynamic takeException() {
     return binding.takeException();
   }
@@ -623,6 +636,7 @@ class MyWidgetTester extends WidgetController implements HitTestDispatcher, Tick
   /// {@macro flutter.flutter_test.TakeAccessibilityAnnouncements}
   ///
   /// See [TestWidgetsFlutterBinding.takeAnnouncements] for details.
+  @override
   List<CapturedAccessibilityAnnouncement> takeAnnouncements() {
     return binding.takeAnnouncements();
   }
@@ -636,6 +650,7 @@ class MyWidgetTester extends WidgetController implements HitTestDispatcher, Tick
   /// May result in an infinite loop or run out of memory if microtasks continue
   /// to recursively schedule new microtasks. Will not run any timers scheduled
   /// after this method was invoked, even if they are zero-time timers.
+  @override
   Future<void> idle() {
     return TestAsyncUtils.guard<void>(() => binding.idle());
   }
@@ -662,6 +677,7 @@ class MyWidgetTester extends WidgetController implements HitTestDispatcher, Tick
   /// An argument can be specified to provide a string that will be used in the
   /// error message. It should be an adverbial phrase describing the current
   /// situation, such as "at the end of the test".
+  @override
   void verifyTickersWereDisposed([String when = 'when none should have been']) {
     if (_tickers != null) {
       for (final Ticker ticker in _tickers!) {
@@ -723,6 +739,7 @@ class MyWidgetTester extends WidgetController implements HitTestDispatcher, Tick
   /// true as a test is starting (meaning that the keyboard is to be simulated
   /// by the test framework). If those members are accessed when using a binding
   /// that sets this flag to false, they will throw.
+  @override
   TestTextInput get testTextInput => binding.testTextInput;
 
   /// Give the text input widget specified by [finder] the focus, as if the
@@ -736,6 +753,7 @@ class MyWidgetTester extends WidgetController implements HitTestDispatcher, Tick
   ///
   /// Tests that just need to add text to widgets like [TextField]
   /// or [TextFormField] only need to call [enterText].
+  @override
   Future<void> showKeyboard(FinderBase<Element> finder) async {
     bool skipOffstage = true;
     if (finder is Finder) {
@@ -775,6 +793,7 @@ class MyWidgetTester extends WidgetController implements HitTestDispatcher, Tick
   /// that widget has an open connection (e.g. by using [tap] to focus it),
   /// then call `testTextInput.enterText` directly (see
   /// [TestTextInput.enterText]).
+  @override
   Future<void> enterText(FinderBase<Element> finder, String text) async {
     return TestAsyncUtils.guard<void>(() async {
       await showKeyboard(finder);
@@ -787,6 +806,7 @@ class MyWidgetTester extends WidgetController implements HitTestDispatcher, Tick
   /// a [CupertinoPageScaffold].
   ///
   /// Will throw an error if there is no back button in the page.
+  @override
   Future<void> pageBack() async {
     return TestAsyncUtils.guard<void>(() async {
       Finder backButton = find.byTooltip('Back');
@@ -804,26 +824,6 @@ class MyWidgetTester extends WidgetController implements HitTestDispatcher, Tick
   void printToConsole(String message) {
     binding.debugPrintOverride(message);
   }
-}
-
-/// The [ZoneDelegate] for [Zone.root].
-///
-/// Used to schedule (real) microtasks and timers in the root zone,
-/// to be run in the correct zone.
-final ZoneDelegate _rootDelegate = _captureRootZoneDelegate();
-
-/// Hack to extract the [ZoneDelegate] for [Zone.root].
-ZoneDelegate _captureRootZoneDelegate() {
-  final Zone captureZone = Zone.root.fork(
-    specification: ZoneSpecification(
-      run: <R>(Zone self, ZoneDelegate parent, Zone zone, R Function() f) {
-        return parent as R;
-      },
-    ),
-  );
-  // The `_captureRootZoneDelegate` argument just happens to be a constant
-  // function with the necessary type. It's not called recursively.
-  return captureZone.run<ZoneDelegate>(_captureRootZoneDelegate);
 }
 
 DateTime? _lastTestStartTime;

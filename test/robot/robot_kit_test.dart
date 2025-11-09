@@ -6,7 +6,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:dartx/dartx_io.dart';
 
 import 'my_fake_async.dart';
-import 'robot_binding.dart';
 import 'robot_kit.dart';
 
 void main() {
