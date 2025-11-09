@@ -29,7 +29,9 @@ import 'package:vekolo/widgets/workout_resume_dialog.dart';
 /// The page integrates with WorkoutPlayerService for workout execution
 /// and DeviceManager for real-time sensor data.
 class WorkoutPlayerPage extends StatefulWidget {
-  const WorkoutPlayerPage({super.key});
+  const WorkoutPlayerPage({super.key, this.isResuming = false});
+
+  final bool isResuming;
 
   @override
   State<WorkoutPlayerPage> createState() => _WorkoutPlayerPageState();
@@ -91,7 +93,8 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
       final incompleteSession = await persistence.getActiveSession();
 
       ResumeChoice? resumeChoice;
-      if (incompleteSession != null && mounted) {
+      if (incompleteSession != null && mounted && !widget.isResuming) {
+        // Only show dialog if not already handled by HomePage
         talker.info('[WorkoutPlayerPage] Found incomplete session from ${incompleteSession.startTime}');
 
         // Show resume dialog
@@ -113,6 +116,10 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
         } else if (resumeChoice == ResumeChoice.resume) {
           talker.info('[WorkoutPlayerPage] User chose to resume previous session');
         }
+      } else if (widget.isResuming && incompleteSession != null) {
+        // HomePage already handled the dialog, assume Resume choice
+        talker.info('[WorkoutPlayerPage] Resuming from HomePage choice');
+        resumeChoice = ResumeChoice.resume;
       }
 
       final playerService = WorkoutPlayerService(workoutPlan: workoutPlan, deviceManager: deviceManager, ftp: ftp);
@@ -155,13 +162,11 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
         }
       });
 
-      if (mounted) {
-        setState(() {
-          _playerService = playerService;
-          _recordingService = recordingService;
-          _isLoading = false;
-        });
-      }
+      setState(() {
+        _playerService = playerService;
+        _recordingService = recordingService;
+        _isLoading = false;
+      });
 
       // Monitor power to auto-start/resume workout when user starts pedaling
       _setupPowerMonitoring(deviceManager, playerService);

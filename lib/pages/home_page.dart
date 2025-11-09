@@ -48,8 +48,8 @@ class _HomePageState extends State<HomePage> {
       if (!mounted) return;
 
       if (choice == ResumeChoice.resume) {
-        // Navigate to workout player - it will handle resuming
-        context.push('/workout-player');
+        // Navigate to workout player - pass parameter to skip showing dialog again
+        context.push('/workout-player?resuming=true');
       } else if (choice == ResumeChoice.discard) {
         await persistence.updateSessionStatus(incompleteSession.id, SessionStatus.abandoned);
         await persistence.clearActiveWorkout();

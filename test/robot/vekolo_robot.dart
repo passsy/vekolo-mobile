@@ -333,8 +333,8 @@ class VekoloRobot {
     logRobot('resuming workout from crash recovery dialog');
     // Tap second "Resume" match (first is in title "Resume Workout?", second is the button)
     await act.tap(spotText('Resume').atIndex(1));
-    // Wait for dialog to close and navigation to complete
-    await idle(2000);
+    // Wait for dialog to close, navigation and workout player to load
+    await idle(3000);
   }
 
   Future<void> discardWorkout() async {
@@ -346,7 +346,8 @@ class VekoloRobot {
   Future<void> startFreshWorkout() async {
     logRobot('starting fresh workout from crash recovery dialog');
     await act.tap(spotText('Start Fresh', exact: true));
-    await idle(1000);
+    // Wait for dialog to close, navigation and workout player to load
+    await idle(3000);
   }
 
   /// Wait for the crash recovery dialog to appear

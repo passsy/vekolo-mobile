@@ -45,7 +45,13 @@ class _VekoloRouterState extends State<VekoloRouter> {
         },
       ),
       GoRoute(path: '/unknown-device', builder: (context, state) => const UnknownDeviceReportPage()),
-      GoRoute(path: '/workout-player', builder: (context, state) => const WorkoutPlayerPage()),
+      GoRoute(
+        path: '/workout-player',
+        builder: (context, state) {
+          final resuming = state.uri.queryParameters['resuming'] == 'true';
+          return WorkoutPlayerPage(isResuming: resuming);
+        },
+      ),
     ],
   );
 
