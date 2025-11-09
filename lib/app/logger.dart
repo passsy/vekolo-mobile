@@ -1,7 +1,39 @@
 import 'package:flutter/widgets.dart';
 import 'package:talker_flutter/talker_flutter.dart';
 
-export 'package:talker/talker.dart' show LogLevel;
+export 'package:talker_flutter/talker_flutter.dart' show LogLevel;
+
+final Map<String, WeakReference<ColumnFormattedLog>> _messagesCache = {};
+
+/// Custom TalkerLog that formats messages with equally spaced columns.
+class ColumnFormattedLog extends TalkerLog {
+  ColumnFormattedLog(
+    super.message, {
+    this.classLabel,
+    TimeFormat? timeFormat,
+    super.key,
+    super.title,
+    super.exception,
+    super.error,
+    super.stackTrace,
+    super.time,
+    super.pen,
+    super.logLevel,
+  }) : _timeFormat = timeFormat;
+
+  final String? classLabel;
+
+  TimeFormat? _timeFormat;
+  TimeFormat? get timeFormat => _timeFormat;
+
+  @override
+  String generateTextMessage({TimeFormat timeFormat = TimeFormat.timeAndSeconds}) {
+    _timeFormat = timeFormat;
+    final lookupKey = (time, message).toString();
+    _messagesCache.putIfAbsent(lookupKey, () => WeakReference(this));
+    return lookupKey;
+  }
+}
 
 /// Custom formatter that displays only the message without underline/topline borders
 class SimpleLoggerFormatter implements LoggerFormatter {
@@ -9,39 +41,56 @@ class SimpleLoggerFormatter implements LoggerFormatter {
 
   @override
   String fmt(LogDetails details, TalkerLoggerSettings settings) {
-    final msg = details.message?.toString() ?? '';
-
-    // Parse and reformat the timestamp to align milliseconds
-    final formattedMsg = _formatTimestamp(msg);
-
-    final msgBorderedLines = formattedMsg.split('\n').map((e) => '│ $e');
-
-    if (!settings.enableColors) {
-      return msgBorderedLines.join('\n');
+    final msg = _messagesCache[details.message]?.target;
+    if (msg == null) {
+      return details.message?.toString() ?? '';
     }
 
-    final coloredLines = msgBorderedLines.map((e) => details.pen.write(e));
-    return coloredLines.join('\n');
-  }
+    final String formattedTime;
+    if (msg.timeFormat == TimeFormat.timeAndSeconds) {
+      final hour = msg.time.hour.toString().padLeft(2, '0');
+      final minute = msg.time.minute.toString().padLeft(2, '0');
+      final second = msg.time.second.toString().padLeft(2, '0');
+      final ms = msg.time.millisecond.toString().padLeft(3, '0');
+      formattedTime = '$hour:$minute:$second.$ms';
+    } else {
+      final year = msg.time.year.toString().padLeft(4);
+      final month = msg.time.month.toString().padLeft(2, '0');
+      final day = msg.time.day.toString().padLeft(2, '0');
+      final hour = msg.time.hour.toString().padLeft(2, '0');
+      final minute = msg.time.minute.toString().padLeft(2, '0');
+      final second = msg.time.second.toString().padLeft(2, '0');
+      final ms = msg.time.millisecond.toString().padLeft(3, '0');
+      formattedTime = '$year:$month:$day $hour:$minute:$second.${ms}';
+    }
 
-  /// Reformats timestamp to align milliseconds and log level
-  /// Example: "[info] | 1:42:35 971ms" -> "[info ] | 1:42:35 971 ms"
-  String _formatTimestamp(String msg) {
-    // Pattern: [level] | H:MM:SS <1-3 digits>ms or HH:MM:SS
-    final timestampPattern = RegExp(r'\[(.*?)](\s*\|\s*\d{1,2}:\d{2}:\d{2})\s+(\d{1,3})ms');
+    const metaWidth = 60;
+    final justText = '$formattedTime [${msg.logLevel?.name}] ${msg.classLabel}';
+    final remaining = metaWidth - justText.length;
+    final meta = '$formattedTime [${msg.logLevel?.name}] ${"".padRight(remaining, '=')} ${msg.classLabel}';
 
-    return msg.replaceAllMapped(timestampPattern, (match) {
-      final level = match.group(1)!;
-      final timeAndSeparator = match.group(2)!;
-      final milliseconds = match.group(3)!;
+    final message = msg.displayMessage;
+    final messageLines = message.split('\n');
 
-      // Pad log level to 5 characters (to accommodate "warning" or "critical")
-      final paddedLevel = level.padRight(5);
-      // Pad milliseconds to 3 characters (0-999)
-      final paddedMs = milliseconds.padLeft(3);
+    final errorOnNewLine = msg.error == null ? "" : "\n${msg.error}";
+    final exceptionOnNewLine = msg.exception == null ? "" : "\n${msg.exception}";
+    final stacktraceOnNewLine = msg.stackTrace == null ? "" : "\n${msg.stackTrace}";
+    final newLineThings = "${errorOnNewLine}${exceptionOnNewLine}${stacktraceOnNewLine}";
 
-      return '$paddedLevel$timeAndSeparator $paddedMs ms';
-    });
+    String color(String msg) {
+      if (settings.enableColors) {
+        return details.pen.write(msg);
+      }
+      return msg;
+    }
+
+    final colorNewLineThings = newLineThings.split('\n').map(color).join('\n');
+    if (messageLines.length <= 1) {
+      return color('$meta │ $message') + colorNewLineThings;
+    } else {
+      final lines = messageLines.map(color);
+      return '${color(meta)} │ \n${lines.map(color).join('\n')}${colorNewLineThings}';
+    }
   }
 }
 
@@ -53,10 +102,6 @@ final talker = TalkerFlutter.init(
   settings: TalkerSettings(),
   logger: TalkerLogger(formatter: SimpleLoggerFormatter()),
 );
-
-/// Tracks instances by class name using weak references.
-/// Map structure: className -> (identityHashCode -> WeakReference)
-final Map<String, Map<int, WeakReference<Object>>> _instanceTracker = {};
 
 /// Function type for transforming an instance into a display name.
 ///
@@ -151,36 +196,43 @@ extension ClassLogger<T extends Object> on T {
     final clazz = _getClassName(this);
     final instanceHash = identityHashCode(this);
 
-    // Register this instance and clean up dead references
-    final instances = _instanceTracker.putIfAbsent(clazz, () => {});
-    instances[instanceHash] = WeakReference(this);
-
-    // Clean up dead weak references
-    instances.removeWhere((key, ref) => ref.target == null);
-
     // Always include instance hash for clarity
     final hashHex = instanceHash.toRadixString(16).padLeft(4, '0');
     final shortHash = hashHex.substring(hashHex.length - 4);
     final classLabel = '$clazz:$shortHash';
 
     // Generate readable color using HSL
-    // - Hue varies by class name, avoiding red shades (reserved for errors)
-    // - Hue range: 60° to 300° (yellow → green → cyan → blue → magenta, skipping red)
-    // - Saturation fixed at 70% (vibrant but not oversaturated)
-    // - Lightness fixed at 60% (readable on dark backgrounds)
-    final hash = classLabel.hashCode;
-    const minHue = 60.0; // Start at yellow
-    const maxHue = 300.0; // End at magenta (before red)
-    final hueRange = maxHue - minHue;
-    final hueDegrees = minHue + (hash.abs() % hueRange.toInt());
-    final hue = hueDegrees / 360.0; // Convert to 0.0 to 1.0
+    final double hue;
     const saturation = 0.7;
     const lightness = 0.6;
+
+    if (e != null) {
+      // Use red color for errors/exceptions
+      hue = 0.0; // Red
+    } else {
+      // - Hue varies by class name, avoiding red shades (reserved for errors)
+      // - Hue range: 60° to 300° (yellow → green → cyan → blue → magenta, skipping red)
+      // - Saturation fixed at 70% (vibrant but not oversaturated)
+      // - Lightness fixed at 60% (readable on dark backgrounds)
+      final hash = clazz.hashCode;
+      const minHue = 60.0; // Start at yellow
+      const maxHue = 300.0; // End at magenta (before red)
+      final hueRange = maxHue - minHue;
+      final hueDegrees = minHue + (hash.abs() % hueRange.toInt());
+      hue = hueDegrees / 360.0; // Convert to 0.0 to 1.0
+    }
 
     final rgb = _hslToRgb(hue, saturation, lightness);
 
     final pen = AnsiPen()..rgb(r: rgb.$1, g: rgb.$2, b: rgb.$3);
-    final entry = TalkerLog('[$classLabel] $message', pen: pen, exception: e, stackTrace: stack, logLevel: level);
+    final entry = ColumnFormattedLog(
+      '$message',
+      classLabel: classLabel,
+      pen: pen,
+      exception: e,
+      stackTrace: stack,
+      logLevel: level,
+    );
     talker.logCustom(entry);
   }
 }

@@ -31,9 +31,6 @@ class DevicesPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final deviceManager = Refs.deviceManager.of(context);
 
-    logClass('Found devicemanager $deviceManager');
-    context.logClass('Found devicemanager $deviceManager');
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Devices'),
