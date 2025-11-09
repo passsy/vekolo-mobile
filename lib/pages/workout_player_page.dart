@@ -155,11 +155,13 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
         }
       });
 
-      setState(() {
-        _playerService = playerService;
-        _recordingService = recordingService;
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _playerService = playerService;
+          _recordingService = recordingService;
+          _isLoading = false;
+        });
+      }
 
       // Monitor power to auto-start/resume workout when user starts pedaling
       _setupPowerMonitoring(deviceManager, playerService);
@@ -167,10 +169,12 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
       talker.info('[WorkoutPlayerPage] Workout player initialized');
     } catch (e, stackTrace) {
       talker.error('[WorkoutPlayerPage] Error loading workout', e, stackTrace);
-      setState(() {
-        _loadError = e.toString();
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _loadError = e.toString();
+          _isLoading = false;
+        });
+      }
     }
   }
 
