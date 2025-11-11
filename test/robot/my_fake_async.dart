@@ -67,9 +67,6 @@ class MyFakeAsync {
   /// This is `null` if there's no current call to [elapse].
   Duration? _elapsingTo;
 
-  /// Tasks that are scheduled to run when fake time progresses.
-  final _microtasks = Queue<_Microtask>();
-
   /// All timers created within [run].
   final _timers = <FakeTimer>{};
 
@@ -86,10 +83,6 @@ class MyFakeAsync {
   /// The number of active non-periodic timers created within a call to [run] or
   /// [myFakeAsync].
   int get nonPeriodicTimerCount => _timers.where((timer) => !timer.isPeriodic).length;
-
-  /// The number of pending microtasks scheduled within a call to [run] or
-  /// [myFakeAsync].
-  int get microtaskCount => _microtasks.length;
 
   /// Creates a [MyFakeAsync].
   ///
@@ -186,16 +179,6 @@ class MyFakeAsync {
     ),
   );
 
-  /// Runs all pending microtasks scheduled within a call to [run] or
-  /// [myFakeAsync] until there are no more microtasks scheduled.
-  ///
-  /// Does not run timers.
-  void flushMicrotasks() {
-    while (_microtasks.isNotEmpty) {
-      _microtasks.removeFirst()();
-    }
-  }
-
   /// Elapses time until there are no more active timers.
   ///
   /// If `flushPeriodicTimers` is `true` (the default), this will repeatedly run
@@ -230,14 +213,12 @@ class MyFakeAsync {
   /// Microtasks are flushed before and after each timer is fired. Before each
   /// timer fires, [_elapsed] is updated to the appropriate duration.
   void _fireTimersWhile(bool Function(FakeTimer timer) predicate) {
-    flushMicrotasks();
     while (_timers.isNotEmpty) {
       final timer = minBy(_timers, (FakeTimer timer) => timer._nextCall)!;
       if (!predicate(timer)) break;
 
       _elapseTo(timer._nextCall);
       timer._fire();
-      flushMicrotasks();
     }
   }
 

@@ -20,20 +20,18 @@ void main() {
     final content = file.readAsStringSync();
     expect(content, 'contents');
   });
-  //
-  // robotTest('disk io async', (robot) async {
-  //   // throw "not working";
-  //   // ignore: dead_code
-  //   final systemTemp = Directory.systemTemp;
-  //   final tempDir = await systemTemp.createTemp();
-  //   final exists = await tempDir.exists();
-  //   expect(exists, isTrue);
-  //   final file = tempDir.file('thing.txt');
-  //   await file.writeAsString('contents');
-  //
-  //   final content = await file.readAsString();
-  //   expect(content, 'contents');
-  // });
+
+  robotTest('disk io async', (tester) async {
+    final systemTemp = Directory.systemTemp;
+    final tempDir = await systemTemp.createTemp();
+    final exists = await tempDir.exists();
+    expect(exists, isTrue);
+    final file = tempDir.file('thing.txt');
+    await file.writeAsString('contents');
+
+    final content = await file.readAsString();
+    expect(content, 'contents');
+  });
 
   robotTest('disk io async with runAsync', (robot) async {
     await robot.tester.runAsync(() async {
