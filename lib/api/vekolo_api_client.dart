@@ -65,8 +65,27 @@ class VekoloApiClient {
     String? sex,
     int? weight,
     int? ftp,
+    String? athleteLevel,
+    String? athleteType,
+    String? birthday,
+    int? height,
+    String? measurementPreference,
+    bool? newsletter,
   }) {
-    return postRequestSignupCode(_context, email: email, name: name, sex: sex, weight: weight, ftp: ftp);
+    return postRequestSignupCode(
+      _context,
+      email: email,
+      name: name,
+      sex: sex,
+      weight: weight,
+      ftp: ftp,
+      athleteLevel: athleteLevel,
+      athleteType: athleteType,
+      birthday: birthday,
+      height: height,
+      measurementPreference: measurementPreference,
+      newsletter: newsletter,
+    );
   }
 
   /// Request a magic code for login

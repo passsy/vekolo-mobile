@@ -19,10 +19,16 @@ class SignupPage extends StatefulWidget {
 class _SignupPageState extends State<SignupPage> {
   final form = FormGroup({
     'email': FormControl<String>(validators: [Validators.required, Validators.email]),
-    'name': FormControl<String>(),
+    'name': FormControl<String>(validators: [Validators.required]),
     'sex': FormControl<String>(validators: [Validators.required]),
-    'weight': FormControl<int>(),
-    'ftp': FormControl<int>(),
+    'birthday': FormControl<String>(validators: [Validators.required]),
+    'height': FormControl<int>(validators: [Validators.required]),
+    'weight': FormControl<int>(validators: [Validators.required]),
+    'measurementPreference': FormControl<String>(value: 'metric', validators: [Validators.required]),
+    'athleteType': FormControl<String>(validators: [Validators.required]),
+    'athleteLevel': FormControl<String>(validators: [Validators.required]),
+    'ftp': FormControl<int>(validators: [Validators.required]),
+    'newsletter': FormControl<bool>(value: false),
     'code': FormControl<String>(),
   });
 
@@ -47,8 +53,14 @@ class _SignupPageState extends State<SignupPage> {
         email: form.control('email').value as String,
         name: form.control('name').value as String?,
         sex: form.control('sex').value as String?,
+        birthday: form.control('birthday').value as String?,
+        height: form.control('height').value as int?,
         weight: form.control('weight').value as int?,
+        measurementPreference: form.control('measurementPreference').value as String?,
+        athleteType: form.control('athleteType').value as String?,
+        athleteLevel: form.control('athleteLevel').value as String?,
         ftp: form.control('ftp').value as int?,
+        newsletter: form.control('newsletter').value as bool?,
       );
 
       if (!mounted) return;
@@ -183,11 +195,43 @@ class _SignupPageState extends State<SignupPage> {
                 ReactiveTextField<String>(
                   formControlName: 'name',
                   decoration: const InputDecoration(
-                    labelText: 'Name (optional)',
+                    labelText: 'Name *',
                     border: OutlineInputBorder(),
                     prefixIcon: Icon(Icons.person),
                   ),
                   readOnly: _codeSent || _isLoading,
+                  validationMessages: {
+                    ValidationMessage.required: (_) => 'Please enter your name',
+                  },
+                ),
+                const SizedBox(height: 16),
+                ReactiveTextField<String>(
+                  formControlName: 'birthday',
+                  decoration: InputDecoration(
+                    labelText: 'Birthday *',
+                    border: const OutlineInputBorder(),
+                    prefixIcon: const Icon(Icons.cake),
+                    suffixIcon: IconButton(
+                      icon: const Icon(Icons.calendar_today),
+                      onPressed: (_codeSent || _isLoading)
+                          ? null
+                          : () async {
+                        final date = await showDatePicker(
+                          context: context,
+                          initialDate: DateTime.now().subtract(const Duration(days: 365 * 25)),
+                          firstDate: DateTime(1900),
+                          lastDate: DateTime.now(),
+                        );
+                        if (date != null) {
+                          form.control('birthday').value = date.toIso8601String().split('T')[0];
+                        }
+                      },
+                    ),
+                  ),
+                  readOnly: true,
+                  validationMessages: {
+                    ValidationMessage.required: (_) => 'Please select your birthday',
+                  },
                 ),
                 const SizedBox(height: 16),
                 Column(
@@ -273,34 +317,140 @@ class _SignupPageState extends State<SignupPage> {
                   ],
                 ),
                 const SizedBox(height: 16),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Measurement Preference *', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+                    const SizedBox(height: 8),
+                    ReactiveValueListenableBuilder<String>(
+                      formControlName: 'measurementPreference',
+                      builder: (context, control, child) {
+                        return Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: (_codeSent || _isLoading) ? null : () => control.value = 'metric',
+                                icon: Icon(control.value == 'metric' ? Icons.check_circle : Icons.circle_outlined),
+                                label: const Text('Metric'),
+                                style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                  backgroundColor: control.value == 'metric' ? Colors.blue.withValues(alpha: 0.1) : null,
+                                  side: BorderSide(color: control.value == 'metric' ? Colors.blue : Colors.grey),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: (_codeSent || _isLoading) ? null : () => control.value = 'imperial',
+                                icon: Icon(control.value == 'imperial' ? Icons.check_circle : Icons.circle_outlined),
+                                label: const Text('Imperial'),
+                                style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                  backgroundColor:
+                                      control.value == 'imperial' ? Colors.blue.withValues(alpha: 0.1) : null,
+                                  side: BorderSide(color: control.value == 'imperial' ? Colors.blue : Colors.grey),
+                                ),
+                              ),
+                            ),
+                          ],
+                        );
+                      },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
                 Row(
                   children: [
                     Expanded(
                       child: ReactiveTextField<int>(
-                        formControlName: 'weight',
+                        formControlName: 'height',
                         decoration: const InputDecoration(
-                          labelText: 'Weight (kg)',
+                          labelText: 'Height (cm) *',
                           border: OutlineInputBorder(),
-                          prefixIcon: Icon(Icons.monitor_weight),
+                          prefixIcon: Icon(Icons.height),
                         ),
                         keyboardType: TextInputType.number,
                         readOnly: _codeSent || _isLoading,
+                        validationMessages: {
+                          ValidationMessage.required: (_) => 'Required',
+                        },
                       ),
                     ),
                     const SizedBox(width: 16),
                     Expanded(
                       child: ReactiveTextField<int>(
-                        formControlName: 'ftp',
+                        formControlName: 'weight',
                         decoration: const InputDecoration(
-                          labelText: 'FTP (watts)',
+                          labelText: 'Weight (kg) *',
                           border: OutlineInputBorder(),
-                          prefixIcon: Icon(Icons.bolt),
+                          prefixIcon: Icon(Icons.monitor_weight),
                         ),
                         keyboardType: TextInputType.number,
                         readOnly: _codeSent || _isLoading,
+                        validationMessages: {
+                          ValidationMessage.required: (_) => 'Required',
+                        },
                       ),
                     ),
                   ],
+                ),
+                const SizedBox(height: 16),
+                ReactiveDropdownField<String>(
+                  formControlName: 'athleteType',
+                  decoration: const InputDecoration(
+                    labelText: 'Athlete Type *',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.sports),
+                  ),
+                  items: const [
+                    DropdownMenuItem(value: 'cyclist', child: Text('Cyclist')),
+                    DropdownMenuItem(value: 'duathlete', child: Text('Duathlete')),
+                    DropdownMenuItem(value: 'triathlete', child: Text('Triathlete')),
+                    DropdownMenuItem(value: 'sports_enthusiast', child: Text('Sports Enthusiast')),
+                  ],
+                  validationMessages: {
+                    ValidationMessage.required: (_) => 'Please select your athlete type',
+                  },
+                ),
+                const SizedBox(height: 16),
+                ReactiveDropdownField<String>(
+                  formControlName: 'athleteLevel',
+                  decoration: const InputDecoration(
+                    labelText: 'Athlete Level *',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.trending_up),
+                  ),
+                  items: const [
+                    DropdownMenuItem(value: 'beginner', child: Text('Beginner')),
+                    DropdownMenuItem(value: 'intermediate', child: Text('Intermediate')),
+                    DropdownMenuItem(value: 'advanced', child: Text('Advanced')),
+                    DropdownMenuItem(value: 'expert', child: Text('Expert')),
+                  ],
+                  validationMessages: {
+                    ValidationMessage.required: (_) => 'Please select your level',
+                  },
+                ),
+                const SizedBox(height: 16),
+                ReactiveTextField<int>(
+                  formControlName: 'ftp',
+                  decoration: const InputDecoration(
+                    labelText: 'FTP (watts) *',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.bolt),
+                  ),
+                  keyboardType: TextInputType.number,
+                  readOnly: _codeSent || _isLoading,
+                  validationMessages: {
+                    ValidationMessage.required: (_) => 'Required',
+                  },
+                ),
+                const SizedBox(height: 16),
+                ReactiveCheckboxListTile(
+                  formControlName: 'newsletter',
+                  title: const Text('Subscribe to newsletter'),
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
                 ),
                 if (_codeSent) ...[
                   const SizedBox(height: 16),

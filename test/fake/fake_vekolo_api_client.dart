@@ -26,8 +26,19 @@ class FakeVekoloApiClient implements VekoloApiClient {
 
   // Auth endpoint overrides
 
-  Future<CodeRequestResponse> Function({required String email, String? name, String? sex, int? weight, int? ftp})?
-  overrideRequestSignupCode;
+  Future<CodeRequestResponse> Function({
+    required String email,
+    String? name,
+    String? sex,
+    int? weight,
+    int? ftp,
+    String? athleteLevel,
+    String? athleteType,
+    String? birthday,
+    int? height,
+    String? measurementPreference,
+    bool? newsletter,
+  })? overrideRequestSignupCode;
 
   @override
   Future<CodeRequestResponse> requestSignupCode({
@@ -36,10 +47,28 @@ class FakeVekoloApiClient implements VekoloApiClient {
     String? sex,
     int? weight,
     int? ftp,
+    String? athleteLevel,
+    String? athleteType,
+    String? birthday,
+    int? height,
+    String? measurementPreference,
+    bool? newsletter,
   }) async {
     methodCalls.add('requestSignupCode');
     if (overrideRequestSignupCode != null) {
-      return overrideRequestSignupCode!(email: email, name: name, sex: sex, weight: weight, ftp: ftp);
+      return overrideRequestSignupCode!(
+        email: email,
+        name: name,
+        sex: sex,
+        weight: weight,
+        ftp: ftp,
+        athleteLevel: athleteLevel,
+        athleteType: athleteType,
+        birthday: birthday,
+        height: height,
+        measurementPreference: measurementPreference,
+        newsletter: newsletter,
+      );
     }
     // Default: return success
     return CodeRequestResponse.create(

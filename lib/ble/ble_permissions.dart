@@ -1,6 +1,6 @@
-import 'dart:io';
-import 'package:permission_handler/permission_handler.dart';
-import 'package:chirp/chirp.dart';
+// Export the platform-specific implementation
+export 'ble_permissions_io.dart'
+    if (dart.library.html) 'ble_permissions_web.dart';
 
 /// Abstract interface for checking and requesting BLE permissions.
 ///
@@ -20,6 +20,10 @@ import 'package:chirp/chirp.dart';
 /// - Bluetooth permission requested automatically when accessing CoreBluetooth
 /// - No location permission needed for BLE
 ///
+/// **Web**:
+/// - Permissions handled automatically by the browser's Web Bluetooth API
+/// - User is prompted when attempting to scan or connect to devices
+///
 /// This abstraction allows for easy testing with fake implementations.
 abstract class BlePermissions {
   /// Check if all required BLE permissions are currently granted.
@@ -27,7 +31,8 @@ abstract class BlePermissions {
   /// Returns true if all permissions needed for BLE operations are granted,
   /// false otherwise.
   ///
-  /// On iOS, this always returns true since permissions are handled by the system.
+  /// On iOS and Web, this always returns true since permissions are handled
+  /// by the system/browser.
   Future<bool> check();
 
   /// Request all necessary BLE permissions from the user.
@@ -51,146 +56,11 @@ abstract class BlePermissions {
   /// even when using the new Android 12+ Bluetooth permissions.
   ///
   /// Returns true if location services are enabled, false otherwise.
-  /// On iOS, this always returns true since location is not needed for BLE.
+  /// On iOS and Web, this always returns true since location is not needed for BLE.
   Future<bool> isLocationServiceEnabled();
 
   /// Open the app's settings page where the user can manually grant permissions.
   ///
   /// Use this when [isPermanentlyDenied] returns true.
   Future<void> openSettings();
-}
-
-/// Production implementation of [BlePermissions] that wraps permission_handler.
-///
-/// Handles all the complexity of Android version-specific permission logic
-/// and provides a simple API for checking and requesting BLE permissions.
-class BlePermissionsImpl implements BlePermissions {
-  @override
-  Future<bool> check() async {
-    if (!Platform.isAndroid) {
-      // iOS handles permissions automatically
-      return true;
-    }
-
-    // Early return for Android 11 and below
-    if (!await _isAndroid12OrHigher()) {
-      final locationStatus = await Permission.locationWhenInUse.status;
-      return locationStatus.isGranted;
-    }
-
-    // Android 12+
-    final scanStatus = await Permission.bluetoothScan.status;
-    final connectStatus = await Permission.bluetoothConnect.status;
-    return scanStatus.isGranted && connectStatus.isGranted;
-  }
-
-  @override
-  Future<bool> request() async {
-    Chirp.info('Requesting BLE permissions');
-
-    if (!Platform.isAndroid) {
-      Chirp.info('Not Android, no permission request needed');
-      return true;
-    }
-
-    final List<Permission> permissionsToRequest = [];
-
-    // Determine permissions based on Android version with early return pattern
-    final isAndroid12Plus = await _isAndroid12OrHigher();
-
-    if (isAndroid12Plus) {
-      // Android 12+ (API 31+) uses new Bluetooth permissions
-      Chirp.info('Android 12+, requesting BLUETOOTH_SCAN and BLUETOOTH_CONNECT');
-      permissionsToRequest.add(Permission.bluetoothScan);
-      permissionsToRequest.add(Permission.bluetoothConnect);
-    }
-
-    if (!isAndroid12Plus) {
-      // Android 11 and below requires location permission for BLE scanning
-      Chirp.info('Android 11 or below, requesting LOCATION permissions');
-      permissionsToRequest.add(Permission.locationWhenInUse);
-    }
-
-    // Request all permissions
-    final statuses = await permissionsToRequest.request();
-
-    // Check if all permissions granted
-    bool allGranted = true;
-    for (final entry in statuses.entries) {
-      final permission = entry.key;
-      final status = entry.value;
-      Chirp.info('$permission: $status');
-
-      if (!status.isGranted) {
-        allGranted = false;
-        if (status.isPermanentlyDenied) {
-          Chirp.info('$permission is permanently denied');
-        }
-      }
-    }
-
-    if (allGranted) {
-      Chirp.info('All permissions granted');
-    } else {
-      Chirp.info('Some permissions denied');
-    }
-
-    return allGranted;
-  }
-
-  @override
-  Future<bool> isPermanentlyDenied() async {
-    if (!Platform.isAndroid) {
-      return false;
-    }
-
-    // Early return for Android 11 and below
-    if (!await _isAndroid12OrHigher()) {
-      final locationStatus = await Permission.locationWhenInUse.status;
-      return locationStatus.isPermanentlyDenied;
-    }
-
-    // Android 12+
-    final scanStatus = await Permission.bluetoothScan.status;
-    final connectStatus = await Permission.bluetoothConnect.status;
-    return scanStatus.isPermanentlyDenied || connectStatus.isPermanentlyDenied;
-  }
-
-  @override
-  Future<bool> isLocationServiceEnabled() async {
-    if (!Platform.isAndroid) {
-      // iOS doesn't require location services for BLE
-      return true;
-    }
-
-    // On Android, check if location services are enabled
-    // This is required even with Android 12+ Bluetooth permissions
-    final serviceStatus = await Permission.location.serviceStatus;
-    return serviceStatus.isEnabled;
-  }
-
-  @override
-  Future<void> openSettings() async {
-    Chirp.info('Opening app settings');
-    await openAppSettings();
-  }
-
-  /// Determine if running Android 12 (API 31) or higher.
-  ///
-  /// Android 12 introduced new runtime Bluetooth permissions that replace
-  /// the need for location permissions when scanning for BLE devices.
-  ///
-  /// We detect this by checking if the bluetoothScan permission is available,
-  /// which only exists on Android 12+.
-  Future<bool> _isAndroid12OrHigher() async {
-    try {
-      // The bluetoothScan permission only exists on Android 12+
-      await Permission.bluetoothScan.status;
-      return true;
-    } catch (e, stackTrace) {
-      // If checking bluetoothScan throws an error, we're on older Android
-      Chirp.error('Not Android 12+', error: e, stackTrace: stackTrace);
-      return false;
-    }
-  }
 }

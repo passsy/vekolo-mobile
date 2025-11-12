@@ -12,6 +12,12 @@ Future<CodeRequestResponse> postRequestSignupCode(
   String? sex,
   int? weight,
   int? ftp,
+  String? athleteLevel,
+  String? athleteType,
+  String? birthday,
+  int? height,
+  String? measurementPreference,
+  bool? newsletter,
 }) async {
   final response = await context.publicDio.post(
     '/auth/code/request',
@@ -22,6 +28,12 @@ Future<CodeRequestResponse> postRequestSignupCode(
       if (sex != null) 'sex': sex,
       if (weight != null) 'weight': weight,
       if (ftp != null) 'ftp': ftp,
+      if (athleteLevel != null) 'athleteLevel': athleteLevel,
+      if (athleteType != null) 'athleteType': athleteType,
+      if (birthday != null) 'birthday': birthday,
+      if (height != null) 'height': height,
+      if (measurementPreference != null) 'measurementPreference': measurementPreference,
+      if (newsletter != null) 'newsletter': newsletter,
     },
     options: Options(contentType: Headers.jsonContentType, validateStatus: (status) => status == 200),
   );

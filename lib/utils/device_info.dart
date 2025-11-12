@@ -1,11 +1,9 @@
-import 'package:vekolo/app/logger.dart';
-import 'dart:io' if (dart.library.html) 'dart:html';
-
 import 'package:device_info_plus/device_info_plus.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:chirp/chirp.dart';
 
 /// Utility for getting device information
 class DeviceInfoUtil {
+  // Logger instance for static methods
   /// Gets the device name/model
   ///
   /// Returns a string like "iPhone 15 Pro", "Pixel 8", etc.
@@ -13,33 +11,34 @@ class DeviceInfoUtil {
   /// Falls back to "Flutter App" if unable to determine device info
   static Future<String> getDeviceName() async {
     try {
-      final _deviceInfo = DeviceInfoPlugin();
-      if (kIsWeb) {
-        final webInfo = await _deviceInfo.webBrowserInfo;
+      final deviceInfo = DeviceInfoPlugin();
+      final info = await deviceInfo.deviceInfo;
+
+      if (info is WebBrowserInfo) {
         // Returns browser name like "Chrome", "Firefox", "Safari", etc.
-        final browserName = webInfo.browserName.name;
+        final browserName = info.browserName.name;
         // Capitalize first letter
         return browserName.substring(0, 1).toUpperCase() + browserName.substring(1);
-      } else if (Platform.isAndroid) {
-        final androidInfo = await _deviceInfo.androidInfo;
+      }
+      if (info is AndroidDeviceInfo) {
         // Returns something like "Pixel 8" or "Samsung Galaxy S24"
-        return androidInfo.model;
-      } else if (Platform.isIOS) {
-        final iosInfo = await _deviceInfo.iosInfo;
+        return info.model;
+      }
+      if (info is IosDeviceInfo) {
         // Returns something like "iPhone 15 Pro"
-        return iosInfo.utsname.machine;
-      } else if (Platform.isMacOS) {
-        final macOsInfo = await _deviceInfo.macOsInfo;
-        return macOsInfo.model;
-      } else if (Platform.isWindows) {
-        final windowsInfo = await _deviceInfo.windowsInfo;
-        return windowsInfo.computerName;
-      } else if (Platform.isLinux) {
-        final linuxInfo = await _deviceInfo.linuxInfo;
-        return linuxInfo.prettyName;
+        return info.utsname.machine;
+      }
+      if (info is MacOsDeviceInfo) {
+        return info.model;
+      }
+      if (info is WindowsDeviceInfo) {
+        return info.computerName;
+      }
+      if (info is LinuxDeviceInfo) {
+        return info.prettyName;
       }
     } catch (e, stackTrace) {
-      talker.error('Error getting device info: $e', e, stackTrace);
+      Chirp.error('Error getting device info', error: e, stackTrace: stackTrace);
     }
 
     // Fallback

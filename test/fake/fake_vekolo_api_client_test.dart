@@ -24,7 +24,19 @@ void main() {
       });
 
       test('can override to return rate limited', () async {
-        apiClient.overrideRequestSignupCode = ({required email, name, sex, weight, ftp}) async {
+        apiClient.overrideRequestSignupCode = ({
+          required email,
+          name,
+          sex,
+          weight,
+          ftp,
+          athleteLevel,
+          athleteType,
+          birthday,
+          height,
+          measurementPreference,
+          newsletter,
+        }) async {
           return CodeRequestResponse.create(
             success: false,
             userExists: false,
@@ -41,7 +53,19 @@ void main() {
       });
 
       test('can override to throw exception', () {
-        apiClient.overrideRequestSignupCode = ({required email, name, sex, weight, ftp}) {
+        apiClient.overrideRequestSignupCode = ({
+          required email,
+          name,
+          sex,
+          weight,
+          ftp,
+          athleteLevel,
+          athleteType,
+          birthday,
+          height,
+          measurementPreference,
+          newsletter,
+        }) {
           throw DioException(
             requestOptions: RequestOptions(path: '/auth/code/request'),
             type: DioExceptionType.connectionTimeout,
