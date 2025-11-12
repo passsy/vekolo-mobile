@@ -1,5 +1,4 @@
-import 'package:vekolo/app/logger.dart';
-
+import 'package:chirp/chirp.dart';
 import 'package:clock/clock.dart';
 import 'package:deep_pick/deep_pick.dart';
 import 'package:fresh_dio/fresh_dio.dart' hide RefreshToken;
@@ -42,7 +41,7 @@ Fresh<VekoloToken> createFreshAuth({required VekoloApiClient Function() apiClien
           }
         }
       } catch (e) {
-        _FreshAuthLogger().logClass('Error checking shouldRefresh: $e');
+        Chirp.info('Error checking shouldRefresh: $e');
       }
       return false;
     },
@@ -69,10 +68,4 @@ class VekoloToken extends Token {
   DateTime get expiresAt {
     return typedAccessToken.expiryDate;
   }
-}
-
-/// Helper class to provide context for logging in top-level functions
-class _FreshAuthLogger {
-  @override
-  String toString() => 'FreshAuth';
 }

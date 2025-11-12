@@ -3,8 +3,8 @@
 /// Based on the web implementation at `/vekolo-web/shared/utils/workout.ts`.
 library;
 
-import 'package:vekolo/app/logger.dart';
 
+import 'package:chirp/chirp.dart';
 import 'package:vekolo/domain/models/workout/workout_models.dart';
 
 // ============================================================================
@@ -147,7 +147,7 @@ List<dynamic> flattenWorkoutEvents(List<dynamic> plan, List<dynamic> events) {
         final parentBlockId = event is MessageEvent ? event.parentBlockId : (event as EffectEvent).parentBlockId;
         final startTime = blockStartTimes[parentBlockId];
         if (startTime == null) {
-          talker.warning('Event ${(event as dynamic).id} references unknown block $parentBlockId');
+          Chirp.info('WARNING: Event ${(event as dynamic).id} references unknown block $parentBlockId');
           return false;
         }
         return true;

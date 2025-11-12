@@ -5,7 +5,7 @@ import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:state_beacon/state_beacon.dart';
 import 'package:vekolo/ble/ble_permissions.dart';
 import 'package:vekolo/ble/ble_platform.dart';
-import 'package:vekolo/app/logger.dart';
+import 'package:chirp/chirp.dart';
 
 /// Opaque token representing an active scan request.
 ///
@@ -250,7 +250,7 @@ class BleScanner with WidgetsBindingObserver {
   /// testing more predictable.
   void initialize() {
     if (_disposed) {
-      logClass('Cannot initialize after disposal');
+      Chirp.info('Cannot initialize after disposal');
       return;
     }
 
@@ -265,7 +265,7 @@ class BleScanner with WidgetsBindingObserver {
   void _startMonitoring() {
     // Subscribe to adapter state changes
     _adapterStateUnsubscribe = _platform.adapterState.subscribe((state) {
-      logClass('Adapter state changed to: $state');
+      Chirp.info('Adapter state changed to: $state');
       _updateBluetoothState();
     });
 
@@ -305,18 +305,18 @@ class BleScanner with WidgetsBindingObserver {
       if (newState != _bluetoothStateBeacon.value) {
         _bluetoothStateBeacon.value = newState;
 
-        logClass('Bluetooth state updated: $newState');
+        Chirp.info('Bluetooth state updated: $newState');
 
         // Clear devices and stop scanning when Bluetooth turns off or becomes unavailable
         if (!newState.isBluetoothOn) {
           if (_discoveredDevices.isNotEmpty) {
-            logClass('Bluetooth turned off, clearing ${_discoveredDevices.length} devices');
+            Chirp.info('Bluetooth turned off, clearing ${_discoveredDevices.length} devices');
             _discoveredDevices.clear();
             _updateDevicesBeacon();
           }
           // Stop platform scanning if it's active
           if (_isScanningBeacon.value) {
-            logClass('Bluetooth turned off, stopping scan');
+            Chirp.info('Bluetooth turned off, stopping scan');
             _stopPlatformScan();
           }
         }
@@ -325,7 +325,7 @@ class BleScanner with WidgetsBindingObserver {
         _maybeAutoRestartScanning();
       }
     } catch (e, stack) {
-      logClass('Error updating Bluetooth state: $e', e: e, stack: stack);
+      Chirp.error('Error updating Bluetooth state', error: e, stackTrace: stack);
     }
   }
 
@@ -365,7 +365,7 @@ class BleScanner with WidgetsBindingObserver {
 
       if (newRssi == null) {
         signalLostCount++;
-        logClass(
+        Chirp.info(
           'Device lost signal: ${device.name ?? device.deviceId} '
           '(last seen ${timeSinceLastSeen.inSeconds}s ago, was ${device.rssi} dBm)',
         );
@@ -373,7 +373,7 @@ class BleScanner with WidgetsBindingObserver {
 
       if (newRssi != null) {
         signalRestoredCount++;
-        logClass(
+        Chirp.info(
           'Device signal restored: ${device.name ?? device.deviceId} '
           '(RSSI: $newRssi dBm)',
         );
@@ -384,7 +384,7 @@ class BleScanner with WidgetsBindingObserver {
     }
 
     if (updated) {
-      logClass(
+      Chirp.info(
         'Signal status updated: $signalLostCount lost, $signalRestoredCount restored '
         '(${_discoveredDevices.length} total devices)',
       );
@@ -409,7 +409,7 @@ class BleScanner with WidgetsBindingObserver {
       for (final id in expiredIds) {
         _discoveredDevices.remove(id);
       }
-      logClass('Removed ${expiredIds.length} expired devices');
+      Chirp.info('Removed ${expiredIds.length} expired devices');
       _updateDevicesBeacon();
     }
   }
@@ -439,7 +439,7 @@ class BleScanner with WidgetsBindingObserver {
           rssi: result.rssi,
         );
         updated = true;
-        logClass('New device discovered: $deviceId (${result.advertisementData.advName})');
+        Chirp.info('New device discovered: $deviceId (${result.advertisementData.advName})');
         continue;
       }
 
@@ -466,7 +466,7 @@ class BleScanner with WidgetsBindingObserver {
         !_isScanningBeacon.value &&
         !_isStartingScan &&
         _bluetoothStateBeacon.value.canScan) {
-      logClass('Auto-restarting scan (conditions now favorable)');
+      Chirp.info('Auto-restarting scan (conditions now favorable)');
       _startPlatformScan();
     }
   }
@@ -490,7 +490,7 @@ class BleScanner with WidgetsBindingObserver {
     final token = ScanToken._();
     _activeTokens.add(token);
 
-    logClass('Start scan requested (${_activeTokens.length} active tokens)');
+    Chirp.info('Start scan requested (${_activeTokens.length} active tokens)');
 
     // Start platform scan if not already scanning and conditions are met
     if (!_isScanningBeacon.value && !_isStartingScan) {
@@ -509,7 +509,7 @@ class BleScanner with WidgetsBindingObserver {
     final state = _bluetoothStateBeacon.value;
 
     if (!state.canScan) {
-      logClass('Cannot start scan: canScan=false (${state})');
+      Chirp.info('Cannot start scan: canScan=false (${state})');
       return;
     }
 
@@ -520,10 +520,10 @@ class BleScanner with WidgetsBindingObserver {
       // Check disposed again after async operation
       if (!_disposed) {
         _isScanningBeacon.value = true;
-        logClass('Platform scan started successfully');
+        Chirp.info('Platform scan started successfully');
       }
     } catch (e, stack) {
-      logClass('Failed to start platform scan', e: e, stack: stack);
+      Chirp.error('Failed to start platform scan', error: e, stackTrace: stack);
     } finally {
       _isStartingScan = false;
     }
@@ -548,7 +548,7 @@ class BleScanner with WidgetsBindingObserver {
     final wasRemoved = _activeTokens.remove(token);
 
     if (wasRemoved) {
-      logClass('Stop scan requested (${_activeTokens.length} active tokens remaining)');
+      Chirp.info('Stop scan requested (${_activeTokens.length} active tokens remaining)');
 
       // Stop platform scan if no tokens remain
       if (_activeTokens.isEmpty && _isScanningBeacon.value) {
@@ -572,10 +572,10 @@ class BleScanner with WidgetsBindingObserver {
       // Check disposed again after async operation
       if (!_disposed) {
         _isScanningBeacon.value = false;
-        logClass('Platform scan stopped');
+        Chirp.info('Platform scan stopped');
       }
     } catch (e, stack) {
-      logClass('Failed to stop platform scan', e: e, stack: stack);
+      Chirp.error('Failed to stop platform scan', error: e, stackTrace: stack);
     }
   }
 
@@ -587,13 +587,13 @@ class BleScanner with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (_disposed) return;
 
-    logClass('App lifecycle changed to: $state');
+    Chirp.info('App lifecycle changed to: $state');
 
     switch (state) {
       case AppLifecycleState.resumed:
         // App came to foreground - resume scanning if we have active tokens
         if (_activeTokens.isNotEmpty && !_isScanningBeacon.value) {
-          logClass('App resumed, restarting scan');
+          Chirp.info('App resumed, restarting scan');
           _startPlatformScan();
         }
 
@@ -601,7 +601,7 @@ class BleScanner with WidgetsBindingObserver {
       case AppLifecycleState.paused:
         // App going to background - stop scanning to save battery
         if (_isScanningBeacon.value) {
-          logClass('App backgrounded, stopping scan');
+          Chirp.info('App backgrounded, stopping scan');
           _stopPlatformScan();
         }
 
@@ -609,7 +609,7 @@ class BleScanner with WidgetsBindingObserver {
       case AppLifecycleState.hidden:
         // App is detaching or hidden - ensure scan is stopped
         if (_isScanningBeacon.value) {
-          logClass('App detached/hidden, stopping scan');
+          Chirp.info('App detached/hidden, stopping scan');
           _stopPlatformScan();
         }
     }
@@ -622,7 +622,7 @@ class BleScanner with WidgetsBindingObserver {
   void dispose() {
     if (_disposed) return;
 
-    logClass('Disposing scanner');
+    Chirp.info('Disposing scanner');
 
     _disposed = true;
 
@@ -652,6 +652,6 @@ class BleScanner with WidgetsBindingObserver {
     _isScanningBeacon.dispose();
     _bluetoothStateBeacon.dispose();
 
-    logClass('Scanner disposed');
+    Chirp.info('Scanner disposed');
   }
 }

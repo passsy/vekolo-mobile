@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'package:vekolo/app/logger.dart';
+import 'package:chirp/chirp.dart';
 
 import 'package:context_plus/context_plus.dart';
 import 'package:flutter/material.dart';
@@ -68,7 +68,7 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
 
   Future<void> _loadWorkout() async {
     try {
-      logClass('Loading workout from save.json');
+      Chirp.info('Loading workout from save.json');
 
       // Load workout JSON from assets
       final jsonString = await rootBundle.loadString('save.json');
@@ -77,7 +77,7 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
       // Parse workout plan
       final workoutPlan = WorkoutPlan.fromJson(jsonData);
 
-      logClass(
+      Chirp.info(
         'Loaded workout: ${workoutPlan.plan.length} items, ${workoutPlan.events.length} events',
       );
 
@@ -95,7 +95,7 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
       ResumeChoice? resumeChoice;
       if (incompleteSession != null && mounted && !widget.isResuming) {
         // Only show dialog if not already handled by HomePage
-        logClass('Found incomplete session from ${incompleteSession.startTime}');
+        Chirp.info('Found incomplete session from ${incompleteSession.startTime}');
 
         // Show resume dialog
         resumeChoice = await showDialog<ResumeChoice>(
@@ -107,18 +107,18 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
         // Handle user choice
         if (resumeChoice == ResumeChoice.discard) {
           // Mark session as abandoned but keep the data
-          logClass('User chose to discard session');
+          Chirp.info('User chose to discard session');
           await persistence.updateSessionStatus(incompleteSession.id, SessionStatus.abandoned);
         } else if (resumeChoice == ResumeChoice.startFresh) {
           // Delete the session entirely
-          logClass('User chose to start fresh, deleting old session');
+          Chirp.info('User chose to start fresh, deleting old session');
           await persistence.deleteSession(incompleteSession.id);
         } else if (resumeChoice == ResumeChoice.resume) {
-          logClass('User chose to resume previous session');
+          Chirp.info('User chose to resume previous session');
         }
       } else if (widget.isResuming && incompleteSession != null) {
         // HomePage already handled the dialog, assume Resume choice
-        logClass('Resuming from HomePage choice');
+        Chirp.info('Resuming from HomePage choice');
         resumeChoice = ResumeChoice.resume;
       }
 
@@ -133,7 +133,7 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
 
       // If resuming, restore the workout state and recording
       if (resumeChoice == ResumeChoice.resume && incompleteSession != null) {
-        logClass('Restoring workout state from saved session');
+        Chirp.info('Restoring workout state from saved session');
 
         // Restore player state (elapsed time and current block)
         playerService.restoreState(
@@ -144,7 +144,7 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
         // Resume recording with existing session
         await recordingService.resumeRecording(sessionId: incompleteSession.id);
 
-        logClass('Workout state restored successfully');
+        Chirp.info('Workout state restored successfully');
       }
 
       // Listen to triggered events
@@ -157,7 +157,7 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
       // Listen to workout completion to stop recording
       playerService.isComplete.subscribe((isComplete) {
         if (isComplete) {
-          logClass('Workout complete, stopping recording');
+          Chirp.info('Workout complete, stopping recording');
           recordingService.stopRecording(completed: true);
         }
       });
@@ -171,9 +171,9 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
       // Monitor power to auto-start/resume workout when user starts pedaling
       _setupPowerMonitoring(deviceManager, playerService);
 
-      logClass('Workout player initialized');
+      Chirp.info('Workout player initialized');
     } catch (e, stackTrace) {
-      logClass('Error loading workout', e: e, stack: stackTrace, level: LogLevel.error);
+      Chirp.error('Error loading workout', error: e, stackTrace: stackTrace);
       if (mounted) {
         setState(() {
           _loadError = e.toString();
@@ -215,7 +215,7 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
 
       // Auto-start: workout hasn't started yet and user is pedaling
       if (!_hasStarted && currentPower >= startResumeThreshold) {
-        logClass('Auto-starting workout - power detected: ${currentPower}W');
+        Chirp.info('Auto-starting workout - power detected: ${currentPower}W');
         playerService.start();
 
         // Mark as started immediately to prevent duplicate startRecording() calls
@@ -226,7 +226,7 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
         final user = authService.currentUser.value;
         final ftp = user?.ftp ?? ProfileDefaults.ftp;
         if (_recordingService != null) {
-          logClass('Calling startRecording()');
+          Chirp.info('Calling startRecording()');
           // Fire and forget - the async operation will complete in the background
           // ignore: unawaited_futures
           _recordingService!.startRecording(
@@ -253,7 +253,7 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
       }
       // Auto-resume: workout is paused (but not manually paused) and user starts pedaling
       else if (_hasStarted && isPaused && !_isManualPause && currentPower >= startResumeThreshold) {
-        logClass('Auto-resuming workout - power detected: ${currentPower}W');
+        Chirp.info('Auto-resuming workout - power detected: ${currentPower}W');
         playerService.start();
         setState(() => _lowPowerStartTime = null); // Reset low power timer
 
@@ -278,7 +278,7 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
           // Check if power has been low for long enough
           final lowPowerDuration = now.difference(_lowPowerStartTime!);
           if (lowPowerDuration >= autoPauseDelay) {
-            logClass('Auto-pausing workout - low power detected: ${currentPower}W');
+            Chirp.info('Auto-pausing workout - low power detected: ${currentPower}W');
             playerService.pause();
             setState(() {
               _lowPowerStartTime = null; // Reset timer

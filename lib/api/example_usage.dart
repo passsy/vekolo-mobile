@@ -6,6 +6,7 @@
 // All models use the Rekord pattern for robust API parsing that handles
 // missing or corrupted fields gracefully.
 
+import 'package:chirp/chirp.dart';
 import 'package:vekolo/api/vekolo_api_client.dart';
 import 'package:vekolo/utils/device_info.dart';
 
@@ -44,18 +45,18 @@ Future<void> signupFlow(VekoloApiClient client) async {
     // Rekord pattern allows graceful field access
     if (!codeResponse.success) {
       if (codeResponse.userExists == true) {
-        print('User already exists, use login instead');
+        Chirp.info('User already exists, use login instead');
         return;
       }
       if (codeResponse.rateLimited == true) {
-        print('Rate limited: ${codeResponse.message}');
+        Chirp.info('Rate limited: ${codeResponse.message}');
         return;
       }
-      print('Failed: ${codeResponse.message}');
+      Chirp.info('Failed: ${codeResponse.message}');
       return;
     }
 
-    print('Magic code sent! Check your email.');
+    Chirp.info('Magic code sent! Check your email.');
 
     // Step 2: User enters the 6-digit code from email
     const userEnteredCode = '123456'; // From email
@@ -72,16 +73,15 @@ Future<void> signupFlow(VekoloApiClient client) async {
     final accessToken = tokenResponse.accessToken;
     final user = accessToken.parseUser();
 
-    print('Logged in as ${user.name}');
-    print('Email: ${user.email}');
-    print('FTP: ${user.ftp}W');
-    print('Access token: ${tokenResponse.accessToken}');
-    print('Refresh token: ${tokenResponse.refreshToken}');
+    Chirp.info('Logged in as ${user.name}');
+    Chirp.info('Email: ${user.email}');
+    Chirp.info('FTP: ${user.ftp}W');
+    Chirp.info('Access token: ${tokenResponse.accessToken}');
+    Chirp.info('Refresh token: ${tokenResponse.refreshToken}');
 
     // TODO: Store these tokens in flutter_secure_storage
   } catch (e, stackTrace) {
-    print('Signup failed: $e');
-    print(stackTrace);
+    Chirp.error('Signup failed', error: e, stackTrace: stackTrace);
   }
 }
 
@@ -93,18 +93,18 @@ Future<void> loginFlow(VekoloApiClient client) async {
 
     if (!codeResponse.success) {
       if (codeResponse.userExists == false) {
-        print('User not found, please sign up first');
+        Chirp.info('User not found, please sign up first');
         return;
       }
       if (codeResponse.rateLimited == true) {
-        print('Rate limited: ${codeResponse.message}');
+        Chirp.info('Rate limited: ${codeResponse.message}');
         return;
       }
-      print('Failed: ${codeResponse.message}');
+      Chirp.info('Failed: ${codeResponse.message}');
       return;
     }
 
-    print('Magic code sent! Check your email.');
+    Chirp.info('Magic code sent! Check your email.');
 
     // Step 2: User enters the 6-digit code from email
     const userEnteredCode = '123456'; // From email
@@ -118,12 +118,11 @@ Future<void> loginFlow(VekoloApiClient client) async {
     );
 
     // Rekord pattern makes nested access clean
-    print('Logged in as ${tokenResponse.accessToken.parseUser().name}');
+    Chirp.info('Logged in as ${tokenResponse.accessToken.parseUser().name}');
 
     // TODO: Store these tokens in flutter_secure_storage
   } catch (e, stackTrace) {
-    print('Login failed: $e');
-    print(stackTrace);
+    Chirp.error('Login failed', error: e, stackTrace: stackTrace);
   }
 }
 
@@ -137,12 +136,11 @@ Future<void> refreshTokenExample(VekoloApiClient client) async {
     final response = await client.refreshToken(refreshToken: storedRefreshToken);
 
     final newAccessToken = response.accessToken;
-    print('New access token: $newAccessToken');
+    Chirp.info('New access token: $newAccessToken');
 
     // TODO: Store the new access token in flutter_secure_storage
   } catch (e, stackTrace) {
-    print('Token refresh failed: $e');
-    print(stackTrace);
+    Chirp.error('Token refresh failed', error: e, stackTrace: stackTrace);
 
     // If refresh fails (401), the refresh token is invalid/expired
     // User needs to log in again
@@ -158,13 +156,12 @@ Future<void> logoutExample(VekoloApiClient client) async {
     // Revoke the token on the server
     final response = await client.revokeToken(refreshToken: storedRefreshToken);
 
-    print(response.message);
+    Chirp.info(response.message);
 
     // TODO: Clear all tokens from flutter_secure_storage
     // TODO: Navigate to login screen
   } catch (e, stackTrace) {
-    print('Logout failed: $e');
-    print(stackTrace);
+    Chirp.error('Logout failed', error: e, stackTrace: stackTrace);
 
     // Even if this fails, still clear local tokens and log out
   }

@@ -39,7 +39,7 @@ import 'dart:async';
 
 import 'package:clock/clock.dart';
 import 'package:state_beacon/state_beacon.dart';
-import 'package:vekolo/app/logger.dart';
+import 'package:chirp/chirp.dart';
 import 'package:vekolo/domain/devices/device_manager.dart';
 import 'package:vekolo/domain/models/erg_command.dart';
 
@@ -255,11 +255,10 @@ class WorkoutSyncService {
       _retryCount = 0;
     } catch (e, stackTrace) {
       // Log error with full stack trace for debugging
-      logClass(
+      Chirp.error(
         'Failed to set target power to ${command.targetWatts}W',
-        e: e,
-        stack: stackTrace,
-        level: LogLevel.error,
+        error: e,
+        stackTrace: stackTrace,
       );
 
       // Check if it's a "device not connected" error - don't retry those
@@ -275,9 +274,8 @@ class WorkoutSyncService {
         final delay = _retryCount; // 1s, 2s, 3s for retries 1-3
         syncError.value = 'Retry $_retryCount/$_maxRetries';
 
-        logClass(
+        Chirp.info(
           'Retrying in ${delay}s (attempt $_retryCount/$_maxRetries)',
-          level: LogLevel.warning,
         );
 
         // Wait and retry
@@ -291,7 +289,7 @@ class WorkoutSyncService {
         // All retries exhausted
         syncError.value = 'Failed after $_maxRetries retries';
         _retryCount = 0;
-        logClass('Giving up after $_maxRetries failed attempts', level: LogLevel.error);
+        Chirp.info('Giving up after $_maxRetries failed attempts');
       }
     }
   }
@@ -320,7 +318,7 @@ class WorkoutSyncService {
     // Cancel any existing timer
     _refreshTimer?.cancel();
 
-    logClass(
+    Chirp.info(
       'Starting periodic refresh every ${trainer.refreshInterval.inSeconds}s',
     );
 
@@ -328,7 +326,7 @@ class WorkoutSyncService {
     _refreshTimer = Timer.periodic(trainer.refreshInterval, (timer) {
       // Re-send last command if we're syncing and have a command to send
       if (_lastSentCommand != null && isSyncing.value) {
-        logClass('Refreshing target: ${_lastSentCommand!.targetWatts}W');
+        Chirp.info('Refreshing target: ${_lastSentCommand!.targetWatts}W');
         _syncTargetToDevice(_lastSentCommand!);
       }
     });

@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'package:vekolo/app/logger.dart';
+import 'package:chirp/chirp.dart';
 
 import 'package:clock/clock.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart' as fbp;
@@ -65,7 +65,7 @@ class BleDeviceInspector {
     _rssi = rssi;
     _services.clear();
 
-    logClass('Starting inspection of device: $deviceId');
+    Chirp.info('Starting inspection of device: $deviceId');
 
     try {
       // Step 1: Connect to device
@@ -82,7 +82,7 @@ class BleDeviceInspector {
       // Step 4: Generate report
       return _generateReport();
     } catch (e, stackTrace) {
-      logClass('Inspection failed: $e', e: e, stack: stackTrace, level: LogLevel.error);
+      Chirp.error('Inspection failed', error: e, stackTrace: stackTrace);
       await _disconnect();
       _inspectionEndTime = clock.now();
       return _generateReport(error: e.toString());
@@ -91,7 +91,7 @@ class BleDeviceInspector {
 
   /// Connects to the BLE device with timeout.
   Future<void> _connectToDevice(String deviceId) async {
-    logClass('Connecting to device: $deviceId');
+    Chirp.info('Connecting to device: $deviceId');
 
     final completer = Completer<void>();
 
@@ -101,11 +101,11 @@ class BleDeviceInspector {
 
     _connectionSubscription = _device!.connectionState.listen(
       (state) {
-        logClass('Connection state: $state');
+        Chirp.info('Connection state: $state');
 
         if (state == fbp.BluetoothConnectionState.connected) {
           if (!completer.isCompleted) {
-            logClass('Connected successfully');
+            Chirp.info('Connected successfully');
             completer.complete();
           }
         } else if (state == fbp.BluetoothConnectionState.disconnected) {
@@ -115,7 +115,7 @@ class BleDeviceInspector {
         }
       },
       onError: (Object e, StackTrace stackTrace) {
-        logClass('Connection error: $e', e: e, stack: stackTrace, level: LogLevel.error);
+        Chirp.error('Connection error', error: e, stackTrace: stackTrace);
         if (!completer.isCompleted) {
           completer.completeError(e, stackTrace);
         }
@@ -135,20 +135,20 @@ class BleDeviceInspector {
 
   /// Discovers all GATT services and collects data.
   Future<void> _discoverServices(String deviceId) async {
-    logClass('Discovering services...');
+    Chirp.info('Discovering services...');
 
     try {
       final services = await _device!.discoverServices();
-      logClass('Found ${services.length} service(s)');
+      Chirp.info('Found ${services.length} service(s)');
 
       for (final service in services) {
-        logClass('Processing service: ${service.uuid}');
+        Chirp.info('Processing service: ${service.uuid}');
 
         final characteristics = <_CharacteristicInfo>[];
 
         // Process each characteristic
         for (final characteristic in service.characteristics) {
-          logClass('Processing characteristic: ${characteristic.uuid}');
+          Chirp.info('Processing characteristic: ${characteristic.uuid}');
 
           // Try to read characteristic value if readable
           List<int>? charValue;
@@ -158,13 +158,13 @@ class BleDeviceInspector {
             charValue = readResult.value;
             charReadError = readResult.error;
           } else {
-            logClass('Characteristic ${characteristic.uuid} is not readable');
+            Chirp.info('Characteristic ${characteristic.uuid} is not readable');
           }
 
           // Process descriptors
           final descriptors = <_DescriptorInfo>[];
           for (final descriptor in characteristic.descriptors) {
-            logClass('Processing descriptor: ${descriptor.uuid}');
+            Chirp.info('Processing descriptor: ${descriptor.uuid}');
 
             List<int>? descriptorValue;
             String? descriptorReadError;
@@ -173,17 +173,17 @@ class BleDeviceInspector {
               final value = await descriptor.read().timeout(
                 _characteristicReadTimeout,
                 onTimeout: () {
-                  logClass('Read timeout for descriptor ${descriptor.uuid}');
+                  Chirp.info('Read timeout for descriptor ${descriptor.uuid}');
                   return <int>[];
                 },
               );
 
               if (value.isNotEmpty) {
                 descriptorValue = value;
-                logClass('Read ${value.length} byte(s) from descriptor ${descriptor.uuid}');
+                Chirp.info('Read ${value.length} byte(s) from descriptor ${descriptor.uuid}');
               }
             } catch (e, stackTrace) {
-              logClass('Failed to read descriptor ${descriptor.uuid}: $e', e: e, stack: stackTrace, level: LogLevel.error);
+              Chirp.error('Failed to read descriptor ${descriptor.uuid}', error: e, stackTrace: stackTrace);
               descriptorReadError = e.toString();
             }
 
@@ -210,9 +210,9 @@ class BleDeviceInspector {
         _services.add(_ServiceInfo(uuid: service.uuid, isPrimary: service.isPrimary, characteristics: characteristics));
       }
 
-      logClass('Service discovery completed');
+      Chirp.info('Service discovery completed');
     } catch (e, stackTrace) {
-      logClass('Error during service discovery: $e', e: e, stack: stackTrace, level: LogLevel.error);
+      Chirp.error('Error during service discovery', error: e, stackTrace: stackTrace);
       rethrow;
     }
   }
@@ -223,25 +223,25 @@ class BleDeviceInspector {
       final value = await characteristic.read().timeout(
         _characteristicReadTimeout,
         onTimeout: () {
-          logClass('Read timeout for characteristic ${characteristic.uuid}');
+          Chirp.info('Read timeout for characteristic ${characteristic.uuid}');
           return <int>[];
         },
       );
 
       if (value.isNotEmpty) {
-        logClass('Read ${value.length} byte(s) from ${characteristic.uuid}');
+        Chirp.info('Read ${value.length} byte(s) from ${characteristic.uuid}');
         return (value: value, error: null);
       }
       return (value: null, error: null);
     } catch (e, stackTrace) {
-      logClass('Failed to read characteristic ${characteristic.uuid}: $e', e: e, stack: stackTrace, level: LogLevel.error);
+      Chirp.error('Failed to read characteristic ${characteristic.uuid}', error: e, stackTrace: stackTrace);
       return (value: null, error: e.toString());
     }
   }
 
   /// Disconnects from the device.
   Future<void> _disconnect() async {
-    logClass('Disconnecting');
+    Chirp.info('Disconnecting');
     await _connectionSubscription?.cancel();
     _connectionSubscription = null;
     if (_device != null) {

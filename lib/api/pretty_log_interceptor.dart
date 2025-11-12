@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'package:vekolo/app/logger.dart';
+import 'package:chirp/chirp.dart';
 import 'package:dio/dio.dart';
 
 /// Defines when the interceptor should log requests and responses
@@ -48,7 +48,7 @@ class PrettyLogInterceptor extends Interceptor {
       }
 
       buffer.writeln('└─────────────────────────────────────────');
-      talker.info(buffer.toString());
+      Chirp.info(buffer.toString());
     }
 
     super.onRequest(options, handler);
@@ -84,7 +84,7 @@ class PrettyLogInterceptor extends Interceptor {
       }
 
       buffer.writeln('└─────────────────────────────────────────');
-      talker.info(buffer.toString());
+      Chirp.info(buffer.toString());
     }
 
     super.onResponse(response, handler);
@@ -98,7 +98,6 @@ class PrettyLogInterceptor extends Interceptor {
 
     if (shouldLog) {
       final buffer = StringBuffer();
-      buffer.writeln('\n');
       buffer.writeln('┌───────────────────────────────────────────────────────────');
       final statusCode = err.response?.statusCode;
       buffer.writeln(
@@ -165,7 +164,7 @@ class PrettyLogInterceptor extends Interceptor {
       }
 
       buffer.writeln('└───────────────────────────────────────────────────────────');
-      talker.error(buffer.toString());
+      Chirp.error(buffer.toString(), error: err);
     }
 
     super.onError(err, handler);

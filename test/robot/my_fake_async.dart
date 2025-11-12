@@ -14,13 +14,9 @@
 // limitations under the License.
 
 import 'dart:async';
-import 'dart:collection';
 
 import 'package:clock/clock.dart';
 import 'package:collection/collection.dart';
-
-/// The type of a microtask callback.
-typedef _Microtask = void Function();
 
 /// Runs [callback] in a [Zone] where all asynchrony is controlled by an
 /// instance of [MyFakeAsync].

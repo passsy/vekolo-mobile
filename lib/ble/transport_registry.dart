@@ -1,4 +1,4 @@
-import 'package:vekolo/app/logger.dart';
+import 'package:chirp/chirp.dart';
 
 import 'package:vekolo/ble/ble_scanner.dart';
 import 'package:vekolo/ble/ble_transport.dart';
@@ -121,7 +121,7 @@ class TransportRegistry {
   /// }
   /// ```
   List<BleTransport> detectCompatibleTransports(DiscoveredDevice discovered, {required String deviceId}) {
-    logClass('Detecting transports for device: ${discovered.name} (${discovered.deviceId})');
+    Chirp.info('Detecting transports for device: ${discovered.name} (${discovered.deviceId})');
 
     final compatibleTransports = <BleTransport>[];
 
@@ -134,19 +134,19 @@ class TransportRegistry {
         final isCompatible = transport.canSupport(discovered);
 
         if (isCompatible) {
-          logClass('✓ ${registration.name} is compatible');
+          Chirp.info('✓ ${registration.name} is compatible');
           compatibleTransports.add(transport);
         } else {
-          logClass('✗ ${registration.name} is not compatible');
+          Chirp.info('✗ ${registration.name} is not compatible');
           // Dispose transport since we won't use it
           transport.dispose();
         }
       } catch (e, stackTrace) {
-        logClass('Error checking ${registration.name} compatibility: $e', e: e, stack: stackTrace);
+        Chirp.error('Error checking ${registration.name} compatibility', error: e, stackTrace: stackTrace);
       }
     }
 
-    logClass('Found ${compatibleTransports.length} compatible transport(s)');
+    Chirp.info('Found ${compatibleTransports.length} compatible transport(s)');
 
     return compatibleTransports;
   }

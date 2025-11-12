@@ -26,9 +26,12 @@ dependencies:
   device_info_plus: ^12.2.0
   visibility_detector: ^0.4.0+2
   shared_preferences: ^2.5.0
-  talker_flutter: ^5.0.2
   nanoid2: ^2.0.1
   path_provider: ^2.1.5
+  chirp:
+    git:
+      url: git@github.com:passsy/chirp.git
+      ref: main
 
 dev_dependencies:
   flutter_blue_plus_platform_interface: ^7.0.0

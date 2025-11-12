@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'package:vekolo/app/logger.dart';
+import 'package:chirp/chirp.dart';
 
 import 'package:async/async.dart';
 import 'package:clock/clock.dart';
@@ -157,7 +157,7 @@ class BleDevice extends FitnessDevice {
     return CancelableOperation.fromFuture(
       _connectImpl(),
       onCancel: () async {
-        logClass('Connection cancelled for $name');
+        Chirp.info('Connection cancelled for $name');
         // Detach all transports on cancel
         await Future.wait(_transports.map((t) => t.detach()));
       },
@@ -166,12 +166,12 @@ class BleDevice extends FitnessDevice {
 
   Future<void> _connectImpl() async {
     try {
-      logClass('Connecting device: $name');
+      Chirp.info('Connecting device: $name');
 
       // Connect via BlePlatform abstraction (works with FakeBlePlatform in tests)
-      logClass('Connecting to physical device');
+      Chirp.info('Connecting to physical device');
       await _platform.connect(_id, timeout: const Duration(seconds: 15));
-      logClass('Connected');
+      Chirp.info('Connected');
 
       // Get the device object via platform abstraction
       final device = _platform.getDevice(_id);
@@ -179,55 +179,55 @@ class BleDevice extends FitnessDevice {
       // Request larger MTU for better performance (optional, non-fatal if it fails)
       try {
         final mtu = await _platform.requestMtu(_id);
-        logClass('MTU negotiated: $mtu bytes');
+        Chirp.info('MTU negotiated: $mtu bytes');
       } catch (e) {
         // MTU negotiation can fail on some devices or platforms (iOS handles automatically)
         // This is non-fatal, continue with default MTU
-        logClass('MTU negotiation failed, using default: $e');
+        Chirp.info('MTU negotiation failed, using default: $e');
       }
 
       // Discover services once via platform abstraction
-      logClass('Discovering services');
+      Chirp.info('Discovering services');
       final services = await _platform.discoverServices(_id);
-      logClass('Discovered ${services.length} services');
+      Chirp.info('Discovered ${services.length} services');
 
       // Create DiscoveredDevice for Phase 1 checks if not provided
       final discoveredDevice = _discoveredDevice ?? _createDiscoveredDeviceFromServices(device, services);
 
       // Phase 1: Verify canSupport for all transports (fast compatibility check)
       // This uses advertising data to verify transports can potentially work with the device
-      logClass('Verifying Phase 1 transport compatibility (canSupport)');
+      Chirp.info('Verifying Phase 1 transport compatibility (canSupport)');
       final phase1VerifiedTransports = <BleTransport>[];
       for (final transport in _transports) {
         try {
           final canSupport = transport.canSupport(discoveredDevice);
           if (canSupport) {
             phase1VerifiedTransports.add(transport);
-            logClass('Transport ${transport.runtimeType} passed Phase 1 (canSupport)');
+            Chirp.info('Transport ${transport.runtimeType} passed Phase 1 (canSupport)');
           } else {
-            logClass('Transport ${transport.runtimeType} failed Phase 1 (canSupport)');
+            Chirp.info('Transport ${transport.runtimeType} failed Phase 1 (canSupport)');
           }
         } catch (e, stackTrace) {
-          logClass('Phase 1 verification failed for ${transport.runtimeType}: $e', e: e, stack: stackTrace, level: LogLevel.error);
+          Chirp.error('Phase 1 verification failed for ${transport.runtimeType}', error: e, stackTrace: stackTrace);
         }
       }
 
       // Phase 2: Verify verifyCompatibility for Phase 1 verified transports (deep compatibility check)
       // This allows transports to perform deep checks on the connected device
       // Process serially to avoid overwhelming the BLE stack
-      logClass('Verifying Phase 2 transport compatibility (verifyCompatibility)');
+      Chirp.info('Verifying Phase 2 transport compatibility (verifyCompatibility)');
       final verifiedTransports = <BleTransport>[];
       for (final transport in phase1VerifiedTransports) {
         try {
           final isCompatible = await transport.verifyCompatibility(device: device, services: services);
           if (isCompatible) {
             verifiedTransports.add(transport);
-            logClass('Transport ${transport.runtimeType} passed Phase 2 (verifyCompatibility)');
+            Chirp.info('Transport ${transport.runtimeType} passed Phase 2 (verifyCompatibility)');
           } else {
-            logClass('Transport ${transport.runtimeType} failed Phase 2 (verifyCompatibility)');
+            Chirp.info('Transport ${transport.runtimeType} failed Phase 2 (verifyCompatibility)');
           }
         } catch (e, stackTrace) {
-          logClass('Phase 2 verification failed for ${transport.runtimeType}: $e', e: e, stack: stackTrace, level: LogLevel.error);
+          Chirp.error('Phase 2 verification failed for ${transport.runtimeType}', error: e, stackTrace: stackTrace);
         }
       }
 
@@ -236,9 +236,7 @@ class BleDevice extends FitnessDevice {
         throw Exception('No compatible transports found for device $name');
       }
 
-      logClass(
-        '${verifiedTransports.length}/${_transports.length} transport(s) verified, now attaching',
-      );
+      Chirp.info('${verifiedTransports.length}/${_transports.length} transport(s) verified, now attaching');
 
       // Try to attach only verified transports with the connected device and discovered services
       // Each transport finds its service and subscribes to characteristics
@@ -248,9 +246,9 @@ class BleDevice extends FitnessDevice {
         try {
           await transport.attach(device: device, services: services);
           attachedCount++;
-          logClass('Successfully attached ${transport.runtimeType}');
+          Chirp.info('Successfully attached ${transport.runtimeType}');
         } catch (e, stackTrace) {
-          logClass('Transport attachment failed for ${transport.runtimeType}: $e', e: e, stack: stackTrace, level: LogLevel.error);
+          Chirp.error('Transport attachment failed for ${transport.runtimeType}', error: e, stackTrace: stackTrace);
           // Don't remove - just let it stay detached
           // Error is stored in transport.lastAttachError
         }
@@ -261,9 +259,7 @@ class BleDevice extends FitnessDevice {
         throw Exception('All transports failed to attach for device $name');
       }
 
-      logClass(
-        'Device connected successfully with $attachedCount/${_transports.length} transport(s) attached',
-      );
+      Chirp.info('Device connected successfully with $attachedCount/${_transports.length} transport(s) attached');
 
       _lastConnectionError = null;
     } catch (e, stackTrace) {
@@ -279,7 +275,7 @@ class BleDevice extends FitnessDevice {
 
   @override
   Future<void> disconnect() async {
-    logClass('Disconnecting device: $name');
+    Chirp.info('Disconnecting device: $name');
 
     // Detach all transports in parallel
     await Future.wait(_transports.map((t) => t.detach()));
@@ -404,7 +400,7 @@ class BleDevice extends FitnessDevice {
   ///
   /// Must be called when this device is no longer needed to prevent memory leaks.
   Future<void> dispose() async {
-    logClass('Disposing device: $name');
+    Chirp.info('Disposing device: $name');
 
     // Unsubscribe from all beacon subscriptions
     for (final unsubscribe in _transportStateUnsubscribers) {

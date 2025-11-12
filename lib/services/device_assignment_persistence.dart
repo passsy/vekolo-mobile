@@ -2,7 +2,7 @@ import 'dart:convert';
 
 import 'package:deep_pick/deep_pick.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:vekolo/app/logger.dart';
+import 'package:chirp/chirp.dart';
 
 /// Storage key for device assignments
 const String _storageKey = 'device_assignments_v1';
@@ -133,7 +133,7 @@ class DeviceAssignmentPersistence {
     final json = jsonEncode(data);
     await _prefs.setString(_storageKey, json);
 
-    logClass('Saved ${assignments.length} assignment(s)');
+    Chirp.info('Saved ${assignments.length} assignment(s)');
   }
 
   /// Load saved device assignments.
@@ -142,7 +142,7 @@ class DeviceAssignmentPersistence {
   Future<DeviceAssignments> loadAssignments() async {
     final json = await _prefs.getString(_storageKey);
     if (json == null) {
-      logClass('No saved assignments found');
+      Chirp.info('No saved assignments found');
       return const DeviceAssignments();
     }
 
@@ -152,12 +152,12 @@ class DeviceAssignmentPersistence {
       // Check version
       final version = pick(data, 'version').asIntOrNull();
       if (version == null) {
-        logClass('No version field, ignoring');
+        Chirp.info('No version field, ignoring');
         return const DeviceAssignments();
       }
 
       if (version != _currentVersion) {
-        logClass('Unknown version $version (expected $_currentVersion), ignoring');
+        Chirp.info('Unknown version $version (expected $_currentVersion), ignoring');
         // Future: handle version migration here if needed
         return const DeviceAssignments();
       }
@@ -165,7 +165,7 @@ class DeviceAssignmentPersistence {
       // Parse assignments list
       final assignmentsList = pick(data, 'assignments').asListOrNull<dynamic>((p) => p.value);
       if (assignmentsList == null) {
-        logClass('No assignments list found');
+        Chirp.info('No assignments list found');
         return const DeviceAssignments();
       }
 
@@ -196,15 +196,15 @@ class DeviceAssignmentPersistence {
             case 'heartRateSource':
               heartRateSource = assignment;
             default:
-              logClass('Unknown role: $role');
+              Chirp.info('Unknown role: $role');
           }
         } catch (e) {
           // Skip invalid assignments
-          logClass('Skipping invalid assignment: $e');
+          Chirp.info('Skipping invalid assignment: $e');
         }
       }
 
-      logClass('Loaded assignments');
+      Chirp.info('Loaded assignments');
 
       return DeviceAssignments(
         primaryTrainer: primaryTrainer,
@@ -214,7 +214,7 @@ class DeviceAssignmentPersistence {
         heartRateSource: heartRateSource,
       );
     } catch (e, stackTrace) {
-      logClass('Failed to load assignments, resetting', e: e, stack: stackTrace, level: LogLevel.error);
+      Chirp.error('Failed to load assignments, resetting', error: e, stackTrace: stackTrace);
       return const DeviceAssignments();
     }
   }
@@ -224,6 +224,6 @@ class DeviceAssignmentPersistence {
   /// Useful for testing or when user wants to reset device connections.
   Future<void> clearAssignments() async {
     await _prefs.remove(_storageKey);
-    logClass('Cleared all assignments');
+    Chirp.info('Cleared all assignments');
   }
 }

@@ -1,14 +1,14 @@
 import 'dart:io';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:vekolo/app/logger.dart';
+import 'package:chirp/chirp.dart';
 
 class BlePermissions {
   /// Request all necessary BLE permissions based on Android version
   static Future<bool> requestPermissions() async {
-    BlePermissions().logClass('Requesting BLE permissions');
+    Chirp.info('Requesting BLE permissions');
 
     if (!Platform.isAndroid) {
-      BlePermissions().logClass('Not Android, no permission request needed');
+      Chirp.info('Not Android, no permission request needed');
       return true;
     }
 
@@ -20,12 +20,12 @@ class BlePermissions {
 
     // For Android 12+ (API 31+)
     if (await _isAndroid12OrHigher()) {
-      BlePermissions().logClass('Android 12+, requesting BLUETOOTH_SCAN and BLUETOOTH_CONNECT');
+      Chirp.info('Android 12+, requesting BLUETOOTH_SCAN and BLUETOOTH_CONNECT');
       permissionsToRequest.add(Permission.bluetoothScan);
       permissionsToRequest.add(Permission.bluetoothConnect);
     } else {
       // For Android 11 and below
-      BlePermissions().logClass('Android 11 or below, requesting LOCATION permissions');
+      Chirp.info('Android 11 or below, requesting LOCATION permissions');
       permissionsToRequest.add(Permission.locationWhenInUse);
     }
 
@@ -37,20 +37,20 @@ class BlePermissions {
     for (final entry in statuses.entries) {
       final permission = entry.key;
       final status = entry.value;
-      BlePermissions().logClass('$permission: $status');
+      Chirp.info('$permission: $status');
 
       if (!status.isGranted) {
         allGranted = false;
         if (status.isPermanentlyDenied) {
-          BlePermissions().logClass('$permission is permanently denied');
+          Chirp.info('$permission is permanently denied');
         }
       }
     }
 
     if (allGranted) {
-      BlePermissions().logClass('All permissions granted ✅');
+      Chirp.info('All permissions granted ✅');
     } else {
-      BlePermissions().logClass('Some permissions denied ❌');
+      Chirp.info('Some permissions denied ❌');
     }
 
     return allGranted;
@@ -100,7 +100,7 @@ class BlePermissions {
 
   /// Open app settings for manual permission grant
   static Future<void> openSettings() async {
-    BlePermissions().logClass('Opening app settings');
+    Chirp.info('Opening app settings');
     await openAppSettings();
   }
 }

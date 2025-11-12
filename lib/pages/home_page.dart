@@ -2,7 +2,7 @@ import 'package:context_plus/context_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:state_beacon/state_beacon.dart';
-import 'package:vekolo/app/logger.dart';
+import 'package:chirp/chirp.dart';
 import 'package:vekolo/app/refs.dart';
 import 'package:vekolo/domain/models/workout_session.dart';
 import 'package:vekolo/widgets/user_avatar.dart';
@@ -32,13 +32,13 @@ class _HomePageState extends State<HomePage> {
   Future<void> _checkForIncompleteWorkout() async {
     if (!mounted) return;
 
-    logClass('Checking for incomplete workout');
+    Chirp.info('Checking for incomplete workout');
     final persistence = Refs.workoutSessionPersistence.of(context);
     final incompleteSession = await persistence.getActiveSession();
-    logClass('Incomplete session: ${incompleteSession?.id ?? "none"}');
+    Chirp.info('Incomplete session: ${incompleteSession?.id ?? "none"}');
 
     if (incompleteSession != null && mounted) {
-      logClass('Showing resume dialog for session: ${incompleteSession.id}');
+      Chirp.info('Showing resume dialog for session: ${incompleteSession.id}');
       final choice = await showDialog<ResumeChoice>(
         context: context,
         barrierDismissible: false,

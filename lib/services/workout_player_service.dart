@@ -45,8 +45,8 @@
 library;
 
 import 'dart:async';
-import 'package:vekolo/app/logger.dart';
 
+import 'package:chirp/chirp.dart';
 import 'package:clock/clock.dart';
 import 'package:state_beacon/state_beacon.dart';
 import 'package:vekolo/domain/devices/device_manager.dart';
@@ -87,7 +87,7 @@ class WorkoutPlayerService {
     _updateCurrentAndNextBlock();
     _updateProgress();
 
-    logClass(
+    Chirp.info(
       'Initialized: ${_flattenedPlan.length} blocks, '
       '${_totalDuration}ms duration, FTP ${_ftp}W',
     );
@@ -249,16 +249,16 @@ class WorkoutPlayerService {
     }
 
     if (isComplete.value) {
-      logClass('Cannot start: workout is already complete');
+      Chirp.info('Cannot start: workout is already complete');
       return;
     }
 
     if (_currentBlockIndex >= _flattenedPlan.length) {
-      logClass('Cannot start: no blocks remaining');
+      Chirp.info('Cannot start: no blocks remaining');
       return;
     }
 
-    logClass('Starting workout');
+    Chirp.info('Starting workout');
 
     // Mark as resumed
     _lastResumeTime = clock.now();
@@ -282,7 +282,7 @@ class WorkoutPlayerService {
       return; // Already paused
     }
 
-    logClass('Pausing workout');
+    Chirp.info('Pausing workout');
 
     // Update elapsed time before pausing
     _updateGlobalElapsedTime();
@@ -308,11 +308,11 @@ class WorkoutPlayerService {
   void skip() {
     final currentBlock = currentBlock$.value;
     if (currentBlock == null) {
-      logClass('Cannot skip: no current block');
+      Chirp.info('Cannot skip: no current block');
       return;
     }
 
-    logClass('Skipping block $_currentBlockIndex');
+    Chirp.info('Skipping block $_currentBlockIndex');
 
     // Calculate how much time to add (remaining time in current block)
     final elapsedUntilCurrentBlock = _getWorkoutElapsedUntilCurrentBlock();
@@ -348,7 +348,7 @@ class WorkoutPlayerService {
   void setPowerScaleFactor(double factor) {
     final clampedFactor = factor.clamp(0.1, 5.0);
 
-    logClass('Setting power scale factor: ${clampedFactor.toStringAsFixed(2)}');
+    Chirp.info('Setting power scale factor: ${clampedFactor.toStringAsFixed(2)}');
 
     powerScaleFactor.value = clampedFactor;
 
@@ -368,7 +368,7 @@ class WorkoutPlayerService {
   /// Use this when the user manually ends the workout before finishing
   /// all blocks.
   void completeEarly() {
-    logClass('Completing workout early at ${_workoutElapsedTime}ms');
+    Chirp.info('Completing workout early at ${_workoutElapsedTime}ms');
 
     _updateGlobalElapsedTime();
     _completeWorkout();
@@ -394,17 +394,16 @@ class WorkoutPlayerService {
   /// player.start();
   /// ```
   void restoreState({required int elapsedMs, required int currentBlockIndex}) {
-    logClass(
+    Chirp.info(
       'Restoring state: elapsedMs=$elapsedMs, '
       'currentBlockIndex=$currentBlockIndex',
     );
 
     // Validate block index
     if (currentBlockIndex < 0 || currentBlockIndex >= _flattenedPlan.length) {
-      logClass(
+      Chirp.info(
         'Invalid block index $currentBlockIndex, '
         'clamping to valid range',
-        level: LogLevel.warning,
       );
       _currentBlockIndex = currentBlockIndex.clamp(0, _flattenedPlan.length - 1);
     } else {
@@ -426,7 +425,7 @@ class WorkoutPlayerService {
     isPaused.value = true;
     _lastResumeTime = null;
 
-    logClass('State restored successfully');
+    Chirp.info('State restored successfully');
   }
 
   /// Disposes of all resources used by this service.
@@ -434,7 +433,7 @@ class WorkoutPlayerService {
   /// Stops the timer, disposes all beacons, and cleans up the sync service.
   /// After calling this, the service should not be used anymore.
   void dispose() {
-    logClass('Disposing WorkoutPlayerService');
+    Chirp.info('Disposing WorkoutPlayerService');
 
     _stopTimer();
     _syncService.dispose();
@@ -616,7 +615,7 @@ class WorkoutPlayerService {
         _triggeredEventController.add(flattenedEvent);
         _triggeredEventIds.add(eventId);
 
-        logClass('Triggered event: $eventId at ${globalElapsedTime}ms');
+        Chirp.info('Triggered event: $eventId at ${globalElapsedTime}ms');
       }
     }
   }
@@ -671,7 +670,7 @@ class WorkoutPlayerService {
 
   /// Completes the workout.
   void _completeWorkout() {
-    logClass('Workout complete at ${_workoutElapsedTime}ms');
+    Chirp.info('Workout complete at ${_workoutElapsedTime}ms');
 
     isPaused.value = true;
     isComplete.value = true;

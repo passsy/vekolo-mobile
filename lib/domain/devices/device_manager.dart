@@ -35,7 +35,7 @@ import 'dart:async';
 import 'package:async/async.dart';
 import 'package:flutter/foundation.dart';
 import 'package:state_beacon/state_beacon.dart';
-import 'package:vekolo/app/logger.dart';
+import 'package:chirp/chirp.dart';
 import 'package:vekolo/ble/ble_device.dart';
 import 'package:vekolo/ble/ble_platform.dart' hide LogLevel;
 import 'package:vekolo/ble/ble_scanner.dart';
@@ -566,7 +566,7 @@ class DeviceManager {
         heartRateSource: assignments.heartRateSource,
       );
     } catch (e, stack) {
-      logClass('Failed to persist assignments: $e', e: e, stack: stack, level: LogLevel.error);
+      Chirp.error('Failed to persist assignments', error: e, stackTrace: stack);
     }
   }
 
@@ -607,7 +607,7 @@ class DeviceManager {
     if (deviceIds.isNotEmpty) {
       _autoConnectDeviceIds.addAll(deviceIds);
 
-      logClass('Found ${deviceIds.length} device(s) to auto-connect');
+      Chirp.info('Found ${deviceIds.length} device(s) to auto-connect');
       _startAutoConnectScanning();
     }
   }
@@ -660,7 +660,7 @@ class DeviceManager {
   /// devices that are already connected. Used during initialization.
   void _restoreAssignments(DeviceAssignments assignments) {
     if (assignments.isEmpty) {
-      logClass('No need to restore (empty) assignments');
+      Chirp.info('No need to restore (empty) assignments');
       return;
     }
     // Create AssignedDevice wrappers from persisted assignments
@@ -717,7 +717,7 @@ class DeviceManager {
       _heartRateSourceBeacon.value = _heartRateSource;
     }
 
-    logClass('Restored assignments from persistence (devices not yet connected)');
+    Chirp.info('Restored assignments from persistence (devices not yet connected)');
   }
 
   /// Restores role assignments for a specific device that was just connected during auto-connect.
@@ -731,31 +731,31 @@ class DeviceManager {
     if (_primaryTrainer?.deviceId == deviceId) {
       _primaryTrainer = _primaryTrainer!.withConnectedDevice(device);
       _primaryTrainerBeacon.value = _primaryTrainer;
-      logClass('Updated primaryTrainer with connected device');
+      Chirp.info('Updated primaryTrainer with connected device');
     }
 
     if (_powerSource?.deviceId == deviceId) {
       _powerSource = _powerSource!.withConnectedDevice(device);
       _powerSourceBeacon.value = _powerSource;
-      logClass('Updated powerSource with connected device');
+      Chirp.info('Updated powerSource with connected device');
     }
 
     if (_cadenceSource?.deviceId == deviceId) {
       _cadenceSource = _cadenceSource!.withConnectedDevice(device);
       _cadenceSourceBeacon.value = _cadenceSource;
-      logClass('Updated cadenceSource with connected device');
+      Chirp.info('Updated cadenceSource with connected device');
     }
 
     if (_speedSource?.deviceId == deviceId) {
       _speedSource = _speedSource!.withConnectedDevice(device);
       _speedSourceBeacon.value = _speedSource;
-      logClass('Updated speedSource with connected device');
+      Chirp.info('Updated speedSource with connected device');
     }
 
     if (_heartRateSource?.deviceId == deviceId) {
       _heartRateSource = _heartRateSource!.withConnectedDevice(device);
       _heartRateSourceBeacon.value = _heartRateSource;
-      logClass('Updated heartRateSource with connected device');
+      Chirp.info('Updated heartRateSource with connected device');
     }
   }
 
@@ -765,7 +765,7 @@ class DeviceManager {
       return; // Already scanning
     }
 
-    logClass('Starting scan for ${_autoConnectDeviceIds.length} device(s)');
+    Chirp.info('Starting scan for ${_autoConnectDeviceIds.length} device(s)');
 
     _autoConnectScanToken = scanner.startScan();
 
@@ -789,7 +789,7 @@ class DeviceManager {
 
           // Found a device we're looking for - mark as connecting and connect it
           _connectingDeviceIds.add(discovered.deviceId);
-          logClass('Starting connection to ${discovered.deviceId}');
+          Chirp.info('Starting connection to ${discovered.deviceId}');
 
           _connectAndRestoreDevice(discovered.deviceId)
               .then((_) {
@@ -806,17 +806,16 @@ class DeviceManager {
                   _autoConnectScanToken = null;
                   _scannerDevicesUnsubscribe?.call();
                   _scannerDevicesUnsubscribe = null;
-                  logClass('All devices connected or sensors assigned, stopping scan');
+                  Chirp.info('All devices connected or sensors assigned, stopping scan');
                 }
               })
               .catchError((error, stackTrace) {
                 // Remove from connecting set on error
                 _connectingDeviceIds.remove(discovered.deviceId);
-                logClass(
+                Chirp.error(
                   'Failed to auto-connect ${discovered.deviceId}: $error',
-                  e: error,
-                  stack: stackTrace as StackTrace?,
-                  level: LogLevel.error,
+                  error: error,
+                  stackTrace: stackTrace as StackTrace?,
                 );
               });
         }
@@ -857,7 +856,7 @@ class DeviceManager {
   ///
   /// Call this when the manager is no longer needed to prevent memory leaks.
   Future<void> dispose() async {
-    logClass('dispose()');
+    Chirp.info('dispose()');
     // Stop auto-connect scanning
     if (_autoConnectScanToken != null) {
       scanner.stopScan(_autoConnectScanToken!);
@@ -882,7 +881,7 @@ class DeviceManager {
         try {
           await device.disconnect();
         } catch (e, stack) {
-          logClass('Failed to disconnect device ${device.name}', e: e, stack: stack, level: LogLevel.error);
+          Chirp.error('Failed to disconnect device ${device.name}', error: e, stackTrace: stack);
         }
       }),
     );

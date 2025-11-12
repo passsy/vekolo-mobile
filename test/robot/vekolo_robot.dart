@@ -1,3 +1,4 @@
+import 'package:ansicolor/ansicolor.dart';
 import 'package:clock/clock.dart' show clock;
 import 'package:context_plus/context_plus.dart';
 import 'package:flutter/material.dart';
@@ -7,9 +8,8 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:spot/spot.dart';
-import 'package:talker_flutter/talker_flutter.dart';
 import 'package:vekolo/app/app.dart';
-import 'package:vekolo/app/logger.dart';
+import 'package:chirp/chirp.dart';
 import 'package:vekolo/app/refs.dart';
 import 'package:vekolo/domain/models/device_info.dart';
 import 'package:vekolo/pages/devices_page.dart';
@@ -385,8 +385,32 @@ class VekoloRobot {
   }
 
   void logRobot(Object? msg) {
-    talker.logCustom(TalkerLog('[Robot] ${msg}', pen: AnsiPen()..green(bold: true)));
+    Chirp.info(msg);
     timeline.addEvent(details: '$msg', eventType: 'Robot');
+  }
+
+  void logRobotError(Object? msg, [Object? e, StackTrace? stack]) {
+    final pen = AnsiPen()..red(bold: true);
+
+    // Build complete log message
+    final buffer = StringBuffer();
+    buffer.write(pen('[Robot ERROR] $msg'));
+
+    if (e != null) {
+      buffer.write('\n');
+      buffer.write(pen('  Exception: $e'));
+    }
+
+    if (stack != null) {
+      buffer.write('\n');
+      buffer.write(pen('  Stack trace:\n$stack'));
+    }
+
+    // Print with single call
+    // ignore: avoid_print
+    print(buffer);
+
+    timeline.addEvent(details: 'ERROR: $msg${e != null ? ' - $e' : ''}', eventType: 'RobotError');
   }
 }
 

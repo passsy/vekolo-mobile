@@ -4,6 +4,7 @@
 library;
 
 import 'dart:convert';
+import 'package:chirp/chirp.dart';
 import 'package:vekolo/domain/models/workout/workout_models.dart';
 import 'package:vekolo/domain/models/workout/workout_utils.dart';
 
@@ -203,46 +204,46 @@ void demonstrateUsage() {
 
   // Calculate total duration
   final totalDuration = calculateTotalDuration(workout.plan);
-  print('Workout duration: ${totalDuration ~/ 1000 ~/ 60} minutes');
+  Chirp.info('Workout duration: ${totalDuration ~/ 1000 ~/ 60} minutes');
 
   // Flatten the plan for rendering/playback
   final flattenedBlocks = flattenWorkoutPlan(workout.plan);
-  print('Total blocks (with intervals expanded): ${flattenedBlocks.length}');
+  Chirp.info('Total blocks (with intervals expanded): ${flattenedBlocks.length}');
 
   // Apply power scale factor (e.g., reduce intensity by 10%)
   final easierBlocks = flattenWorkoutPlan(workout.plan, powerScaleFactor: 0.9);
-  print('Easier workout: ${(easierBlocks[1] as PowerBlock).power * 100}% FTP');
+  Chirp.info('Easier workout: ${(easierBlocks[1] as PowerBlock).power * 100}% FTP');
 
   // Get power stats
   final stats = calculatePowerStats(workout.plan);
-  print('Power range: ${(stats.minPower * 100).toInt()}% - ${(stats.maxPower * 100).toInt()}% FTP');
+  Chirp.info('Power range: ${(stats.minPower * 100).toInt()}% - ${(stats.maxPower * 100).toInt()}% FTP');
 
   // Flatten events for playback
   final flattenedEvents = flattenWorkoutEvents(workout.plan, workout.events);
-  print('Total events: ${flattenedEvents.length}');
+  Chirp.info('Total events: ${flattenedEvents.length}');
   for (final event in flattenedEvents) {
     if (event is FlattenedMessageEvent) {
-      print('  Message at ${event.timeOffset ~/ 1000}s: "${event.text}"');
+      Chirp.info('  Message at ${event.timeOffset ~/ 1000}s: "${event.text}"');
     }
   }
 
   // Map absolute time to block position
   final position = mapAbsoluteTimeToBlockRelative(workout.plan, 900000); // 15 minutes
   if (position != null) {
-    print('At 15:00, you are in block ${position.blockId}, ${position.offset ~/ 1000}s into it');
+    Chirp.info('At 15:00, you are in block ${position.blockId}, ${position.offset ~/ 1000}s into it');
   }
 
   // Calculate power at a specific time in a ramp block
   final ramp = workout.plan[0] as RampBlock;
   final powerAt5min = calculatePowerAtTime(ramp, 300000);
-  print('Power at 5min into warmup: ${(powerAt5min * 100).toInt()}% FTP');
+  Chirp.info('Power at 5min into warmup: ${(powerAt5min * 100).toInt()}% FTP');
 
   // JSON serialization roundtrip
   final jsonString = jsonEncode(workout.toJson());
-  print('\nJSON size: ${jsonString.length} bytes');
+  Chirp.info('\nJSON size: ${jsonString.length} bytes');
 
   final restored = WorkoutPlan.fromJson(jsonDecode(jsonString) as Map<String, dynamic>);
-  print('Roundtrip successful: ${restored.plan.length} items, ${restored.events.length} events');
+  Chirp.info('Roundtrip successful: ${restored.plan.length} items, ${restored.events.length} events');
 }
 
 /// JSON example for reference.

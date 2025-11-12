@@ -1,9 +1,10 @@
-import 'package:vekolo/app/logger.dart';
+import 'package:chirp/chirp.dart';
 
 import 'package:context_plus/context_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:vekolo/api/pretty_log_interceptor.dart';
 import 'package:vekolo/api/vekolo_api_client.dart';
+import 'package:vekolo/app/logger.dart';
 import 'package:vekolo/app/refs.dart';
 import 'package:vekolo/ble/ble_permissions.dart';
 import 'package:vekolo/ble/ble_platform.dart' hide LogLevel;
@@ -43,6 +44,8 @@ class _VekoloAppState extends State<VekoloApp> {
       // Initialize SharedPreferences first (required by other services)
       if (!mounted) return;
 
+      initializeLogger();
+
       // Disable verbose flutter_blue_plus logging
       Refs.blePlatform.of(context).setLogLevel(fbp.LogLevel.none);
 
@@ -54,7 +57,7 @@ class _VekoloAppState extends State<VekoloApp> {
       try {
         await deviceManager.initialize();
       } catch (e, stackTrace) {
-        logClass('Failed to initialize DeviceManager auto-connect: $e', e: e, stack: stackTrace, level: LogLevel.error);
+        Chirp.error('Failed to initialize DeviceManager auto-connect', error: e, stackTrace: stackTrace);
       }
 
       // Run async initialization (load user from secure storage)
@@ -62,7 +65,7 @@ class _VekoloAppState extends State<VekoloApp> {
       try {
         await authService.refreshAccessToken();
       } catch (e, stack) {
-        logClass('No valid refresh token found during initialization', e: e, stack: stack, level: LogLevel.error);
+        Chirp.error('No valid refresh token found during initialization', error: e, stackTrace: stack);
       }
 
       // Mark initialization as complete
@@ -74,7 +77,7 @@ class _VekoloAppState extends State<VekoloApp> {
         });
       }
     } catch (e, stack) {
-      logClass('Initialization failed: $e', e: e, stack: stack, level: LogLevel.error);
+      Chirp.error('Initialization failed', error: e, stackTrace: stack);
       if (mounted) {
         setState(() {
           _initializationError = e.toString();
