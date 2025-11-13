@@ -193,6 +193,56 @@ class _HomePageState extends State<HomePage> {
               Text('Ready to train?', style: Theme.of(context).textTheme.titleMedium, textAlign: TextAlign.center),
               const SizedBox(height: 32),
 
+              // Navigate to new HomePage2
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFFF6F00), Color(0xFFE91E63)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFFFF6F00).withValues(alpha: 0.3),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    const Icon(Icons.auto_awesome, size: 48, color: Colors.white),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'Try New Home Page',
+                      style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Experience the redesigned interface',
+                      style: TextStyle(color: Colors.white, fontSize: 14),
+                    ),
+                    const SizedBox(height: 16),
+                    ElevatedButton.icon(
+                      onPressed: () => context.push('/home2'),
+                      icon: const Icon(Icons.arrow_forward),
+                      label: const Text('Open HomePage2'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: const Color(0xFFFF6F00),
+                        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                        textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 32),
+
               // Sample Workout Card
               WorkoutCard(
                 name: 'Sweet Spot Workout',
@@ -312,15 +362,12 @@ class WorkoutCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        name,
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-                      ),
+                      Text(name, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
                       Text(
                         _formatDuration(duration),
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: Theme.of(context).colorScheme.secondary,
-                            ),
+                        style: Theme.of(
+                          context,
+                        ).textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.secondary),
                       ),
                     ],
                   ),
@@ -331,16 +378,18 @@ class WorkoutCard extends StatelessWidget {
             const Divider(),
             const SizedBox(height: 16),
             // Workout blocks
-            ...blocks.expand((block) => [
-                  _buildWorkoutBlock(
-                    context,
-                    icon: block.icon,
-                    title: block.title,
-                    subtitle: block.subtitle,
-                    color: block.color,
-                  ),
-                  const SizedBox(height: 12),
-                ]),
+            ...blocks.expand(
+              (block) => [
+                _buildWorkoutBlock(
+                  context,
+                  icon: block.icon,
+                  title: block.title,
+                  subtitle: block.subtitle,
+                  color: block.color,
+                ),
+                const SizedBox(height: 12),
+              ],
+            ),
             const SizedBox(height: 12),
             // Start button
             SizedBox(
@@ -348,10 +397,7 @@ class WorkoutCard extends StatelessWidget {
               child: ElevatedButton.icon(
                 onPressed: onStart,
                 icon: const Icon(Icons.play_circle_filled, size: 28),
-                label: const Text(
-                  'Start',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
+                label: const Text('Start', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   backgroundColor: Theme.of(context).colorScheme.primary,
@@ -376,10 +422,7 @@ class WorkoutCard extends StatelessWidget {
       children: [
         Container(
           padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(8),
-          ),
+          decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
           child: Icon(icon, color: color, size: 20),
         ),
         const SizedBox(width: 12),
@@ -387,14 +430,8 @@ class WorkoutCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                title,
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
-              ),
-              Text(
-                subtitle,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
-              ),
+              Text(title, style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
+              Text(subtitle, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey[600])),
             ],
           ),
         ),
@@ -405,12 +442,7 @@ class WorkoutCard extends StatelessWidget {
 
 /// Information about a workout block for display in WorkoutCard.
 class _WorkoutBlockInfo {
-  const _WorkoutBlockInfo({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.color,
-  });
+  const _WorkoutBlockInfo({required this.icon, required this.title, required this.subtitle, required this.color});
 
   final IconData icon;
   final String title;
