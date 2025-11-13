@@ -30,7 +30,7 @@ class SecureTokenStorage extends TokenStorage<VekoloToken> {
         refreshToken: RefreshToken(data['refreshToken'] as String),
       );
     } catch (e, stackTrace) {
-      Chirp.error('Failed to parse token', error: e, stackTrace: stackTrace);
+      chirp.error('Failed to parse token', error: e, stackTrace: stackTrace);
       return null;
     }
   }
@@ -111,7 +111,7 @@ class AuthService {
     try {
       return User.init.fromAccessToken(accessToken);
     } catch (e, stackTrace) {
-      Chirp.error('Failed to parse user data', error: e, stackTrace: stackTrace);
+      chirp.error('Failed to parse user data', error: e, stackTrace: stackTrace);
       return null;
     }
   }

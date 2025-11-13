@@ -15,7 +15,7 @@ class BlePermissionsImpl implements BlePermissions {
 
   @override
   Future<bool> request() async {
-    Chirp.info('Web platform, permissions handled by browser');
+    chirp.info('Web platform, permissions handled by browser');
     return true;
   }
 
@@ -32,7 +32,7 @@ class BlePermissionsImpl implements BlePermissions {
 
   @override
   Future<void> openSettings() async {
-    Chirp.info('Opening settings not supported on web');
+    chirp.info('Opening settings not supported on web');
     // No-op on web - browser handles settings
   }
 }

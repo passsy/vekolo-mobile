@@ -91,7 +91,7 @@ class WorkoutSessionPersistence {
   /// Call this when a workout starts recording.
   Future<void> setActiveWorkout(String workoutId) async {
     await _prefs.setString(_activeWorkoutKey, workoutId);
-    Chirp.info('Set active workout: $workoutId');
+    chirp.info('Set active workout: $workoutId');
   }
 
   /// Clear the active workout ID (for crash detection).
@@ -99,7 +99,7 @@ class WorkoutSessionPersistence {
   /// Call this when a workout completes, is abandoned, or is discarded.
   Future<void> clearActiveWorkout() async {
     await _prefs.remove(_activeWorkoutKey);
-    Chirp.info('Cleared active workout');
+    chirp.info('Cleared active workout');
   }
 
   /// Get the active workout session (for crash recovery).
@@ -115,13 +115,13 @@ class WorkoutSessionPersistence {
       return null;
     }
 
-    Chirp.info('Found active workout ID: $workoutId');
+    chirp.info('Found active workout ID: $workoutId');
 
     // Load metadata from file
     final metadata = await loadSessionMetadata(workoutId);
     if (metadata == null) {
       // Metadata file missing - cleanup orphaned active flag
-      Chirp.info('Metadata file missing for active workout $workoutId, cleaning up');
+      chirp.info('Metadata file missing for active workout $workoutId, cleaning up');
       await clearActiveWorkout();
       return null;
     }
@@ -144,7 +144,7 @@ class WorkoutSessionPersistence {
   Future<String> createSession(String workoutName, WorkoutPlan plan, {String? userId, required int ftp}) async {
     // Generate unique ID using nanoid
     final workoutId = nanoid();
-    Chirp.info('Creating session: $workoutId ($workoutName)');
+    chirp.info('Creating session: $workoutId ($workoutName)');
 
     // Create workout directory
     final workoutDir = await getWorkoutDirectory(workoutId);
@@ -171,7 +171,7 @@ class WorkoutSessionPersistence {
     // Mark as active in SharedPreferences
     await setActiveWorkout(workoutId);
 
-    Chirp.info('Session created: $workoutId');
+    chirp.info('Session created: $workoutId');
     return workoutId;
   }
 
@@ -182,7 +182,7 @@ class WorkoutSessionPersistence {
     final metadataFile = await getMetadataFile(workoutId);
 
     if (!await metadataFile.exists()) {
-      Chirp.info('Metadata file not found: $workoutId');
+      chirp.info('Metadata file not found: $workoutId');
       return null;
     }
 
@@ -191,7 +191,7 @@ class WorkoutSessionPersistence {
       final json = jsonDecode(jsonString) as Map<String, dynamic>;
       return WorkoutSessionMetadata.fromJson(json);
     } catch (e, stackTrace) {
-      Chirp.error('Failed to load metadata for $workoutId', error: e, stackTrace: stackTrace);
+      chirp.error('Failed to load metadata for $workoutId', error: e, stackTrace: stackTrace);
       return null;
     }
   }
@@ -200,11 +200,11 @@ class WorkoutSessionPersistence {
   ///
   /// Updates the status in metadata.json and clears active flag if completed/abandoned.
   Future<void> updateSessionStatus(String workoutId, SessionStatus status) async {
-    Chirp.info('Updating session $workoutId status to ${status.value}');
+    chirp.info('Updating session $workoutId status to ${status.value}');
 
     final metadata = await loadSessionMetadata(workoutId);
     if (metadata == null) {
-      Chirp.info('Cannot update status - metadata not found: $workoutId');
+      chirp.info('Cannot update status - metadata not found: $workoutId');
       return;
     }
 
@@ -233,12 +233,12 @@ class WorkoutSessionPersistence {
   ///
   /// Removes the entire workout folder (metadata + samples).
   Future<void> deleteSession(String workoutId) async {
-    Chirp.info('Deleting session: $workoutId');
+    chirp.info('Deleting session: $workoutId');
 
     final workoutDir = await getWorkoutDirectory(workoutId);
     if (await workoutDir.exists()) {
       await workoutDir.delete(recursive: true);
-      Chirp.info('Session deleted: $workoutId');
+      chirp.info('Session deleted: $workoutId');
     }
 
     // Clear active flag if this was the active workout
@@ -291,7 +291,7 @@ class WorkoutSessionPersistence {
     // Ensure parent directory exists before writing
     final parentDir = samplesFile.parent;
     if (!await parentDir.exists()) {
-      Chirp.info('Parent directory for samples does not exist, skipping write for $workoutId');
+      chirp.info('Parent directory for samples does not exist, skipping write for $workoutId');
       return;
     }
 
@@ -318,7 +318,7 @@ class WorkoutSessionPersistence {
     final buffer = _sampleBuffers[workoutId];
     if (buffer == null || buffer.isEmpty) return;
 
-    Chirp.info('Flushing ${buffer.length} samples for $workoutId');
+    chirp.info('Flushing ${buffer.length} samples for $workoutId');
     await appendSamples(workoutId, buffer);
     buffer.clear();
   }
@@ -364,7 +364,7 @@ class WorkoutSessionPersistence {
         final json = jsonDecode(line) as Map<String, dynamic>;
         yield WorkoutSample.fromJson(json);
       } catch (e, stackTrace) {
-        Chirp.error('Failed to parse sample line', error: e, stackTrace: stackTrace);
+        chirp.error('Failed to parse sample line', error: e, stackTrace: stackTrace);
       }
     }
   }

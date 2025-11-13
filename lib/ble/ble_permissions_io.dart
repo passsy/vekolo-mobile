@@ -29,10 +29,10 @@ class BlePermissionsImpl implements BlePermissions {
 
   @override
   Future<bool> request() async {
-    Chirp.info('Requesting BLE permissions');
+    chirp.info('Requesting BLE permissions');
 
     if (!Platform.isAndroid) {
-      Chirp.info('Non-Android platform, no permission request needed');
+      chirp.info('Non-Android platform, no permission request needed');
       return true;
     }
 
@@ -43,14 +43,14 @@ class BlePermissionsImpl implements BlePermissions {
 
     if (isAndroid12Plus) {
       // Android 12+ (API 31+) uses new Bluetooth permissions
-      Chirp.info('Android 12+, requesting BLUETOOTH_SCAN and BLUETOOTH_CONNECT');
+      chirp.info('Android 12+, requesting BLUETOOTH_SCAN and BLUETOOTH_CONNECT');
       permissionsToRequest.add(Permission.bluetoothScan);
       permissionsToRequest.add(Permission.bluetoothConnect);
     }
 
     if (!isAndroid12Plus) {
       // Android 11 and below requires location permission for BLE scanning
-      Chirp.info('Android 11 or below, requesting LOCATION permissions');
+      chirp.info('Android 11 or below, requesting LOCATION permissions');
       permissionsToRequest.add(Permission.locationWhenInUse);
     }
 
@@ -62,20 +62,20 @@ class BlePermissionsImpl implements BlePermissions {
     for (final entry in statuses.entries) {
       final permission = entry.key;
       final status = entry.value;
-      Chirp.info('$permission: $status');
+      chirp.info('$permission: $status');
 
       if (!status.isGranted) {
         allGranted = false;
         if (status.isPermanentlyDenied) {
-          Chirp.info('$permission is permanently denied');
+          chirp.info('$permission is permanently denied');
         }
       }
     }
 
     if (allGranted) {
-      Chirp.info('All permissions granted');
+      chirp.info('All permissions granted');
     } else {
-      Chirp.info('Some permissions denied');
+      chirp.info('Some permissions denied');
     }
 
     return allGranted;
@@ -114,7 +114,7 @@ class BlePermissionsImpl implements BlePermissions {
 
   @override
   Future<void> openSettings() async {
-    Chirp.info('Opening app settings');
+    chirp.info('Opening app settings');
     await openAppSettings();
   }
 
@@ -132,7 +132,7 @@ class BlePermissionsImpl implements BlePermissions {
       return true;
     } catch (e, stackTrace) {
       // If checking bluetoothScan throws an error, we're on older Android
-      Chirp.error('Not Android 12+', error: e, stackTrace: stackTrace);
+      chirp.error('Not Android 12+', error: e, stackTrace: stackTrace);
       return false;
     }
   }

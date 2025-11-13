@@ -255,7 +255,7 @@ class WorkoutSyncService {
       _retryCount = 0;
     } catch (e, stackTrace) {
       // Log error with full stack trace for debugging
-      Chirp.error(
+      chirp.error(
         'Failed to set target power to ${command.targetWatts}W',
         error: e,
         stackTrace: stackTrace,
@@ -274,7 +274,7 @@ class WorkoutSyncService {
         final delay = _retryCount; // 1s, 2s, 3s for retries 1-3
         syncError.value = 'Retry $_retryCount/$_maxRetries';
 
-        Chirp.info(
+        chirp.info(
           'Retrying in ${delay}s (attempt $_retryCount/$_maxRetries)',
         );
 
@@ -289,7 +289,7 @@ class WorkoutSyncService {
         // All retries exhausted
         syncError.value = 'Failed after $_maxRetries retries';
         _retryCount = 0;
-        Chirp.info('Giving up after $_maxRetries failed attempts');
+        chirp.info('Giving up after $_maxRetries failed attempts');
       }
     }
   }
@@ -318,7 +318,7 @@ class WorkoutSyncService {
     // Cancel any existing timer
     _refreshTimer?.cancel();
 
-    Chirp.info(
+    chirp.info(
       'Starting periodic refresh every ${trainer.refreshInterval.inSeconds}s',
     );
 
@@ -326,7 +326,7 @@ class WorkoutSyncService {
     _refreshTimer = Timer.periodic(trainer.refreshInterval, (timer) {
       // Re-send last command if we're syncing and have a command to send
       if (_lastSentCommand != null && isSyncing.value) {
-        Chirp.info('Refreshing target: ${_lastSentCommand!.targetWatts}W');
+        chirp.info('Refreshing target: ${_lastSentCommand!.targetWatts}W');
         _syncTargetToDevice(_lastSentCommand!);
       }
     });

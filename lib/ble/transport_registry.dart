@@ -121,7 +121,7 @@ class TransportRegistry {
   /// }
   /// ```
   List<BleTransport> detectCompatibleTransports(DiscoveredDevice discovered, {required String deviceId}) {
-    Chirp.info('Detecting transports for device: ${discovered.name} (${discovered.deviceId})');
+    chirp.info('Detecting transports for device: ${discovered.name} (${discovered.deviceId})');
 
     final compatibleTransports = <BleTransport>[];
 
@@ -134,19 +134,19 @@ class TransportRegistry {
         final isCompatible = transport.canSupport(discovered);
 
         if (isCompatible) {
-          Chirp.info('✓ ${registration.name} is compatible');
+          chirp.info('✓ ${registration.name} is compatible');
           compatibleTransports.add(transport);
         } else {
-          Chirp.info('✗ ${registration.name} is not compatible');
+          chirp.info('✗ ${registration.name} is not compatible');
           // Dispose transport since we won't use it
           transport.dispose();
         }
       } catch (e, stackTrace) {
-        Chirp.error('Error checking ${registration.name} compatibility', error: e, stackTrace: stackTrace);
+        chirp.error('Error checking ${registration.name} compatibility', error: e, stackTrace: stackTrace);
       }
     }
 
-    Chirp.info('Found ${compatibleTransports.length} compatible transport(s)');
+    chirp.info('Found ${compatibleTransports.length} compatible transport(s)');
 
     return compatibleTransports;
   }

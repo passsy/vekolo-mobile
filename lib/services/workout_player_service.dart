@@ -87,7 +87,7 @@ class WorkoutPlayerService {
     _updateCurrentAndNextBlock();
     _updateProgress();
 
-    Chirp.info(
+    chirp.info(
       'Initialized: ${_flattenedPlan.length} blocks, '
       '${_totalDuration}ms duration, FTP ${_ftp}W',
     );
@@ -249,16 +249,16 @@ class WorkoutPlayerService {
     }
 
     if (isComplete.value) {
-      Chirp.info('Cannot start: workout is already complete');
+      chirp.info('Cannot start: workout is already complete');
       return;
     }
 
     if (_currentBlockIndex >= _flattenedPlan.length) {
-      Chirp.info('Cannot start: no blocks remaining');
+      chirp.info('Cannot start: no blocks remaining');
       return;
     }
 
-    Chirp.info('Starting workout');
+    chirp.info('Starting workout');
 
     // Mark as resumed
     _lastResumeTime = clock.now();
@@ -282,7 +282,7 @@ class WorkoutPlayerService {
       return; // Already paused
     }
 
-    Chirp.info('Pausing workout');
+    chirp.info('Pausing workout');
 
     // Update elapsed time before pausing
     _updateGlobalElapsedTime();
@@ -308,11 +308,11 @@ class WorkoutPlayerService {
   void skip() {
     final currentBlock = currentBlock$.value;
     if (currentBlock == null) {
-      Chirp.info('Cannot skip: no current block');
+      chirp.info('Cannot skip: no current block');
       return;
     }
 
-    Chirp.info('Skipping block $_currentBlockIndex');
+    chirp.info('Skipping block $_currentBlockIndex');
 
     // Calculate how much time to add (remaining time in current block)
     final elapsedUntilCurrentBlock = _getWorkoutElapsedUntilCurrentBlock();
@@ -348,7 +348,7 @@ class WorkoutPlayerService {
   void setPowerScaleFactor(double factor) {
     final clampedFactor = factor.clamp(0.1, 5.0);
 
-    Chirp.info('Setting power scale factor: ${clampedFactor.toStringAsFixed(2)}');
+    chirp.info('Setting power scale factor: ${clampedFactor.toStringAsFixed(2)}');
 
     powerScaleFactor.value = clampedFactor;
 
@@ -368,7 +368,7 @@ class WorkoutPlayerService {
   /// Use this when the user manually ends the workout before finishing
   /// all blocks.
   void completeEarly() {
-    Chirp.info('Completing workout early at ${_workoutElapsedTime}ms');
+    chirp.info('Completing workout early at ${_workoutElapsedTime}ms');
 
     _updateGlobalElapsedTime();
     _completeWorkout();
@@ -394,14 +394,14 @@ class WorkoutPlayerService {
   /// player.start();
   /// ```
   void restoreState({required int elapsedMs, required int currentBlockIndex}) {
-    Chirp.info(
+    chirp.info(
       'Restoring state: elapsedMs=$elapsedMs, '
       'currentBlockIndex=$currentBlockIndex',
     );
 
     // Validate block index
     if (currentBlockIndex < 0 || currentBlockIndex >= _flattenedPlan.length) {
-      Chirp.info(
+      chirp.info(
         'Invalid block index $currentBlockIndex, '
         'clamping to valid range',
       );
@@ -425,7 +425,7 @@ class WorkoutPlayerService {
     isPaused.value = true;
     _lastResumeTime = null;
 
-    Chirp.info('State restored successfully');
+    chirp.info('State restored successfully');
   }
 
   /// Disposes of all resources used by this service.
@@ -433,7 +433,7 @@ class WorkoutPlayerService {
   /// Stops the timer, disposes all beacons, and cleans up the sync service.
   /// After calling this, the service should not be used anymore.
   void dispose() {
-    Chirp.info('Disposing WorkoutPlayerService');
+    chirp.info('Disposing WorkoutPlayerService');
 
     _stopTimer();
     _syncService.dispose();
@@ -611,11 +611,11 @@ class WorkoutPlayerService {
 
       // Check if event should trigger now
       if (globalElapsedTime >= timeOffset && !_triggeredEventIds.contains(eventId)) {
-        // Trigger event
-        _triggeredEventController.add(flattenedEvent);
-        _triggeredEventIds.add(eventId);
+      // Trigger event
+      _triggeredEventController.add(flattenedEvent);
+      _triggeredEventIds.add(eventId);
 
-        Chirp.info('Triggered event: $eventId at ${globalElapsedTime}ms');
+      chirp.info('Triggered event: $eventId at ${globalElapsedTime}ms');
       }
     }
   }
@@ -670,7 +670,7 @@ class WorkoutPlayerService {
 
   /// Completes the workout.
   void _completeWorkout() {
-    Chirp.info('Workout complete at ${_workoutElapsedTime}ms');
+    chirp.info('Workout complete at ${_workoutElapsedTime}ms');
 
     isPaused.value = true;
     isComplete.value = true;

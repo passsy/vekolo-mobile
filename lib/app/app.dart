@@ -57,7 +57,7 @@ class _VekoloAppState extends State<VekoloApp> {
       try {
         await deviceManager.initialize();
       } catch (e, stackTrace) {
-        Chirp.error('Failed to initialize DeviceManager auto-connect', error: e, stackTrace: stackTrace);
+        chirp.error('Failed to initialize DeviceManager auto-connect', error: e, stackTrace: stackTrace);
       }
 
       // Run async initialization (load user from secure storage)
@@ -65,7 +65,7 @@ class _VekoloAppState extends State<VekoloApp> {
       try {
         await authService.refreshAccessToken();
       } catch (e, stack) {
-        Chirp.error('No valid refresh token found during initialization', error: e, stackTrace: stack);
+        chirp.error('No valid refresh token found during initialization', error: e, stackTrace: stack);
       }
 
       // Mark initialization as complete
@@ -77,7 +77,7 @@ class _VekoloAppState extends State<VekoloApp> {
         });
       }
     } catch (e, stack) {
-      Chirp.error('Initialization failed', error: e, stackTrace: stack);
+      chirp.error('Initialization failed', error: e, stackTrace: stack);
       if (mounted) {
         setState(() {
           _initializationError = e.toString();

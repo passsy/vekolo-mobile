@@ -1,4 +1,3 @@
-import 'package:ansicolor/ansicolor.dart';
 import 'package:clock/clock.dart' show clock;
 import 'package:context_plus/context_plus.dart';
 import 'package:flutter/material.dart';
@@ -56,6 +55,14 @@ class VekoloRobot {
 
   static const int _idlePumpStepMs = 100; // Pump in 100ms steps to process callbacks
 
+  final logger = ChirpLogger(
+    name: 'Robot',
+    writers: [
+      ConsoleChirpMessageWriter(formatter: RainbowMessageFormatter(metaWidth: 100)),
+      SpotTimelineWriter(),
+    ],
+  );
+
   Future<void> _setup() async {
     // Only setup once per test to preserve SharedPreferences across app restarts
     if (_isSetup) return;
@@ -98,7 +105,14 @@ class VekoloRobot {
   /// // kickrCore is now connected and ready to use
   /// ```
   Future<void> launchApp({bool loggedIn = false, List<FakeDevice> pairedDevices = const []}) async {
-    logRobot('Launching the app (loggedIn=$loggedIn, devices=${pairedDevices.map((it) => it.name).join(", ")})');
+    logger.log(
+      'Launching the app',
+      data: {
+        'loggedIn': loggedIn,
+        if (pairedDevices.isNotEmpty) 'devices': pairedDevices.map((it) => it.name).join(", "),
+      },
+      level: robotLogLevel,
+    );
     await _setup();
 
     // If devices should be pre-paired, save assignments before launching app
@@ -261,7 +275,7 @@ class VekoloRobot {
   }
 
   Future<void> openManageDevicesPage() async {
-    logRobot('open DevicesPage');
+    logger.log('open DevicesPage', level: robotLogLevel);
     final button = spot<IconButton>().withChild(spotIcon(Icons.devices));
     await act.tap(button);
     await idle(500);
@@ -269,21 +283,21 @@ class VekoloRobot {
   }
 
   Future<void> openScanner() async {
-    logRobot('open ScannerPage');
+    logger.log('open ScannerPage', level: robotLogLevel);
     await act.tap(spotText('Scan'));
     await idle(500);
     spot<ScannerPage>().existsOnce();
   }
 
   Future<void> selectDeviceInScanner(String name) async {
-    logRobot('select device in scanner: $name');
+    logger.log('select device in scanner: $name', level: robotLogLevel);
     final deviceTile = spot<ListTile>().withChild(spotText(name));
     await act.tap(deviceTile);
     await idle(500);
   }
 
   Future<void> waitUntilConnected() async {
-    logRobot('waiting until connected');
+    logger.log('waiting until connected', level: robotLogLevel);
     final connected = spot<AlertDialog>().spotText('Connected!');
     await tester.verify.waitUntilExistsAtLeastOnce(connected);
     // wait another 1s for the dialog to disappear
@@ -321,7 +335,7 @@ class VekoloRobot {
   }
 
   Future<void> tapStartWorkout(String name) async {
-    logRobot('starting workout: $name');
+    logger.log('starting workout: $name', level: robotLogLevel);
 
     // Find the WorkoutCard widget that contains the workout name
     final workoutCard = spot<WorkoutCard>().withChild(spotText(name));
@@ -337,7 +351,7 @@ class VekoloRobot {
   }
 
   Future<void> resumeWorkout() async {
-    logRobot('resuming workout from crash recovery dialog');
+    logger.log('resuming workout from crash recovery dialog', level: robotLogLevel);
     // Tap second "Resume" match (first is in title "Resume Workout?", second is the button)
     await act.tap(spotText('Resume').atIndex(1));
     // Wait for dialog to close, navigation and workout player to load
@@ -345,13 +359,13 @@ class VekoloRobot {
   }
 
   Future<void> discardWorkout() async {
-    logRobot('discarding workout from crash recovery dialog');
+    logger.log('discarding workout from crash recovery dialog', level: robotLogLevel);
     await act.tap(spotText('Discard', exact: true));
     await idle(500);
   }
 
   Future<void> startFreshWorkout() async {
-    logRobot('starting fresh workout from crash recovery dialog');
+    logger.log('starting fresh workout from crash recovery dialog', level: robotLogLevel);
     await act.tap(spotText('Start Fresh', exact: true));
     // Wait for dialog to close, navigation and workout player to load
     await idle(3000);
@@ -359,7 +373,7 @@ class VekoloRobot {
 
   /// Wait for the crash recovery dialog to appear
   Future<void> waitForCrashRecoveryDialog() async {
-    logRobot('waiting for crash recovery dialog');
+    logger.log('waiting for crash recovery dialog', level: robotLogLevel);
     await tester.verify.waitUntilExistsAtLeastOnce(spotText('Resume Workout?'), timeout: const Duration(seconds: 5));
     await idle(500); // wait for dialog to be faded in
   }
@@ -373,7 +387,7 @@ class VekoloRobot {
   /// delayed. We wait 2 seconds to ensure the startRecording() call (which happens in a
   /// power monitoring beacon callback) has time to execute and complete.
   Future<void> waitForActiveWorkoutSession({Duration timeout = const Duration(seconds: 10)}) async {
-    logRobot('waiting for active workout session');
+    logger.log('waiting for active workout session', level: robotLogLevel);
 
     // Wait long enough for:
     // 1. Beacon callback to fire (can be delayed several seconds by test framework)
@@ -381,36 +395,7 @@ class VekoloRobot {
     // Total: Can be 4+ seconds in some test runs, using 5s to be very safe
     await idle(5000);
 
-    logRobot('active workout session should be created');
-  }
-
-  void logRobot(Object? msg) {
-    Chirp.info(msg);
-    timeline.addEvent(details: '$msg', eventType: 'Robot');
-  }
-
-  void logRobotError(Object? msg, [Object? e, StackTrace? stack]) {
-    final pen = AnsiPen()..red(bold: true);
-
-    // Build complete log message
-    final buffer = StringBuffer();
-    buffer.write(pen('[Robot ERROR] $msg'));
-
-    if (e != null) {
-      buffer.write('\n');
-      buffer.write(pen('  Exception: $e'));
-    }
-
-    if (stack != null) {
-      buffer.write('\n');
-      buffer.write(pen('  Stack trace:\n$stack'));
-    }
-
-    // Print with single call
-    // ignore: avoid_print
-    print(buffer);
-
-    timeline.addEvent(details: 'ERROR: $msg${e != null ? ' - $e' : ''}', eventType: 'RobotError');
+    logger.log('active workout session should be created', level: robotLogLevel);
   }
 }
 
@@ -541,3 +526,12 @@ class Aether {
     return serviceUuids.toList();
   }
 }
+
+class SpotTimelineWriter implements ChirpMessageWriter {
+  @override
+  void write(LogRecord entry) {
+    timeline.addEvent(details: '${entry.message}', eventType: 'Robot');
+  }
+}
+
+final robotLogLevel = ChirpLogLevel('robot', 400);

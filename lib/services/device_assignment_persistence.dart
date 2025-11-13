@@ -133,7 +133,7 @@ class DeviceAssignmentPersistence {
     final json = jsonEncode(data);
     await _prefs.setString(_storageKey, json);
 
-    Chirp.info('Saved ${assignments.length} assignment(s)');
+    chirp.info('Saved ${assignments.length} assignment(s)');
   }
 
   /// Load saved device assignments.
@@ -142,7 +142,7 @@ class DeviceAssignmentPersistence {
   Future<DeviceAssignments> loadAssignments() async {
     final json = await _prefs.getString(_storageKey);
     if (json == null) {
-      Chirp.info('No saved assignments found');
+      chirp.info('No saved assignments found');
       return const DeviceAssignments();
     }
 
@@ -152,12 +152,12 @@ class DeviceAssignmentPersistence {
       // Check version
       final version = pick(data, 'version').asIntOrNull();
       if (version == null) {
-        Chirp.info('No version field, ignoring');
+        chirp.info('No version field, ignoring');
         return const DeviceAssignments();
       }
 
       if (version != _currentVersion) {
-        Chirp.info('Unknown version $version (expected $_currentVersion), ignoring');
+        chirp.info('Unknown version $version (expected $_currentVersion), ignoring');
         // Future: handle version migration here if needed
         return const DeviceAssignments();
       }
@@ -165,7 +165,7 @@ class DeviceAssignmentPersistence {
       // Parse assignments list
       final assignmentsList = pick(data, 'assignments').asListOrNull<dynamic>((p) => p.value);
       if (assignmentsList == null) {
-        Chirp.info('No assignments list found');
+        chirp.info('No assignments list found');
         return const DeviceAssignments();
       }
 
@@ -196,15 +196,15 @@ class DeviceAssignmentPersistence {
             case 'heartRateSource':
               heartRateSource = assignment;
             default:
-              Chirp.info('Unknown role: $role');
+              chirp.info('Unknown role: $role');
           }
         } catch (e) {
           // Skip invalid assignments
-          Chirp.info('Skipping invalid assignment: $e');
+          chirp.info('Skipping invalid assignment: $e');
         }
       }
 
-      Chirp.info('Loaded assignments');
+      chirp.info('Loaded assignments');
 
       return DeviceAssignments(
         primaryTrainer: primaryTrainer,
@@ -214,7 +214,7 @@ class DeviceAssignmentPersistence {
         heartRateSource: heartRateSource,
       );
     } catch (e, stackTrace) {
-      Chirp.error('Failed to load assignments, resetting', error: e, stackTrace: stackTrace);
+      chirp.error('Failed to load assignments, resetting', error: e, stackTrace: stackTrace);
       return const DeviceAssignments();
     }
   }
@@ -224,6 +224,6 @@ class DeviceAssignmentPersistence {
   /// Useful for testing or when user wants to reset device connections.
   Future<void> clearAssignments() async {
     await _prefs.remove(_storageKey);
-    Chirp.info('Cleared all assignments');
+    chirp.info('Cleared all assignments');
   }
 }

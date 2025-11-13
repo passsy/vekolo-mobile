@@ -32,13 +32,13 @@ class _HomePageState extends State<HomePage> {
   Future<void> _checkForIncompleteWorkout() async {
     if (!mounted) return;
 
-    Chirp.info('Checking for incomplete workout');
+    chirp.info('Checking for incomplete workout');
     final persistence = Refs.workoutSessionPersistence.of(context);
     final incompleteSession = await persistence.getActiveSession();
-    Chirp.info('Incomplete session: ${incompleteSession?.id ?? "none"}');
+    chirp.info('Incomplete session: ${incompleteSession?.id ?? "none"}');
 
     if (incompleteSession != null && mounted) {
-      Chirp.info('Showing resume dialog for session: ${incompleteSession.id}');
+      chirp.info('Showing resume dialog for session: ${incompleteSession.id}');
       final choice = await showDialog<ResumeChoice>(
         context: context,
         barrierDismissible: false,

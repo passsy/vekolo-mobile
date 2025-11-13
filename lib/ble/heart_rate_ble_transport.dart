@@ -82,7 +82,7 @@ class HeartRateBleTransport implements BleTransport, HeartRateSource {
     try {
       _stateBeacon.value = TransportState.attaching;
       _lastAttachError = null; // Clear any previous error
-      Chirp.info('Attaching to Heart Rate service on $deviceId');
+      chirp.info('Attaching to Heart Rate service on $deviceId');
 
       // Find Heart Rate Service
       final hrService = services.firstWhere(
@@ -90,7 +90,7 @@ class HeartRateBleTransport implements BleTransport, HeartRateSource {
         orElse: () => throw Exception('Heart Rate Service not found'),
       );
 
-      Chirp.info('Found Heart Rate Service');
+      chirp.info('Found Heart Rate Service');
 
       // Find Heart Rate Measurement characteristic
       final hrMeasurementChar = hrService.characteristics.firstWhere(
@@ -98,17 +98,17 @@ class HeartRateBleTransport implements BleTransport, HeartRateSource {
         orElse: () => throw Exception('Heart Rate Measurement characteristic not found'),
       );
 
-      Chirp.info('Found Heart Rate Measurement characteristic');
+      chirp.info('Found Heart Rate Measurement characteristic');
 
       // Subscribe to heart rate notifications
       await hrMeasurementChar.setNotifyValue(true);
       _heartRateSubscription = hrMeasurementChar.onValueReceived.listen(_parseHeartRateMeasurement);
 
-      Chirp.info('Subscribed to heart rate notifications');
+      chirp.info('Subscribed to heart rate notifications');
 
       _stateBeacon.value = TransportState.attached;
     } catch (e, stackTrace) {
-      Chirp.error('Failed to attach to Heart Rate service', error: e, stackTrace: stackTrace);
+      chirp.error('Failed to attach to Heart Rate service', error: e, stackTrace: stackTrace);
       _lastAttachError = ConnectionError(
         message: 'Failed to attach to Heart Rate service: $e',
         timestamp: clock.now(),
@@ -124,7 +124,7 @@ class HeartRateBleTransport implements BleTransport, HeartRateSource {
   @override
   Future<void> detach() async {
     try {
-      Chirp.info('Detaching from Heart Rate service on $deviceId');
+      chirp.info('Detaching from Heart Rate service on $deviceId');
 
       // Cancel subscriptions
       await _heartRateSubscription?.cancel();
@@ -132,7 +132,7 @@ class HeartRateBleTransport implements BleTransport, HeartRateSource {
 
       _stateBeacon.value = TransportState.detached;
     } catch (e, stackTrace) {
-      Chirp.error('Detach failed', error: e, stackTrace: stackTrace);
+      chirp.error('Detach failed', error: e, stackTrace: stackTrace);
       _stateBeacon.value = TransportState.detached;
     }
   }
@@ -169,7 +169,7 @@ class HeartRateBleTransport implements BleTransport, HeartRateSource {
       final data = HeartRateData(bpm: bpm, timestamp: clock.now());
       _heartRateBeacon.value = data;
     } catch (e, stackTrace) {
-      Chirp.error('Failed to parse heart rate', error: e, stackTrace: stackTrace);
+      chirp.error('Failed to parse heart rate', error: e, stackTrace: stackTrace);
     }
   }
 

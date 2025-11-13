@@ -61,7 +61,7 @@ class _UnknownDeviceReportPageState extends State<UnknownDeviceReportPage> {
   @override
   void initState() {
     super.initState();
-    Chirp.info('Initializing page');
+    chirp.info('Initializing page');
 
     // Initialize form with notes field
     _form = FormGroup({'notes': FormControl<String>(value: '')});
@@ -72,14 +72,14 @@ class _UnknownDeviceReportPageState extends State<UnknownDeviceReportPage> {
 
   @override
   void dispose() {
-    Chirp.info('Disposing page');
+    chirp.info('Disposing page');
     _stopScan();
     super.dispose();
   }
 
   /// Starts real BLE scanning for all devices
   Future<void> _startScan() async {
-    Chirp.info('Starting real BLE scan');
+    chirp.info('Starting real BLE scan');
 
     setState(() {
       _pageState = UnknownDevicePageState.scanning;
@@ -136,7 +136,7 @@ class _UnknownDeviceReportPageState extends State<UnknownDeviceReportPage> {
           }
         },
         onError: (Object e, StackTrace stackTrace) {
-          Chirp.error('Scan error', error: e, stackTrace: stackTrace);
+          chirp.error('Scan error', error: e, stackTrace: stackTrace);
           if (mounted) {
             setState(() {
               _errorMessage = 'Failed to scan for devices: $e';
@@ -146,9 +146,9 @@ class _UnknownDeviceReportPageState extends State<UnknownDeviceReportPage> {
         },
       );
 
-      Chirp.info('Scan started, waiting for devices...');
+      chirp.info('Scan started, waiting for devices...');
     } catch (e, stackTrace) {
-      Chirp.error('Failed to start scan', error: e, stackTrace: stackTrace);
+      chirp.error('Failed to start scan', error: e, stackTrace: stackTrace);
       if (mounted) {
         setState(() {
           _errorMessage =
@@ -163,7 +163,7 @@ class _UnknownDeviceReportPageState extends State<UnknownDeviceReportPage> {
   Future<void> _stopScan() async {
     if (!_isScanning) return;
 
-    Chirp.info('Stopping scan');
+    chirp.info('Stopping scan');
     await _scanSubscription?.cancel();
     _scanSubscription = null;
     await fbp.FlutterBluePlus.stopScan();
@@ -177,7 +177,7 @@ class _UnknownDeviceReportPageState extends State<UnknownDeviceReportPage> {
 
   /// Connects to device and collects data
   Future<void> _onDeviceSelected(_SimpleDevice device) async {
-    Chirp.info('Device selected: ${device.id}');
+    chirp.info('Device selected: ${device.id}');
 
     // Get current user from AuthService before async operations
     final authService = Refs.authService.of(context);
@@ -204,12 +204,12 @@ class _UnknownDeviceReportPageState extends State<UnknownDeviceReportPage> {
           // Connect to the device
           await bleDevice.connect();
 
-          Chirp.info('Connected to device: ${device.id}');
+          chirp.info('Connected to device: ${device.id}');
 
           // Discover services
           final services = await bleDevice.discoverServices();
 
-          Chirp.info('Discovered ${services.length} services');
+          chirp.info('Discovered ${services.length} services');
 
           // Store for later regeneration with user info
           _selectedBleDevice = bleDevice;
@@ -252,7 +252,7 @@ class _UnknownDeviceReportPageState extends State<UnknownDeviceReportPage> {
         }),
       ]);
     } on TimeoutException catch (e, stackTrace) {
-      Chirp.error('Connection timeout', error: e, stackTrace: stackTrace);
+      chirp.error('Connection timeout', error: e, stackTrace: stackTrace);
 
       if (mounted) {
         setState(() {
@@ -261,7 +261,7 @@ class _UnknownDeviceReportPageState extends State<UnknownDeviceReportPage> {
         });
       }
     } catch (e, stackTrace) {
-      Chirp.error('Connection error', error: e, stackTrace: stackTrace);
+      chirp.error('Connection error', error: e, stackTrace: stackTrace);
 
       if (mounted) {
         setState(() {
@@ -331,7 +331,7 @@ class _UnknownDeviceReportPageState extends State<UnknownDeviceReportPage> {
               }
             } catch (e) {
               buffer.writeln('     Value: (read failed: $e)');
-              Chirp.info('Failed to read characteristic ${characteristic.uuid}: $e');
+              chirp.info('Failed to read characteristic ${characteristic.uuid}: $e');
             }
           }
         }
@@ -345,7 +345,7 @@ class _UnknownDeviceReportPageState extends State<UnknownDeviceReportPage> {
       buffer.writeln('Connection Parameters:');
       buffer.writeln('- MTU: $mtu bytes');
     } catch (e) {
-      Chirp.info('Could not read MTU: $e');
+      chirp.info('Could not read MTU: $e');
     }
     buffer.writeln();
 
@@ -373,7 +373,7 @@ class _UnknownDeviceReportPageState extends State<UnknownDeviceReportPage> {
 
   /// Handles form submission - sends report via email
   Future<void> _submitReport() async {
-    Chirp.info('Submitting report');
+    chirp.info('Submitting report');
 
     try {
       // Get current user
@@ -391,7 +391,7 @@ class _UnknownDeviceReportPageState extends State<UnknownDeviceReportPage> {
       }
 
       final notes = _form.control('notes').value as String?;
-      Chirp.info('Additional notes: ${notes ?? "(none)"}');
+      chirp.info('Additional notes: ${notes ?? "(none)"}');
 
       // Build email content
       final emailBody = StringBuffer();
@@ -410,7 +410,7 @@ class _UnknownDeviceReportPageState extends State<UnknownDeviceReportPage> {
 
       final mailtoUrl = Uri.parse('mailto:$emailAddress?subject=$subject&body=$body');
 
-      Chirp.info('Opening email client with mailto URL');
+      chirp.info('Opening email client with mailto URL');
 
       // Launch email client
       if (await canLaunchUrl(mailtoUrl)) {
@@ -426,7 +426,7 @@ class _UnknownDeviceReportPageState extends State<UnknownDeviceReportPage> {
         throw Exception('Could not launch email client');
       }
     } catch (e, stackTrace) {
-      Chirp.error('Error sending email', error: e, stackTrace: stackTrace);
+      chirp.error('Error sending email', error: e, stackTrace: stackTrace);
 
       if (mounted) {
         setState(() {

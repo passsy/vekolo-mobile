@@ -44,7 +44,7 @@ class _ScannerPageState extends State<ScannerPage> {
   @override
   void initState() {
     super.initState();
-    Chirp.info('Initializing scanner page');
+    chirp.info('Initializing scanner page');
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _setupListeners();
@@ -59,7 +59,7 @@ class _ScannerPageState extends State<ScannerPage> {
       });
 
       if (state.canScan && !_isScanning && _scanToken == null) {
-        Chirp.info('Ready to scan, auto-starting');
+        chirp.info('Ready to scan, auto-starting');
         _startScan();
       }
     });
@@ -86,7 +86,7 @@ class _ScannerPageState extends State<ScannerPage> {
 
   @override
   void dispose() {
-    Chirp.info('Disposing scanner page');
+    chirp.info('Disposing scanner page');
     if (_scanToken != null) {
       _scanner.stopScan(_scanToken!);
     }
@@ -111,12 +111,12 @@ class _ScannerPageState extends State<ScannerPage> {
     if (!mounted) return;
 
     if (info.visibleFraction == 0) {
-      Chirp.info('Page hidden, stopping scan');
+      chirp.info('Page hidden, stopping scan');
       _stopScan();
     } else if (info.visibleFraction > 0) {
       final bluetoothState = _bluetoothState;
       if (bluetoothState != null && bluetoothState.canScan && !_isScanning && _scanToken == null) {
-        Chirp.info('Page visible again, restarting scan');
+        chirp.info('Page visible again, restarting scan');
         _startScan();
       }
     }
@@ -172,7 +172,7 @@ class _ScannerPageState extends State<ScannerPage> {
 
       return capabilities;
     } catch (e) {
-      Chirp.info('Error detecting capabilities: $e');
+      chirp.info('Error detecting capabilities: $e');
       return {};
     }
   }
@@ -268,7 +268,7 @@ class _ScannerPageState extends State<ScannerPage> {
                               capabilities: capabilities,
                               connectMode: widget.connectMode,
                               onTap: () async {
-                                Chirp.info(
+                                chirp.info(
                                   '✅ Selected device: ${device.name?.isEmpty ?? true ? "Unknown" : device.name} '
                                   '(ID: ${device.deviceId}, RSSI: ${device.rssi ?? "unknown"})',
                                 );
@@ -301,7 +301,7 @@ class _ScannerPageState extends State<ScannerPage> {
               padding: const EdgeInsets.all(16.0),
               child: OutlinedButton.icon(
                 onPressed: () {
-                  Chirp.info('Navigating to unknown device report page');
+                  chirp.info('Navigating to unknown device report page');
                   context.push('/unknown-device');
                 },
                 icon: const Icon(Icons.help_outline),
@@ -493,7 +493,7 @@ class _DeviceConnectingDialogState extends State<_DeviceConnectingDialog> {
       BleDevice? newDevice; // Only created for new devices, before adding to manager
 
       if (isReconnect) {
-        Chirp.info('Device already exists in manager, reconnecting');
+        chirp.info('Device already exists in manager, reconnecting');
         fitnessDevice = existingDevice;
       } else {
         setState(() => _statusMessage = 'Detecting device type...');
@@ -504,7 +504,7 @@ class _DeviceConnectingDialogState extends State<_DeviceConnectingDialog> {
           deviceId: widget.device.deviceId,
         );
 
-        Chirp.info('Found ${transports.length} compatible transport(s)');
+        chirp.info('Found ${transports.length} compatible transport(s)');
 
         if (transports.isEmpty) {
           throw Exception(
@@ -536,7 +536,7 @@ class _DeviceConnectingDialogState extends State<_DeviceConnectingDialog> {
       if (!mounted) return;
 
       setState(() => _statusMessage = 'Establishing Bluetooth connection...');
-      Chirp.info(
+      chirp.info(
         '${isReconnect ? 'Reconnecting' : 'Connecting'} device: ${fitnessDevice.name}',
       );
       await deviceManager.connectDevice(fitnessDevice.id).value;
@@ -592,7 +592,7 @@ class _DeviceConnectingDialogState extends State<_DeviceConnectingDialog> {
 
       widget.onConnect(fitnessDevice, autoAssignments, isReconnect);
     } catch (e, stackTrace) {
-      Chirp.error('Error connecting to device', error: e, stackTrace: stackTrace);
+      chirp.error('Error connecting to device', error: e, stackTrace: stackTrace);
 
       if (!mounted) return;
 

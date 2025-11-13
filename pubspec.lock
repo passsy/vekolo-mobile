@@ -2,7 +2,7 @@
 # See https://dart.dev/tools/pub/glossary#lockfile
 packages:
   ansicolor:
-    dependency: "direct main"
+    dependency: transitive
     description:
       name: ansicolor
       sha256: "50e982d500bc863e1d703448afdbf9e5a72eb48840a4f766fa361ffd6877055f"
@@ -86,7 +86,7 @@ packages:
     description:
       path: "."
       ref: main
-      resolved-ref: "1841112b5d6bce5e8962bfc7e7e1c270819643f1"
+      resolved-ref: fd86f78e7a15c2d637a422b3f8a3bcbe84e58e73
       url: "git@github.com:passsy/chirp.git"
     source: git
     version: "1.0.0"
@@ -166,10 +166,10 @@ packages:
     dependency: transitive
     description:
       name: crypto
-      sha256: "1e445881f28f22d6140f181e07737b22f1e099a5e1ff94b0af2f9e4a463f4855"
+      sha256: c8ea0233063ba03258fbcf2ca4d6dadfefe14f02fab57702265467a19f27fadf
       url: "https://pub.dev"
     source: hosted
-    version: "3.0.6"
+    version: "3.0.7"
   csslib:
     dependency: transitive
     description:
@@ -420,10 +420,10 @@ packages:
     dependency: transitive
     description:
       name: http
-      sha256: bb2ce4590bc2667c96f318d68cac1b5a7987ec819351d32b1c987239a815e007
+      sha256: "87721a4a50b19c7f1d49001e51409bddc46303966ce89a65af4f4e6004896412"
       url: "https://pub.dev"
     source: hosted
-    version: "1.5.0"
+    version: "1.6.0"
   http_parser:
     dependency: transitive
     description:
@@ -540,10 +540,10 @@ packages:
     dependency: "direct dev"
     description:
       name: meta
-      sha256: e3641ec5d63ebf0d9b41bd43201a66e3fc79a65db5f61fc181f04cd27aab950c
+      sha256: "23f08335362185a5ea2ad3a4e597f1375e78bce8a040df5c600c8d3552ef2394"
       url: "https://pub.dev"
     source: hosted
-    version: "1.16.0"
+    version: "1.17.0"
   mime:
     dependency: transitive
     description:
@@ -833,26 +833,26 @@ packages:
     dependency: "direct main"
     description:
       name: state_beacon
-      sha256: d082420f25dbeb01e0eaaa57c82916ddba899b239120a21d4594495779e64766
+      sha256: "3488b7c0f39f877a540fef5236285a8d19138c69b9015bf0fd5054c44d16a613"
       url: "https://pub.dev"
     source: hosted
-    version: "1.0.0"
+    version: "1.0.1"
   state_beacon_core:
     dependency: transitive
     description:
       name: state_beacon_core
-      sha256: c109a5fee4b93f1cf2fcb2e6ea9c74285654e3e8799eb6e33c69581807214f94
+      sha256: "900a56a65255f5d1763d4d445be9b0189e58de98de3cd57d68e71d6b239ebe72"
       url: "https://pub.dev"
     source: hosted
-    version: "1.0.0"
+    version: "1.0.1"
   state_beacon_flutter:
     dependency: transitive
     description:
       name: state_beacon_flutter
-      sha256: "4429e1efc43ded8d05d34e2d9049cefa5c4d48a1f3cdaa43435015c5d73ec284"
+      sha256: fba1eff00596886fa15c69f9385eda80ea10b551be0cd37be28ee66eadbfacc3
       url: "https://pub.dev"
     source: hosted
-    version: "1.0.0"
+    version: "1.0.1"
   stream_channel:
     dependency: transitive
     description:
@@ -889,10 +889,10 @@ packages:
     dependency: "direct dev"
     description:
       name: test_api
-      sha256: "522f00f556e73044315fa4585ec3270f1808a4b186c936e612cab0b565ff1e00"
+      sha256: ab2726c1a94d3176a45960b6234466ec367179b87dd74f1611adb1f3b5fb9d55
       url: "https://pub.dev"
     source: hosted
-    version: "0.7.6"
+    version: "0.7.7"
   time:
     dependency: transitive
     description:

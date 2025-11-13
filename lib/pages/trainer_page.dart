@@ -90,7 +90,7 @@ class _TrainerPageState extends State<TrainerPage> {
         await _connectionOperation!.value;
       }
 
-      Chirp.info('Device connected successfully, starting power updates');
+      chirp.info('Device connected successfully, starting power updates');
 
       final supportsErgMode = device.supportsErgMode;
 
@@ -103,7 +103,7 @@ class _TrainerPageState extends State<TrainerPage> {
         _sendTargetPower();
       }
     } catch (e, stackTrace) {
-      Chirp.error('Connection failed', error: e, stackTrace: stackTrace);
+      chirp.error('Connection failed', error: e, stackTrace: stackTrace);
       if (mounted) {
         setState(() {
           _errorMessage = 'Connection failed: $e';
@@ -177,10 +177,10 @@ class _TrainerPageState extends State<TrainerPage> {
   }
 
   void _sendTargetPower() {
-    Chirp.info('Initial target power: ${_targetPower}W');
+    chirp.info('Initial target power: ${_targetPower}W');
     unawaited(
       _device?.setTargetPower(_targetPower).catchError((Object error, StackTrace stackTrace) {
-        Chirp.error('Failed to set target power', error: error, stackTrace: stackTrace);
+        chirp.error('Failed to set target power', error: error, stackTrace: stackTrace);
         if (!mounted) return;
         setState(() {
           _errorMessage = 'Failed to set target power: $error';
@@ -193,13 +193,13 @@ class _TrainerPageState extends State<TrainerPage> {
     setState(() {
       _targetPower = power.round();
     });
-    Chirp.info('Setting target power to ${_targetPower}W');
+    chirp.info('Setting target power to ${_targetPower}W');
     if (!_supportsErgMode) {
       return;
     }
     unawaited(
       _device?.setTargetPower(_targetPower).catchError((Object error, StackTrace stackTrace) {
-        Chirp.error('Failed to set target power', error: error, stackTrace: stackTrace);
+        chirp.error('Failed to set target power', error: error, stackTrace: stackTrace);
         if (!mounted) return;
         setState(() {
           _errorMessage = 'Failed to set target power: $error';

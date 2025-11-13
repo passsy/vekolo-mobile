@@ -70,11 +70,11 @@ class WorkoutRecordingService {
   /// Returns the generated session ID.
   Future<String> startRecording(String workoutName, {String? userId, required int ftp}) async {
     if (_isRecording) {
-      Chirp.info('Already recording session: $_sessionId');
+      chirp.info('Already recording session: $_sessionId');
       return _sessionId!;
     }
 
-    Chirp.info('Starting recording: $workoutName');
+    chirp.info('Starting recording: $workoutName');
 
     // Create new session
     _sessionId = await _persistence.createSession(workoutName, _playerService.workoutPlan, userId: userId, ftp: ftp);
@@ -82,7 +82,7 @@ class WorkoutRecordingService {
     // Start sampling
     _startSampling();
 
-    Chirp.info('Recording started: $_sessionId');
+    chirp.info('Recording started: $_sessionId');
     return _sessionId!;
   }
 
@@ -91,11 +91,11 @@ class WorkoutRecordingService {
   /// Used for crash recovery - continues recording to an existing session.
   Future<void> resumeRecording({required String sessionId}) async {
     if (_isRecording) {
-      Chirp.info('Already recording session: $_sessionId');
+      chirp.info('Already recording session: $_sessionId');
       return;
     }
 
-    Chirp.info('Resuming recording: $sessionId');
+    chirp.info('Resuming recording: $sessionId');
 
     // Verify session exists
     final metadata = await _persistence.loadSessionMetadata(sessionId);
@@ -111,7 +111,7 @@ class WorkoutRecordingService {
     // Start sampling
     _startSampling();
 
-    Chirp.info('Recording resumed: $_sessionId');
+    chirp.info('Recording resumed: $_sessionId');
   }
 
   /// Stop recording.
@@ -121,11 +121,11 @@ class WorkoutRecordingService {
   /// false when abandoned or stopped early.
   Future<void> stopRecording({required bool completed}) async {
     if (!_isRecording) {
-      Chirp.info('Not recording, nothing to stop');
+      chirp.info('Not recording, nothing to stop');
       return;
     }
 
-    Chirp.info('Stopping recording (completed: $completed)');
+    chirp.info('Stopping recording (completed: $completed)');
 
     // Stop sampling timer
     _recordingTimer?.cancel();
@@ -143,14 +143,14 @@ class WorkoutRecordingService {
       );
     }
 
-    Chirp.info('Recording stopped: $_sessionId');
+    chirp.info('Recording stopped: $_sessionId');
     _sessionId = null;
   }
 
   /// Start the 1Hz sampling timer.
   void _startSampling() {
     if (_recordingTimer != null) {
-      Chirp.info('Sampling already started');
+      chirp.info('Sampling already started');
       return;
     }
 
@@ -161,7 +161,7 @@ class WorkoutRecordingService {
       _recordSample();
     });
 
-    Chirp.info('Sampling started (1Hz)');
+    chirp.info('Sampling started (1Hz)');
   }
 
   /// Record a single sample.
@@ -169,7 +169,7 @@ class WorkoutRecordingService {
   /// Reads current values from beacons (no subscriptions!) and writes to persistence.
   void _recordSample() {
     if (_sessionId == null) {
-      Chirp.info('Cannot record sample - no session ID');
+      chirp.info('Cannot record sample - no session ID');
       return;
     }
 
@@ -224,7 +224,7 @@ class WorkoutRecordingService {
   /// IMPORTANT: Always call this when done with the service.
   /// Stops recording and flushes pending samples.
   Future<void> dispose() async {
-    Chirp.info('Disposing');
+    chirp.info('Disposing');
 
     // Stop timer
     _recordingTimer?.cancel();
@@ -249,6 +249,6 @@ class WorkoutRecordingService {
     _isRecording = false;
     _sessionId = null;
 
-    Chirp.info('Disposed');
+    chirp.info('Disposed');
   }
 }

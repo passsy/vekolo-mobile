@@ -48,7 +48,7 @@ class PrettyLogInterceptor extends Interceptor {
       }
 
       buffer.writeln('└─────────────────────────────────────────');
-      Chirp.info(buffer.toString());
+      chirp.info(buffer.toString());
     }
 
     super.onRequest(options, handler);
@@ -84,7 +84,7 @@ class PrettyLogInterceptor extends Interceptor {
       }
 
       buffer.writeln('└─────────────────────────────────────────');
-      Chirp.info(buffer.toString());
+      chirp.info(buffer.toString());
     }
 
     super.onResponse(response, handler);
@@ -164,7 +164,7 @@ class PrettyLogInterceptor extends Interceptor {
       }
 
       buffer.writeln('└───────────────────────────────────────────────────────────');
-      Chirp.error(buffer.toString(), error: err);
+      chirp.error(buffer.toString(), error: err);
     }
 
     super.onError(err, handler);
