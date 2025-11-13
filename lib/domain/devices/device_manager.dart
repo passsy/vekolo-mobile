@@ -87,6 +87,9 @@ class DeviceManager {
   /// Reactive beacon for device list changes.
   final WritableBeacon<List<FitnessDevice>> _devicesBeacon = Beacon.list([]);
 
+  /// Connection state subscriptions for each device (for auto-reconnect monitoring).
+  final Map<String, void Function()> _deviceConnectionSubscriptions = {};
+
   // ============================================================================
   // Device Assignments
   // ============================================================================
@@ -180,6 +183,9 @@ class DeviceManager {
 
     _devices.add(device);
     _devicesBeacon.value = List.unmodifiable(_devices);
+
+    // Monitor device connection state for auto-reconnect
+    _setupDeviceConnectionMonitoring(device);
   }
 
   /// Adds a device or returns the existing device if one with the same ID exists.
@@ -200,6 +206,10 @@ class DeviceManager {
 
     _devices.add(device);
     _devicesBeacon.value = List.unmodifiable(_devices);
+
+    // Monitor device connection state for auto-reconnect
+    _setupDeviceConnectionMonitoring(device);
+
     return device;
   }
 
@@ -240,6 +250,10 @@ class DeviceManager {
       _heartRateSource = null;
       _heartRateSourceBeacon.value = null;
     }
+
+    // Cancel connection state monitoring
+    _deviceConnectionSubscriptions[deviceId]?.call();
+    _deviceConnectionSubscriptions.remove(deviceId);
 
     _devices.remove(device);
     _devicesBeacon.value = List.unmodifiable(_devices);
@@ -823,6 +837,33 @@ class DeviceManager {
     });
   }
 
+  /// Sets up monitoring for device connection state to enable auto-reconnect.
+  ///
+  /// When a device with an assigned role disconnects unexpectedly, it will be
+  /// added back to the auto-connect list and scanning will be started to detect
+  /// when the device comes back online.
+  void _setupDeviceConnectionMonitoring(FitnessDevice device) {
+    final unsubscribe = device.connectionState.subscribe((state) {
+      if (state == ConnectionState.disconnected) {
+        // Check if device has an assigned role
+        final hasAssignedRole = _primaryTrainer?.deviceId == device.id ||
+            _powerSource?.deviceId == device.id ||
+            _cadenceSource?.deviceId == device.id ||
+            _speedSource?.deviceId == device.id ||
+            _heartRateSource?.deviceId == device.id;
+
+        if (hasAssignedRole) {
+          chirp.info('Assigned device ${device.id} disconnected, enabling auto-reconnect');
+          _autoConnectDeviceIds.add(device.id);
+          _startAutoConnectScanning();
+        }
+      }
+    });
+
+    // Store subscription so we can cancel it later
+    _deviceConnectionSubscriptions[device.id] = unsubscribe;
+  }
+
   /// Checks if auto-connect scanning should stop.
   ///
   /// Returns true if all devices are found or all sensors are assigned.
@@ -857,6 +898,13 @@ class DeviceManager {
   /// Call this when the manager is no longer needed to prevent memory leaks.
   Future<void> dispose() async {
     chirp.info('dispose()');
+
+    // Cancel all device connection state subscriptions
+    for (final unsubscribe in _deviceConnectionSubscriptions.values) {
+      unsubscribe();
+    }
+    _deviceConnectionSubscriptions.clear();
+
     // Stop auto-connect scanning
     if (_autoConnectScanToken != null) {
       scanner.stopScan(_autoConnectScanToken!);

@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:chirp/chirp.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 
@@ -81,7 +82,9 @@ Future<Directory> setupPathProvider() async {
   PathProviderPlatform.instance = platform;
 
   addTearDown(() async {
+    await Future.delayed(Duration(milliseconds: 100));
     if (await platform.baseDir.exists()) {
+      Chirp.info('Deleting temporary directory: ${platform.baseDir.path}');
       await platform.baseDir.delete(recursive: true);
     }
   });

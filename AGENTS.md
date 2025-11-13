@@ -29,8 +29,10 @@
 
 **📖 Essential reading:** [docs/state_beacon_overview.md](./docs/state_beacon_overview.md)
 
-This project uses `state_beacon` for reactive state management. Key patterns:
+This project uses `state_beacon` for reactive state management.
+DO NOT USE `StreamController`, always create a Beacon insteada which is way more flexible!
 
+Key patterns:
 - Use `Beacon.writable` for mutable state
 - Use `Beacon.derived` for computed values  
 - Use `.watch(context)` in widget `build()` methods
@@ -58,6 +60,7 @@ source.subscribe((value) {
 - Test domain logic without hardware dependencies
 - See `test/fake/` for fake implementations
 - Use `addTearDown()` for cleanup, avoid `setUp()`/`tearDown()`
+- Always test the real implementation in /lib. Never copy/mirror production code to test files to test it!
 
 ## Documentation
 

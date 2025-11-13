@@ -86,7 +86,7 @@ packages:
     description:
       path: "."
       ref: main
-      resolved-ref: fd86f78e7a15c2d637a422b3f8a3bcbe84e58e73
+      resolved-ref: "5730d753f4c058cc4186af26e8771c22aaa062b1"
       url: "git@github.com:passsy/chirp.git"
     source: git
     version: "1.0.0"

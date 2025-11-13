@@ -1147,7 +1147,7 @@ void main() {
       scanner.stopScan(token3);
     });
 
-    test('devices persist across stop/start when not expired', () async {
+    test('devices are directly cleared at stop', () async {
       final (:scanner, :platform, :permissions) = createScanner();
       platform.setAdapterState(BluetoothAdapterState.on);
       permissions.setHasPermission(true);
@@ -1164,8 +1164,8 @@ void main() {
       scanner.stopScan(token1);
       await Future.delayed(const Duration(milliseconds: 100));
 
-      // Devices should still be in list
-      expect(scanner.devices.value, hasLength(1));
+      // Devices should be cleared
+      expect(scanner.devices.value, hasLength(0));
 
       final token2 = scanner.startScan();
       await Future.delayed(const Duration(milliseconds: 200));

@@ -4,7 +4,6 @@ import 'package:context_plus/context_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:vekolo/api/pretty_log_interceptor.dart';
 import 'package:vekolo/api/vekolo_api_client.dart';
-import 'package:vekolo/app/logger.dart';
 import 'package:vekolo/app/refs.dart';
 import 'package:vekolo/ble/ble_permissions.dart';
 import 'package:vekolo/ble/ble_platform.dart' hide LogLevel;
@@ -43,8 +42,6 @@ class _VekoloAppState extends State<VekoloApp> {
     try {
       // Initialize SharedPreferences first (required by other services)
       if (!mounted) return;
-
-      initializeLogger();
 
       // Disable verbose flutter_blue_plus logging
       Refs.blePlatform.of(context).setLogLevel(fbp.LogLevel.none);

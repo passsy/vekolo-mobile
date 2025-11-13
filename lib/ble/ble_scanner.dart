@@ -305,7 +305,7 @@ class BleScanner with WidgetsBindingObserver {
       if (newState != _bluetoothStateBeacon.value) {
         _bluetoothStateBeacon.value = newState;
 
-        chirp.info('Bluetooth state updated: $newState');
+        chirp.info('Bluetooth state updated', data: {'newState': newState});
 
         // Clear devices and stop scanning when Bluetooth turns off or becomes unavailable
         if (!newState.isBluetoothOn) {
@@ -509,7 +509,7 @@ class BleScanner with WidgetsBindingObserver {
     final state = _bluetoothStateBeacon.value;
 
     if (!state.canScan) {
-      chirp.info('Cannot start scan: canScan=false (${state})');
+      chirp.info('Cannot start scan', data: {'state': state});
       return;
     }
 

@@ -42,10 +42,7 @@ class BleDevice extends FitnessDevice {
        _name = name,
        _transports = transports,
        _platform = platform,
-       _discoveredDevice = discoveredDevice {
-    // Set up aggregated connection state
-    _setupConnectionStateAggregation();
-  }
+       _discoveredDevice = discoveredDevice;
 
   final String _id;
   final String _name;
@@ -53,12 +50,17 @@ class BleDevice extends FitnessDevice {
   final BlePlatform _platform;
   final DiscoveredDevice? _discoveredDevice;
 
-  // Aggregated state
+  // Connection state
   late final WritableBeacon<ConnectionState> _connectionStateBeacon = Beacon.writable(ConnectionState.disconnected);
   ConnectionError? _lastConnectionError;
 
-  // Transport state subscriptions (unsubscribe callbacks)
-  final List<void Function()> _transportStateUnsubscribers = [];
+  // Connection state subscription
+  StreamSubscription<fbp.BluetoothConnectionState>? _connectionStateSubscription;
+
+  /// The underlying Bluetooth device.
+  ///
+  /// Returns the device object from the platform. Only valid when connected.
+  fbp.BluetoothDevice get _device => _platform.getDevice(_id);
 
   // ============================================================================
   // Identity Properties
@@ -125,31 +127,29 @@ class BleDevice extends FitnessDevice {
   @override
   ConnectionError? get lastConnectionError => _lastConnectionError;
 
-  void _setupConnectionStateAggregation() {
-    // Monitor all transport attachment states
-    for (final transport in _transports) {
-      final unsubscribe = transport.state.subscribe((state) {
-        _updateAggregatedConnectionState();
-      });
-      _transportStateUnsubscribers.add(unsubscribe);
-    }
+  /// Subscribe to device connection state changes.
+  ///
+  /// This monitors the actual BLE connection and handles unexpected disconnections
+  /// (device powered off, out of range, etc.).
+  void _setupConnectionStateMonitoring() {
+    _connectionStateSubscription = _device.connectionState.listen((state) {
+      chirp.info('Device $_name connection state changed to $state');
+
+      if (state == fbp.BluetoothConnectionState.disconnected) {
+        _handleDisconnection();
+      }
+    }, onError: (Object e, StackTrace stackTrace) {
+      chirp.error('Error monitoring connection state for $_name', error: e, stackTrace: stackTrace);
+    });
   }
 
-  void _updateAggregatedConnectionState() {
-    // Aggregate connection state from all transports:
-    // - If any transport is attaching -> connecting
-    // - If all transports are attached -> connected
-    // - Otherwise -> disconnected
+  /// Handle unexpected disconnection by detaching all transports.
+  Future<void> _handleDisconnection() async {
+    chirp.info('Device $_name disconnected, detaching transports');
+    _connectionStateBeacon.value = ConnectionState.disconnected;
 
-    final states = _transports.map((t) => t.state.value).toList();
-
-    if (states.any((s) => s == TransportState.attaching)) {
-      _connectionStateBeacon.value = ConnectionState.connecting;
-    } else if (states.every((s) => s == TransportState.attached)) {
-      _connectionStateBeacon.value = ConnectionState.connected;
-    } else {
-      _connectionStateBeacon.value = ConnectionState.disconnected;
-    }
+    // Detach all transports
+    await Future.wait(_transports.map((t) => t.detach()));
   }
 
   @override
@@ -167,14 +167,15 @@ class BleDevice extends FitnessDevice {
   Future<void> _connectImpl() async {
     try {
       chirp.info('Connecting device: $name');
+      _connectionStateBeacon.value = ConnectionState.connecting;
 
       // Connect via BlePlatform abstraction (works with FakeBlePlatform in tests)
       chirp.info('Connecting to physical device');
       await _platform.connect(_id, timeout: const Duration(seconds: 15));
       chirp.info('Connected');
 
-      // Get the device object via platform abstraction
-      final device = _platform.getDevice(_id);
+      // Set up connection state monitoring to detect disconnections
+      _setupConnectionStateMonitoring();
 
       // Request larger MTU for better performance (optional, non-fatal if it fails)
       try {
@@ -192,7 +193,7 @@ class BleDevice extends FitnessDevice {
       chirp.info('Discovered ${services.length} services');
 
       // Create DiscoveredDevice for Phase 1 checks if not provided
-      final discoveredDevice = _discoveredDevice ?? _createDiscoveredDeviceFromServices(device, services);
+      final discoveredDevice = _discoveredDevice ?? _createDiscoveredDeviceFromServices(_device, services);
 
       // Phase 1: Verify canSupport for all transports (fast compatibility check)
       // This uses advertising data to verify transports can potentially work with the device
@@ -219,7 +220,7 @@ class BleDevice extends FitnessDevice {
       final verifiedTransports = <BleTransport>[];
       for (final transport in phase1VerifiedTransports) {
         try {
-          final isCompatible = await transport.verifyCompatibility(device: device, services: services);
+          final isCompatible = await transport.verifyCompatibility(device: _device, services: services);
           if (isCompatible) {
             verifiedTransports.add(transport);
             chirp.info('Transport ${transport.runtimeType} passed Phase 2 (verifyCompatibility)');
@@ -244,7 +245,7 @@ class BleDevice extends FitnessDevice {
       var attachedCount = 0;
       for (final transport in verifiedTransports) {
         try {
-          await transport.attach(device: device, services: services);
+          await transport.attach(device: _device, services: services);
           attachedCount++;
           chirp.info('Successfully attached ${transport.runtimeType}');
         } catch (e, stackTrace) {
@@ -261,8 +262,10 @@ class BleDevice extends FitnessDevice {
 
       chirp.info('Device connected successfully with $attachedCount/${_transports.length} transport(s) attached');
 
+      _connectionStateBeacon.value = ConnectionState.connected;
       _lastConnectionError = null;
     } catch (e, stackTrace) {
+      _connectionStateBeacon.value = ConnectionState.disconnected;
       _lastConnectionError = ConnectionError(
         message: 'Failed to connect to device $name: $e',
         timestamp: clock.now(),
@@ -277,11 +280,17 @@ class BleDevice extends FitnessDevice {
   Future<void> disconnect() async {
     chirp.info('Disconnecting device: $name');
 
+    // Cancel connection state monitoring
+    await _connectionStateSubscription?.cancel();
+    _connectionStateSubscription = null;
+
     // Detach all transports in parallel
     await Future.wait(_transports.map((t) => t.detach()));
 
     // Disconnect via BlePlatform abstraction
     await _platform.disconnect(_id);
+
+    _connectionStateBeacon.value = ConnectionState.disconnected;
   }
 
   // ============================================================================
@@ -402,11 +411,9 @@ class BleDevice extends FitnessDevice {
   Future<void> dispose() async {
     chirp.info('Disposing device: $name');
 
-    // Unsubscribe from all beacon subscriptions
-    for (final unsubscribe in _transportStateUnsubscribers) {
-      unsubscribe();
-    }
-    _transportStateUnsubscribers.clear();
+    // Cancel connection state monitoring
+    await _connectionStateSubscription?.cancel();
+    _connectionStateSubscription = null;
 
     // Dispose all transports
     await Future.wait(_transports.map((t) => t.dispose()));

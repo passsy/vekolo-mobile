@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:spot/spot.dart';
 import 'package:vekolo/app/app.dart';
 import 'package:chirp/chirp.dart';
+import 'package:vekolo/app/logger.dart';
 import 'package:vekolo/app/refs.dart';
 import 'package:vekolo/domain/models/device_info.dart';
 import 'package:vekolo/pages/devices_page.dart';
@@ -34,6 +35,8 @@ extension RobotExtensions on WidgetTester {
 
 class VekoloRobot {
   VekoloRobot({required this.tester}) {
+    initializeLogger();
+
     addFlutterTearDown(() {
       _blePlatform.dispose();
     });
@@ -55,13 +58,7 @@ class VekoloRobot {
 
   static const int _idlePumpStepMs = 100; // Pump in 100ms steps to process callbacks
 
-  final logger = ChirpLogger(
-    name: 'Robot',
-    writers: [
-      ConsoleChirpMessageWriter(formatter: RainbowMessageFormatter(metaWidth: 100)),
-      SpotTimelineWriter(),
-    ],
-  );
+  late final logger = ChirpLogger(name: 'Robot', writers: [...Chirp.root.writers, SpotTimelineWriter()]);
 
   Future<void> _setup() async {
     // Only setup once per test to preserve SharedPreferences across app restarts
@@ -105,13 +102,12 @@ class VekoloRobot {
   /// // kickrCore is now connected and ready to use
   /// ```
   Future<void> launchApp({bool loggedIn = false, List<FakeDevice> pairedDevices = const []}) async {
-    logger.log(
+    logger.robotLog(
       'Launching the app',
       data: {
         'loggedIn': loggedIn,
         if (pairedDevices.isNotEmpty) 'devices': pairedDevices.map((it) => it.name).join(", "),
       },
-      level: robotLogLevel,
     );
     await _setup();
 
@@ -264,6 +260,7 @@ class VekoloRobot {
   }
 
   Future<void> closeApp() async {
+    logger.robotLog('closing app');
     await tester.pumpWidget(const SizedBox.shrink());
     // Wait for all async operations to complete, including:
     // - Widget disposal
@@ -275,7 +272,7 @@ class VekoloRobot {
   }
 
   Future<void> openManageDevicesPage() async {
-    logger.log('open DevicesPage', level: robotLogLevel);
+    logger.robotLog('open DevicesPage');
     final button = spot<IconButton>().withChild(spotIcon(Icons.devices));
     await act.tap(button);
     await idle(500);
@@ -283,27 +280,49 @@ class VekoloRobot {
   }
 
   Future<void> openScanner() async {
-    logger.log('open ScannerPage', level: robotLogLevel);
+    logger.robotLog('open ScannerPage');
     await act.tap(spotText('Scan'));
     await idle(500);
     spot<ScannerPage>().existsOnce();
   }
 
   Future<void> selectDeviceInScanner(String name) async {
-    logger.log('select device in scanner: $name', level: robotLogLevel);
+    logger.robotLog('select device in scanner: $name');
     final deviceTile = spot<ListTile>().withChild(spotText(name));
     await act.tap(deviceTile);
     await idle(500);
   }
 
   Future<void> waitUntilConnected() async {
-    logger.log('waiting until connected', level: robotLogLevel);
+    logger.robotLog('waiting until connected');
     final connected = spot<AlertDialog>().spotText('Connected!');
     await tester.verify.waitUntilExistsAtLeastOnce(connected);
     // wait another 1s for the dialog to disappear
     await idle(1000);
     await idle();
     connected.doesNotExist();
+  }
+
+  void verifyDisconnectButtonEnabled() {
+    logger.robotLog('verify disconnect button is enabled');
+    final card = spot<DataSourceSection>().withChild(spotText('POWER SOURCE')).spot<DeviceCard>()..existsOnce();
+
+    card
+        .spot<ElevatedButton>()
+        .withChild(spotText('Disconnect'))
+        .existsOnce()
+        .hasWidgetProp(prop: widgetProp('onPressed', (it) => it.onPressed), match: (it) => it.isNotNull());
+  }
+
+  void verifyDisconnectButtonDisabled() {
+    logger.robotLog('verify disconnect button is disabled (not shown)');
+    final card = spot<DataSourceSection>().withChild(spotText('POWER SOURCE')).spot<DeviceCard>()..existsOnce();
+
+    // When disconnected, the Disconnect button should not exist (shows Connect instead)
+    card.spot<ElevatedButton>().withChild(spotText('Disconnect')).doesNotExist();
+
+    // Verify Connect button is shown instead
+    card.spot<ElevatedButton>().withChild(spotText('Connect')).existsOnce();
   }
 
   /// Determines the transport ID from advertised service UUIDs.
@@ -335,7 +354,7 @@ class VekoloRobot {
   }
 
   Future<void> tapStartWorkout(String name) async {
-    logger.log('starting workout: $name', level: robotLogLevel);
+    logger.robotLog('starting workout: $name');
 
     // Find the WorkoutCard widget that contains the workout name
     final workoutCard = spot<WorkoutCard>().withChild(spotText(name));
@@ -351,7 +370,7 @@ class VekoloRobot {
   }
 
   Future<void> resumeWorkout() async {
-    logger.log('resuming workout from crash recovery dialog', level: robotLogLevel);
+    logger.robotLog('resuming workout from crash recovery dialog');
     // Tap second "Resume" match (first is in title "Resume Workout?", second is the button)
     await act.tap(spotText('Resume').atIndex(1));
     // Wait for dialog to close, navigation and workout player to load
@@ -359,13 +378,13 @@ class VekoloRobot {
   }
 
   Future<void> discardWorkout() async {
-    logger.log('discarding workout from crash recovery dialog', level: robotLogLevel);
+    logger.robotLog('discarding workout from crash recovery dialog');
     await act.tap(spotText('Discard', exact: true));
     await idle(500);
   }
 
   Future<void> startFreshWorkout() async {
-    logger.log('starting fresh workout from crash recovery dialog', level: robotLogLevel);
+    logger.robotLog('starting fresh workout from crash recovery dialog');
     await act.tap(spotText('Start Fresh', exact: true));
     // Wait for dialog to close, navigation and workout player to load
     await idle(3000);
@@ -373,7 +392,7 @@ class VekoloRobot {
 
   /// Wait for the crash recovery dialog to appear
   Future<void> waitForCrashRecoveryDialog() async {
-    logger.log('waiting for crash recovery dialog', level: robotLogLevel);
+    logger.robotLog('waiting for crash recovery dialog');
     await tester.verify.waitUntilExistsAtLeastOnce(spotText('Resume Workout?'), timeout: const Duration(seconds: 5));
     await idle(500); // wait for dialog to be faded in
   }
@@ -387,7 +406,7 @@ class VekoloRobot {
   /// delayed. We wait 2 seconds to ensure the startRecording() call (which happens in a
   /// power monitoring beacon callback) has time to execute and complete.
   Future<void> waitForActiveWorkoutSession({Duration timeout = const Duration(seconds: 10)}) async {
-    logger.log('waiting for active workout session', level: robotLogLevel);
+    logger.robotLog('waiting for active workout session');
 
     // Wait long enough for:
     // 1. Beacon callback to fire (can be delayed several seconds by test framework)
@@ -395,7 +414,7 @@ class VekoloRobot {
     // Total: Can be 4+ seconds in some test runs, using 5s to be very safe
     await idle(5000);
 
-    logger.log('active workout session should be created', level: robotLogLevel);
+    logger.robotLog('active workout session should be created');
   }
 }
 
@@ -535,3 +554,9 @@ class SpotTimelineWriter implements ChirpMessageWriter {
 }
 
 final robotLogLevel = ChirpLogLevel('robot', 400);
+
+extension RobotLoggerExtension on ChirpLogger {
+  void robotLog(String message, {Map<String, Object?>? data}) {
+    log(message, level: robotLogLevel, data: data);
+  }
+}

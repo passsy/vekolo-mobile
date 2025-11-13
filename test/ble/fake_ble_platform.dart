@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 import 'package:clock/clock.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:flutter_blue_plus_platform_interface/flutter_blue_plus_platform_interface.dart';
@@ -92,8 +93,14 @@ class FakeBlePlatform implements BlePlatform {
     if (device == null) {
       throw Exception('Device not found: $deviceId');
     }
+    if (!device.isAdvertising) {
+      throw Exception('Cannot connect to device that is not advertising: ${device.name}');
+    }
     device._isConnected = true;
     _connectedDeviceIds.add(deviceId);
+
+    // Update connection state beacon
+    device._connectionStateBeacon.value = BluetoothConnectionState.connected;
 
     // Create and cache services based on the fake device's advertised service UUIDs
     // when the device connects, so they're ready when discoverServices() is called
@@ -269,12 +276,8 @@ class FakeBlePlatform implements BlePlatform {
     device._isConnected = false;
     _connectedDeviceIds.remove(deviceId);
 
-    // Disconnect the BluetoothDevice instance
-    try {
-      await device.bluetoothDevice.disconnect();
-    } catch (_) {
-      // Ignore errors during disconnect
-    }
+    // Update connection state beacon
+    device._connectionStateBeacon.value = BluetoothConnectionState.disconnected;
   }
 
   /// Change the Bluetooth adapter state.
@@ -547,6 +550,138 @@ class FakeBluetoothCharacteristic implements BluetoothCharacteristic {
   }
 }
 
+/// Wrapper for BluetoothDevice that provides fake connection state.
+///
+/// This allows tests to control the connection state stream independently
+/// of the real flutter_blue_plus implementation.
+class FakeBluetoothDeviceWrapper implements BluetoothDevice {
+  FakeBluetoothDeviceWrapper({
+    required DeviceIdentifier remoteId,
+    required WritableBeacon<BluetoothConnectionState> connectionStateBeacon,
+  }) : _remoteId = remoteId,
+       _connectionStateBeacon = connectionStateBeacon;
+
+  final DeviceIdentifier _remoteId;
+  final WritableBeacon<BluetoothConnectionState> _connectionStateBeacon;
+
+  @override
+  DeviceIdentifier get remoteId => _remoteId;
+
+  @override
+  Stream<BluetoothConnectionState> get connectionState => _connectionStateBeacon.toStream();
+
+  // Delegate all other methods to a real BluetoothDevice instance
+  // Most of these won't be called in tests, but implement them for completeness
+
+  @override
+  Future<void> connect({Duration timeout = const Duration(seconds: 35), int? mtu, bool autoConnect = false}) async {
+    // Connection is managed via FakeDevice/FakeBlePlatform, not through this wrapper
+    throw UnimplementedError('Use FakeDevice.connect() instead');
+  }
+
+  @override
+  Future<void> disconnect({int timeout = 35, int androidDelay = 0, bool queue = true}) async {
+    // Disconnection is managed via FakeDevice/FakeBlePlatform, not through this wrapper
+    throw UnimplementedError('Use FakeDevice.disconnect() instead');
+  }
+
+  @override
+  Future<List<BluetoothService>> discoverServices({int timeout = 15, bool subscribeToServicesChanged = true}) async {
+    // Service discovery is managed via FakeBlePlatform, not through this wrapper
+    throw UnimplementedError('Use FakeBlePlatform.discoverServices() instead');
+  }
+
+  @override
+  Future<int> requestMtu(int desiredMtu, {int timeout = 15, double predelay = 0.0}) async {
+    // MTU request is managed via FakeBlePlatform, not through this wrapper
+    throw UnimplementedError('Use FakeBlePlatform.requestMtu() instead');
+  }
+
+  // Other properties/methods that are unlikely to be used in tests
+  @override
+  String get advName => '';
+
+  @override
+  String get platformName => '';
+
+  @override
+  String get localName => '';
+
+  @override
+  String get name => '';
+
+  @override
+  DeviceIdentifier get id => _remoteId;
+
+  @override
+  bool get isAutoConnectEnabled => false;
+
+  @override
+  bool get isConnected => false;
+
+  @override
+  bool get isDisconnected => true;
+
+  @override
+  Stream<BluetoothConnectionState> get state => connectionState;
+
+  @override
+  BluetoothBondState get prevBondState => BluetoothBondState.none;
+
+  @override
+  int get mtuNow => 512;
+
+  @override
+  Stream<bool> get isDiscoveringServices => Stream.value(false);
+
+  @override
+  Stream<int> get mtu => Stream.value(512);
+
+  @override
+  Stream<List<BluetoothService>> get servicesStream => Stream.value([]);
+
+  @override
+  Stream<List<BluetoothService>> get services => Stream.value([]);
+
+  @override
+  List<BluetoothService> get servicesList => [];
+
+  @override
+  DisconnectReason? get disconnectReason => null;
+
+  @override
+  Future<void> clearGattCache() async {}
+
+  @override
+  Future<int> readRssi({int timeout = 15}) async => -50;
+
+  @override
+  Future<void> requestConnectionPriority({required ConnectionPriority connectionPriorityRequest}) async {}
+
+  @override
+  Future<void> setPreferredPhy({required int txPhy, required int rxPhy, required PhyCoding option}) async {}
+
+  @override
+  Future<void> createBond({int timeout = 90, Uint8List? pin}) async {}
+
+  @override
+  Future<void> removeBond({int timeout = 30}) async {}
+
+  @override
+  Future<void> pair({int timeout = 90, Uint8List? pin}) async {}
+
+  @override
+  Stream<BluetoothBondState> get bondState => Stream.value(BluetoothBondState.none);
+
+  @override
+  Stream<List<BluetoothService>> get onServicesReset => Stream.value([]);
+
+  @override
+  void cancelWhenDisconnected(StreamSubscription subscription, {bool delayed = false, bool next = false}) {
+    // In tests, we don't need to do anything here
+  }
+}
+
 /// Fake implementation of BluetoothService for testing.
 ///
 /// This class wraps BluetoothService functionality but uses fake characteristics
@@ -602,7 +737,13 @@ class FakeDevice {
   /// The BluetoothDevice instance linked to this fake device.
   /// This ensures that when getDevice() is called, it returns a device
   /// that's connected to this fake device and can discover its services.
-  final BluetoothDevice bluetoothDevice;
+  late final BluetoothDevice bluetoothDevice;
+
+  /// Connection state beacon for this device.
+  ///
+  /// This controls the connection state stream exposed by bluetoothDevice.connectionState.
+  /// Tests can use this to simulate connection state changes.
+  late final WritableBeacon<BluetoothConnectionState> _connectionStateBeacon;
 
   int _rssi;
   bool _isAdvertising = false;
@@ -618,8 +759,13 @@ class FakeDevice {
     required int rssi,
     required this.services,
     required this.platform,
-  }) : _rssi = rssi,
-       bluetoothDevice = BluetoothDevice(remoteId: DeviceIdentifier(id));
+  }) : _rssi = rssi {
+    _connectionStateBeacon = Beacon.writable(BluetoothConnectionState.disconnected);
+    bluetoothDevice = FakeBluetoothDeviceWrapper(
+      remoteId: DeviceIdentifier(id),
+      connectionStateBeacon: _connectionStateBeacon,
+    );
+  }
 
   /// Whether this device is currently connected.
   ///
@@ -640,15 +786,18 @@ class FakeDevice {
     platform._emitScanResults();
   }
 
-  /// Stop advertising this device.
+  /// Stop advertising and disconnect this device.
   ///
-  /// The device immediately disappears from scan results.
-  /// Connection state is preserved - a connected device can stop advertising
-  /// but remain connected (e.g., when going out of scan range but maintaining connection).
-  void turnOff() {
+  /// The device immediately disappears from scan results and disconnects from
+  /// the platform. This simulates the device being powered off or going out of range.
+  Future<void> turnOff() async {
     _isAdvertising = false;
-    // Don't disconnect - connection state persists independently of advertising
     platform._emitScanResults();
+
+    // If connected, disconnect the device (simulates power off)
+    if (_isConnected) {
+      await platform.disconnect(id);
+    }
   }
 
   /// Update the device's signal strength.
