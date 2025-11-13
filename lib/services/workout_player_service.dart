@@ -51,6 +51,7 @@ import 'package:clock/clock.dart';
 import 'package:state_beacon/state_beacon.dart';
 import 'package:vekolo/domain/devices/device_manager.dart';
 import 'package:vekolo/domain/models/erg_command.dart';
+import 'package:vekolo/domain/models/power_history.dart';
 import 'package:vekolo/domain/models/workout/workout_models.dart';
 import 'package:vekolo/domain/models/workout/workout_utils.dart';
 import 'package:vekolo/services/workout_sync_service.dart';
@@ -75,6 +76,7 @@ class WorkoutPlayerService {
     double powerScaleFactor = 1.0,
   }) : _workoutPlan = workoutPlan,
        _ftp = ftp,
+       _deviceManager = deviceManager,
        _syncService = WorkoutSyncService(deviceManager),
        _flattenedPlan = flattenWorkoutPlan(workoutPlan.plan, powerScaleFactor: powerScaleFactor),
        _flattenedEvents = flattenWorkoutEvents(workoutPlan.plan, workoutPlan.events),
@@ -100,9 +102,13 @@ class WorkoutPlayerService {
   final WorkoutPlan _workoutPlan;
   final int _ftp;
   final WorkoutSyncService _syncService;
+  final DeviceManager _deviceManager;
 
   /// The workout plan being executed.
   WorkoutPlan get workoutPlan => _workoutPlan;
+
+  /// Power history tracker for visualization.
+  final PowerHistory powerHistory = PowerHistory();
 
   // ==========================================================================
   // Flattened Workout Data
@@ -504,6 +510,9 @@ class WorkoutPlayerService {
       _handleBlock(currentBlock, blockElapsedTime);
     }
 
+    // Record power history
+    _recordPowerHistory();
+
     // Check for events to trigger
     _checkEvents(_workoutElapsedTime);
   }
@@ -700,5 +709,19 @@ class WorkoutPlayerService {
       return block.duration;
     }
     return 0;
+  }
+
+  /// Records power history data point.
+  ///
+  /// Called on each tick to record current power vs target power.
+  void _recordPowerHistory() {
+    final actualPower = _deviceManager.powerStream.value?.watts ?? 0;
+    final targetPower = powerTarget$.value;
+
+    powerHistory.record(
+      timestamp: _workoutElapsedTime,
+      actualWatts: actualPower,
+      targetWatts: targetPower,
+    );
   }
 }
