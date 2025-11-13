@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:fresh_dio/fresh_dio.dart' show Fresh;
+import 'package:vekolo/api/activities/get_activities.dart';
 import 'package:vekolo/api/api_context.dart';
 import 'package:vekolo/api/auth/redeem_code.dart';
 import 'package:vekolo/api/auth/refresh_token.dart';
@@ -9,6 +10,7 @@ import 'package:vekolo/api/auth/request_signup_code.dart';
 import 'package:vekolo/api/auth/revoke_token.dart';
 import 'package:vekolo/api/user/update_profile.dart';
 
+export 'package:vekolo/api/activities/get_activities.dart';
 export 'package:vekolo/api/auth/redeem_code.dart';
 export 'package:vekolo/api/auth/refresh_token.dart';
 export 'package:vekolo/api/auth/request_login_code.dart';
@@ -123,5 +125,19 @@ class VekoloApiClient {
   /// `POST /api/user/update`
   Future<UpdateProfileResponse> updateProfile({int? ftp, int? weight, String? name, String? email}) {
     return postUpdateProfile(_context, ftp: ftp, weight: weight, name: name, email: email);
+  }
+
+  // Activity endpoints
+
+  /// Get activities
+  ///
+  /// `GET /api/activities`
+  ///
+  /// Fetches activities based on the timeline filter:
+  /// - `null` or 'public': Public activities only
+  /// - 'mixed': Public activities + user's private activities (requires auth)
+  /// - 'mine': Only user's activities (requires auth)
+  Future<ActivitiesResponse> activities({String? timeline}) {
+    return getActivities(_context, timeline: timeline);
   }
 }
