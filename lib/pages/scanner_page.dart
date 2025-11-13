@@ -548,9 +548,9 @@ class _DeviceConnectingDialogState extends State<_DeviceConnectingDialog> {
 
       // Auto-assign all capabilities that are not already assigned
       // Check after connection so supportsErgMode and capabilities are accurate
-      if (fitnessDevice.supportsErgMode && deviceManager.primaryTrainerBeacon.value == null) {
-        deviceManager.assignPrimaryTrainer(fitnessDevice.id);
-        autoAssignments.add('primary trainer');
+      if (fitnessDevice.supportsErgMode && deviceManager.smartTrainerBeacon.value == null) {
+        deviceManager.assignSmartTrainer(fitnessDevice.id);
+        autoAssignments.add('smart trainer');
       }
 
       if (fitnessDevice.capabilities.contains(device_info.DeviceDataType.power) &&

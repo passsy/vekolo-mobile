@@ -39,21 +39,21 @@ class DeviceAssignment {
 /// Represents all device assignments loaded from persistent storage.
 class DeviceAssignments {
   const DeviceAssignments({
-    this.primaryTrainer,
+    this.smartTrainer,
     this.powerSource,
     this.cadenceSource,
     this.speedSource,
     this.heartRateSource,
   });
 
-  final DeviceAssignment? primaryTrainer;
+  final DeviceAssignment? smartTrainer;
   final DeviceAssignment? powerSource;
   final DeviceAssignment? cadenceSource;
   final DeviceAssignment? speedSource;
   final DeviceAssignment? heartRateSource;
 
   bool get isEmpty {
-    return primaryTrainer == null &&
+    return smartTrainer == null &&
         powerSource == null &&
         cadenceSource == null &&
         speedSource == null &&
@@ -75,7 +75,7 @@ class DeviceAssignmentPersistence {
   /// Saves which devices are assigned to which roles so they can be
   /// auto-reconnected on app restart.
   Future<void> saveAssignments({
-    DeviceAssignment? primaryTrainer,
+    DeviceAssignment? smartTrainer,
     DeviceAssignment? powerSource,
     DeviceAssignment? cadenceSource,
     DeviceAssignment? speedSource,
@@ -83,12 +83,12 @@ class DeviceAssignmentPersistence {
   }) async {
     final assignments = <Map<String, dynamic>>[];
 
-    if (primaryTrainer != null) {
+    if (smartTrainer != null) {
       assignments.add({
-        'deviceId': primaryTrainer.deviceId,
-        'deviceName': primaryTrainer.deviceName,
-        'transport': primaryTrainer.transport,
-        'role': 'primaryTrainer',
+        'deviceId': smartTrainer.deviceId,
+        'deviceName': smartTrainer.deviceName,
+        'transport': smartTrainer.transport,
+        'role': 'smartTrainer',
       });
     }
 
@@ -169,7 +169,7 @@ class DeviceAssignmentPersistence {
         return const DeviceAssignments();
       }
 
-      DeviceAssignment? primaryTrainer;
+      DeviceAssignment? smartTrainer;
       DeviceAssignment? powerSource;
       DeviceAssignment? cadenceSource;
       DeviceAssignment? speedSource;
@@ -185,8 +185,9 @@ class DeviceAssignmentPersistence {
           final assignment = DeviceAssignment(deviceId: deviceId, deviceName: deviceName, transport: transport);
 
           switch (role) {
-            case 'primaryTrainer':
-              primaryTrainer = assignment;
+            case 'smartTrainer':
+            case 'primaryTrainer': // Legacy support
+              smartTrainer = assignment;
             case 'powerSource':
               powerSource = assignment;
             case 'cadenceSource':
@@ -204,15 +205,23 @@ class DeviceAssignmentPersistence {
         }
       }
 
-      chirp.info('Loaded assignments');
-
-      return DeviceAssignments(
-        primaryTrainer: primaryTrainer,
+      final result = DeviceAssignments(
+        smartTrainer: smartTrainer,
         powerSource: powerSource,
         cadenceSource: cadenceSource,
         speedSource: speedSource,
         heartRateSource: heartRateSource,
       );
+
+      chirp.info('Loaded assignments', data: {
+        'smartTrainer': smartTrainer != null ? '${smartTrainer.deviceName} (${smartTrainer.deviceId})' : null,
+        'powerSource': powerSource != null ? '${powerSource.deviceName} (${powerSource.deviceId})' : null,
+        'cadenceSource': cadenceSource != null ? '${cadenceSource.deviceName} (${cadenceSource.deviceId})' : null,
+        'speedSource': speedSource != null ? '${speedSource.deviceName} (${speedSource.deviceId})' : null,
+        'heartRateSource': heartRateSource != null ? '${heartRateSource.deviceName} (${heartRateSource.deviceId})' : null,
+      });
+
+      return result;
     } catch (e, stackTrace) {
       chirp.error('Failed to load assignments, resetting', error: e, stackTrace: stackTrace);
       return const DeviceAssignments();

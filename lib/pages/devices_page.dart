@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:state_beacon/state_beacon.dart';
 import 'package:vekolo/app/refs.dart';
+import 'package:vekolo/domain/devices/assigned_device.dart';
 import 'package:vekolo/domain/devices/device_manager.dart';
 import 'package:vekolo/domain/devices/fitness_device.dart';
 import 'package:vekolo/domain/models/device_info.dart' as device_info;
@@ -57,6 +58,19 @@ class DevicesPage extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          SmartTrainerSection(
+            deviceManager: deviceManager,
+            onUnassign: () => _handleUnassignSmartTrainer(context),
+            onRemove: (device) => _handleRemove(context, device),
+            onShowAssignmentDialog: () => _showSmartTrainerAssignmentDialog(context, deviceManager),
+            onConnect: (device) => _handleConnect(context, device),
+            onDisconnect: (device) => _handleDisconnect(context, device),
+          ),
+          const SizedBox(height: 24),
+          const Divider(),
+          const SizedBox(height: 24),
+          Text('DATA SOURCES', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 16),
           DataSourceSection(
             deviceManager: deviceManager,
             title: 'POWER SOURCE',
@@ -135,6 +149,7 @@ class DevicesPage extends StatelessWidget {
                     onConnect: () => _handleConnect(context, device),
                     onDisconnect: () => _handleDisconnect(context, device),
                     onRemove: () => _handleRemove(context, device),
+                    onAssignSmartTrainer: () => _handleAssignSmartTrainer(context, device),
                     onAssignPower: () => _handleAssignPower(context, device),
                     onAssignCadence: () => _handleAssignCadence(context, device),
                     onAssignSpeed: () => _handleAssignSpeed(context, device),
@@ -217,6 +232,19 @@ class DevicesPage extends StatelessWidget {
     }
   }
 
+  void _handleAssignSmartTrainer(BuildContext context, FitnessDevice device) {
+    final deviceManager = Refs.deviceManager.of(context);
+    try {
+      deviceManager.assignSmartTrainer(device.id);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${device.name} assigned as smart trainer')));
+    } catch (e, stackTrace) {
+      chirp.error('Error assigning smart trainer', error: e, stackTrace: stackTrace);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to assign: $e'), backgroundColor: Colors.red));
+    }
+  }
+
   void _handleAssignPower(BuildContext context, FitnessDevice device) {
     final deviceManager = Refs.deviceManager.of(context);
     try {
@@ -271,6 +299,19 @@ class DevicesPage extends StatelessWidget {
     }
   }
 
+  void _handleUnassignSmartTrainer(BuildContext context) {
+    final deviceManager = Refs.deviceManager.of(context);
+    try {
+      deviceManager.assignSmartTrainer(null);
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Smart trainer unassigned')));
+    } catch (e, stackTrace) {
+      chirp.error('Error unassigning smart trainer', error: e, stackTrace: stackTrace);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to unassign: $e'), backgroundColor: Colors.red));
+    }
+  }
+
   void _handleUnassignDataSource(BuildContext context, device_info.DeviceDataType dataType) {
     final deviceManager = Refs.deviceManager.of(context);
     try {
@@ -300,12 +341,87 @@ class DevicesPage extends StatelessWidget {
   // Device Assignment Dialog
   // ============================================================================
 
+  void _showSmartTrainerAssignmentDialog(BuildContext context, DeviceManager deviceManager) {
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        final allDevices = deviceManager.devicesBeacon.watch(dialogContext);
+        final eligibleDevices = allDevices.where((device) => device.supportsErgMode).toList();
+
+        return AlertDialog(
+          title: const Text('Assign Smart Trainer'),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: eligibleDevices.isEmpty
+                ? Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.info_outline, size: 48, color: Colors.grey[400]),
+                        const SizedBox(height: 16),
+                        Text(
+                          'No eligible devices found.\n\nMake sure you have devices that support ERG mode (like smart trainers).',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: Colors.grey[600]),
+                        ),
+                        const SizedBox(height: 24),
+                        ElevatedButton.icon(
+                          onPressed: () {
+                            Navigator.of(dialogContext).pop();
+                            context.push('/scanner?connectMode=true');
+                          },
+                          icon: const Icon(Icons.search),
+                          label: const Text('Scan for Devices'),
+                        ),
+                      ],
+                    ),
+                  )
+                : ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: eligibleDevices.length,
+                    itemBuilder: (context, index) {
+                      final device = eligibleDevices[index];
+                      return ListTile(
+                        leading: const Icon(Icons.bluetooth),
+                        title: Text(device.name),
+                        subtitle: Text(_formatCapabilities(device.capabilities)),
+                        trailing: const Icon(Icons.arrow_forward),
+                        onTap: () {
+                          Navigator.of(dialogContext).pop();
+                          try {
+                            deviceManager.assignSmartTrainer(device.id);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('${device.name} assigned as smart trainer')),
+                            );
+                          } catch (e, stackTrace) {
+                            chirp.error('Error assigning smart trainer', error: e, stackTrace: stackTrace);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Failed to assign: $e'), backgroundColor: Colors.red),
+                            );
+                          }
+                        },
+                      );
+                    },
+                  ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Cancel'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   void _showDeviceAssignmentDialog(
     BuildContext context,
     DeviceManager deviceManager,
     device_info.DeviceDataType dataType,
   ) {
-    // Allow primary trainer to also be assigned as data source
+    // Allow smart trainer to also be assigned as data source
     // (e.g., a KICKR CORE can control ERG mode AND provide power/cadence/speed data)
     // Allow same device to be assigned to multiple data sources (power, cadence, HR)
 
@@ -411,6 +527,7 @@ class DeviceCard extends StatelessWidget {
     this.onUnassign,
     this.onConnect,
     this.onRemove,
+    this.onAssignSmartTrainer,
     this.onAssignPower,
     this.onAssignCadence,
     this.onAssignSpeed,
@@ -424,6 +541,7 @@ class DeviceCard extends StatelessWidget {
   final VoidCallback? onUnassign;
   final VoidCallback? onConnect;
   final VoidCallback? onRemove;
+  final VoidCallback? onAssignSmartTrainer;
   final VoidCallback? onAssignPower;
   final VoidCallback? onAssignCadence;
   final VoidCallback? onAssignSpeed;
@@ -468,6 +586,16 @@ class DeviceCard extends StatelessWidget {
                     spacing: 8,
                     runSpacing: 8,
                     children: [
+                      if (device.supportsErgMode && onAssignSmartTrainer != null)
+                        OutlinedButton.icon(
+                          onPressed: onAssignSmartTrainer,
+                          icon: const Icon(Icons.fitness_center, size: 18),
+                          label: const Text('Assign as Smart Trainer'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.purple[700],
+                            side: BorderSide(color: Colors.purple[300]!),
+                          ),
+                        ),
                       if (device.capabilities.contains(device_info.DeviceDataType.heartRate) && onAssignHeartRate != null)
                         OutlinedButton(
                           onPressed: onAssignHeartRate,
@@ -608,6 +736,85 @@ class DeviceCard extends StatelessWidget {
 }
 
 // ============================================================================
+// SmartTrainerSection Widget
+// ============================================================================
+
+class SmartTrainerSection extends StatelessWidget {
+  const SmartTrainerSection({
+    required this.deviceManager,
+    required this.onUnassign,
+    required this.onRemove,
+    required this.onShowAssignmentDialog,
+    required this.onConnect,
+    required this.onDisconnect,
+    super.key,
+  });
+
+  final DeviceManager deviceManager;
+  final VoidCallback onUnassign;
+  final void Function(FitnessDevice) onRemove;
+  final VoidCallback onShowAssignmentDialog;
+  final void Function(FitnessDevice) onConnect;
+  final void Function(FitnessDevice) onDisconnect;
+
+  @override
+  Widget build(BuildContext context) {
+    return Builder(
+      builder: (context) {
+        final assignedDevice = deviceManager.smartTrainerBeacon.watch(context);
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.fitness_center, size: 24),
+                const SizedBox(width: 8),
+                Text(
+                  'SMART TRAINER',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            if (assignedDevice != null)
+              _buildAssignedDeviceCard(context, assignedDevice)
+            else
+              OutlinedButton.icon(
+                onPressed: onShowAssignmentDialog,
+                icon: const Icon(Icons.add),
+                label: const Text('Assign Smart Trainer'),
+              ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildAssignedDeviceCard(BuildContext context, AssignedDevice assignedDevice) {
+    final connectedDevice = assignedDevice.connectedDevice;
+
+    if (connectedDevice != null) {
+      // Device is available and connected/connectable
+      return DeviceCard(
+        device: connectedDevice,
+        onUnassign: onUnassign,
+        onRemove: () => onRemove(connectedDevice),
+        onConnect: () => onConnect(connectedDevice),
+        onDisconnect: () => onDisconnect(connectedDevice),
+      );
+    }
+
+    // Device is assigned but not available (not discovered)
+    return UnavailableDeviceCard(
+      deviceId: assignedDevice.deviceId,
+      deviceName: assignedDevice.deviceName,
+      onUnassign: onUnassign,
+    );
+  }
+}
+
+// ============================================================================
 // DataSourceSection Widget
 // ============================================================================
 
@@ -674,14 +881,8 @@ class DataSourceSection extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 12),
-            if (assignedDevice?.connectedDevice != null)
-              DeviceCard(
-                device: assignedDevice!.connectedDevice!,
-                onUnassign: () => onUnassignDataSource(dataType),
-                onRemove: () => onRemove(assignedDevice.connectedDevice!),
-                onConnect: () => onConnect(assignedDevice.connectedDevice!),
-                onDisconnect: () => onDisconnect(assignedDevice.connectedDevice!),
-              )
+            if (assignedDevice != null)
+              _buildAssignedDeviceCard(context, assignedDevice)
             else
               OutlinedButton.icon(
                 onPressed: onShowAssignmentDialog,
@@ -691,6 +892,28 @@ class DataSourceSection extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+
+  Widget _buildAssignedDeviceCard(BuildContext context, AssignedDevice assignedDevice) {
+    final connectedDevice = assignedDevice.connectedDevice;
+
+    if (connectedDevice != null) {
+      // Device is available and connected/connectable
+      return DeviceCard(
+        device: connectedDevice,
+        onUnassign: () => onUnassignDataSource(dataType),
+        onRemove: () => onRemove(connectedDevice),
+        onConnect: () => onConnect(connectedDevice),
+        onDisconnect: () => onDisconnect(connectedDevice),
+      );
+    }
+
+    // Device is assigned but not available (not discovered)
+    return UnavailableDeviceCard(
+      deviceId: assignedDevice.deviceId,
+      deviceName: assignedDevice.deviceName,
+      onUnassign: () => onUnassignDataSource(dataType),
     );
   }
 
@@ -709,5 +932,83 @@ class DataSourceSection extends StatelessWidget {
         final hrData = device.heartRateStream?.watch(context);
         return hrData != null ? '${hrData.bpm} BPM' : '-- BPM';
     }
+  }
+}
+
+// ============================================================================
+// UnavailableDeviceCard Widget
+// ============================================================================
+
+/// Card showing a device that's assigned but not currently available.
+///
+/// This happens when a device was previously assigned but is now:
+/// - Powered off
+/// - Out of Bluetooth range
+/// - No longer owned by the user
+///
+/// Allows the user to unassign the device to clean up their configuration.
+class UnavailableDeviceCard extends StatelessWidget {
+  const UnavailableDeviceCard({
+    required this.deviceId,
+    required this.deviceName,
+    required this.onUnassign,
+    super.key,
+  });
+
+  final String deviceId;
+  final String deviceName;
+  final VoidCallback onUnassign;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      color: Colors.orange[50],
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.warning_amber, size: 20, color: Colors.orange[700]),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    deviceName,
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Device not available',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.orange[900]),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'ID: $deviceId',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                OutlinedButton.icon(
+                  onPressed: onUnassign,
+                  icon: const Icon(Icons.link_off),
+                  label: const Text('Unassign'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.orange[900],
+                    side: BorderSide(color: Colors.orange[300]!),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

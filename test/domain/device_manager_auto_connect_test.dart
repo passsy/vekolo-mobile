@@ -48,7 +48,7 @@ void main() {
         await deps.manager.initialize();
 
         expect(deps.manager.devices, isEmpty);
-        expect(deps.manager.primaryTrainerBeacon.value, isNull);
+        expect(deps.manager.smartTrainerBeacon.value, isNull);
       });
 
       test('connects to already discovered devices', () async {
@@ -57,7 +57,7 @@ void main() {
         // Create a trainer device and add it to platform
         final trainer = MockTrainer(id: 'trainer-1', name: 'Test Trainer');
         await deps.manager.addDevice(trainer);
-        deps.manager.assignPrimaryTrainer(trainer.id);
+        deps.manager.assignSmartTrainer(trainer.id);
 
         // Save assignments
         // Wait for auto-save via beacon subscription (needs extra time for async beacon + persistence)
@@ -85,7 +85,7 @@ void main() {
         await Future.delayed(const Duration(milliseconds: 200));
 
         expect(newDeps.manager.devices, hasLength(1));
-        expect(newDeps.manager.primaryTrainerBeacon.value?.deviceId, equals('trainer-1'));
+        expect(newDeps.manager.smartTrainerBeacon.value?.deviceId, equals('trainer-1'));
       });
 
       test('starts scanning for missing devices', () async {
@@ -94,7 +94,7 @@ void main() {
         // Save an assignment for a device that doesn't exist yet
         final trainer = MockTrainer(id: 'trainer-1', name: 'Test Trainer');
         await deps.manager.addDevice(trainer);
-        deps.manager.assignPrimaryTrainer(trainer.id);
+        deps.manager.assignSmartTrainer(trainer.id);
         // Wait for auto-save via beacon subscription (needs extra time for async beacon + persistence)
         await Future.delayed(const Duration(milliseconds: 200));
 
@@ -127,7 +127,7 @@ void main() {
 
         // Device should be connected and assigned
         expect(newDeps.manager.devices, hasLength(1));
-        expect(newDeps.manager.primaryTrainerBeacon.value?.deviceId, equals('trainer-1'));
+        expect(newDeps.manager.smartTrainerBeacon.value?.deviceId, equals('trainer-1'));
 
         // Scanning should stop after device is found
         await Future.delayed(const Duration(milliseconds: 200));
@@ -142,7 +142,7 @@ void main() {
         final hrMonitor = DeviceSimulator.createHeartRateMonitor(name: 'HR Monitor');
         await deps.manager.addDevice(trainer);
         await deps.manager.addDevice(hrMonitor);
-        deps.manager.assignPrimaryTrainer(trainer.id);
+        deps.manager.assignSmartTrainer(trainer.id);
         deps.manager.assignHeartRateSource(hrMonitor.id);
         // Wait for auto-save via beacon subscription (needs extra time for async beacon + persistence)
         await Future.delayed(const Duration(milliseconds: 200));
@@ -181,7 +181,7 @@ void main() {
         await pumpEventQueue();
 
         expect(newDeps.manager.devices, hasLength(2));
-        expect(newDeps.manager.primaryTrainerBeacon.value?.deviceId, equals('trainer-1'));
+        expect(newDeps.manager.smartTrainerBeacon.value?.deviceId, equals('trainer-1'));
         expect(newDeps.manager.heartRateSourceBeacon.value?.deviceId, equals(hrDeviceId));
       });
     });
@@ -193,7 +193,7 @@ void main() {
         // Add a device and assign it
         final trainer = MockTrainer(id: 'trainer-1', name: 'Trainer');
         await deps.manager.addDevice(trainer);
-        deps.manager.assignPrimaryTrainer(trainer.id);
+        deps.manager.assignSmartTrainer(trainer.id);
         // Wait for auto-save via beacon subscription (needs extra time for async beacon + persistence)
         await Future.delayed(const Duration(milliseconds: 200));
 
@@ -221,7 +221,7 @@ void main() {
         await deps.manager.addDevice(cadenceSensor);
         await deps.manager.addDevice(hrMonitor);
 
-        deps.manager.assignPrimaryTrainer(trainer.id);
+        deps.manager.assignSmartTrainer(trainer.id);
         deps.manager.assignPowerSource(powerMeter.id);
         deps.manager.assignCadenceSource(cadenceSensor.id);
         deps.manager.assignSpeedSource(trainer.id); // Trainer provides speed
@@ -277,7 +277,7 @@ void main() {
         await Future.delayed(const Duration(milliseconds: 200));
 
         // Verify all sensors are assigned
-        expect(newDeps.manager.primaryTrainerBeacon.value, isNotNull);
+        expect(newDeps.manager.smartTrainerBeacon.value, isNotNull);
         expect(newDeps.manager.powerSourceBeacon.value, isNotNull);
         expect(newDeps.manager.cadenceSourceBeacon.value, isNotNull);
         expect(newDeps.manager.speedSourceBeacon.value, isNotNull);
@@ -295,7 +295,7 @@ void main() {
         // Save assignment
         final trainer = MockTrainer(id: 'trainer-1', name: 'Trainer');
         await deps.manager.addDevice(trainer);
-        deps.manager.assignPrimaryTrainer(trainer.id);
+        deps.manager.assignSmartTrainer(trainer.id);
         // Wait for auto-save via beacon subscription (needs extra time for async beacon + persistence)
         await Future.delayed(const Duration(milliseconds: 200));
         await deps.manager.removeDevice(trainer.id);
@@ -334,7 +334,7 @@ void main() {
         // Save assignment for device that won't be discovered
         final trainer = MockTrainer(id: 'trainer-1', name: 'Trainer');
         await deps.manager.addDevice(trainer);
-        deps.manager.assignPrimaryTrainer(trainer.id);
+        deps.manager.assignSmartTrainer(trainer.id);
         // Wait for auto-save via beacon subscription (needs extra time for async beacon + persistence)
         await Future.delayed(const Duration(milliseconds: 200));
         await deps.manager.removeDevice(trainer.id);
@@ -364,7 +364,7 @@ void main() {
         // Save assignment
         final trainer = MockTrainer(id: 'trainer-1', name: 'Trainer');
         await deps.manager.addDevice(trainer);
-        deps.manager.assignPrimaryTrainer(trainer.id);
+        deps.manager.assignSmartTrainer(trainer.id);
         // Wait for auto-save via beacon subscription (needs extra time for async beacon + persistence)
         await Future.delayed(const Duration(milliseconds: 200));
         await deps.manager.removeDevice(trainer.id);
@@ -416,7 +416,7 @@ void main() {
 
         final trainer = MockTrainer(id: 'trainer-1', name: 'Trainer');
         await deps.manager.addDevice(trainer);
-        deps.manager.assignPrimaryTrainer(trainer.id);
+        deps.manager.assignSmartTrainer(trainer.id);
         // Wait for auto-save via beacon subscription (needs extra time for async beacon + persistence)
         await Future.delayed(const Duration(milliseconds: 200));
         await deps.manager.removeDevice(trainer.id);
@@ -431,7 +431,7 @@ void main() {
         await newDeps.manager.initialize();
         await Future.delayed(const Duration(milliseconds: 500));
 
-        expect(newDeps.manager.primaryTrainerBeacon.value?.deviceId, equals('trainer-1'));
+        expect(newDeps.manager.smartTrainerBeacon.value?.deviceId, equals('trainer-1'));
       });
 
       test('restores multiple role assignments for same device', () async {
@@ -439,7 +439,7 @@ void main() {
 
         final trainer = MockTrainer(id: 'trainer-1', name: 'Trainer');
         await deps.manager.addDevice(trainer);
-        deps.manager.assignPrimaryTrainer(trainer.id);
+        deps.manager.assignSmartTrainer(trainer.id);
         deps.manager.assignPowerSource(trainer.id);
         deps.manager.assignCadenceSource(trainer.id);
         // Wait for auto-save via beacon subscription (needs extra time for async beacon + persistence)
@@ -456,7 +456,7 @@ void main() {
         await newDeps.manager.initialize();
         await Future.delayed(const Duration(milliseconds: 500));
 
-        expect(newDeps.manager.primaryTrainerBeacon.value?.deviceId, equals('trainer-1'));
+        expect(newDeps.manager.smartTrainerBeacon.value?.deviceId, equals('trainer-1'));
         expect(newDeps.manager.powerSourceBeacon.value?.deviceId, equals('trainer-1'));
         expect(newDeps.manager.cadenceSourceBeacon.value?.deviceId, equals('trainer-1'));
       });

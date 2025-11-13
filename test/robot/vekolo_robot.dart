@@ -204,7 +204,7 @@ class VekoloRobot {
     }
 
     await persistence.saveAssignments(
-      primaryTrainer: trainerAssignment,
+      smartTrainer: trainerAssignment,
       powerSource: trainerAssignment,
       cadenceSource: trainerAssignment,
       speedSource: trainerAssignment,

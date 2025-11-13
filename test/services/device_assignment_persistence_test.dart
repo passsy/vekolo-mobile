@@ -50,7 +50,7 @@ void main() {
 
         final trainer = MockTrainer(id: 'trainer-1', name: 'KICKR CORE');
         await deps.manager.addDevice(trainer);
-        deps.manager.assignPrimaryTrainer(trainer.id);
+        deps.manager.assignSmartTrainer(trainer.id);
 
         // Wait for auto-save via beacon subscription (needs extra time for async beacon + persistence)
         await Future.delayed(const Duration(milliseconds: 200));
@@ -74,7 +74,7 @@ void main() {
 
         final trainer = MockTrainer(id: 'trainer-1', name: 'KICKR CORE');
         await deps.manager.addDevice(trainer);
-        deps.manager.assignPrimaryTrainer(trainer.id);
+        deps.manager.assignSmartTrainer(trainer.id);
         deps.manager.assignPowerSource(trainer.id);
 
         // Wait for auto-save via beacon subscription (needs extra time for async beacon + persistence)
@@ -98,7 +98,7 @@ void main() {
         await deps.manager.addDevice(trainer);
 
         // Assign all roles to same device (valid for a multi-function device like KICKR)
-        deps.manager.assignPrimaryTrainer(trainer.id);
+        deps.manager.assignSmartTrainer(trainer.id);
         deps.manager.assignPowerSource(trainer.id);
         deps.manager.assignCadenceSource(trainer.id);
         deps.manager.assignSpeedSource(trainer.id);
@@ -122,7 +122,7 @@ void main() {
         final persistence = (await createDeviceManager()).persistence;
         final assignments = await persistence.loadAssignments();
 
-        expect(assignments.primaryTrainer, isNull);
+        expect(assignments.smartTrainer, isNull);
         expect(assignments.powerSource, isNull);
         expect(assignments.cadenceSource, isNull);
         expect(assignments.speedSource, isNull);
@@ -149,7 +149,7 @@ void main() {
         expect(assignments.powerSource?.deviceId, 'trainer-1');
         expect(assignments.powerSource?.deviceName, 'KICKR CORE');
         expect(assignments.powerSource?.transport, 'FTMS');
-        expect(assignments.primaryTrainer, isNull);
+        expect(assignments.smartTrainer, isNull);
       });
 
       test('loads single device with multiple roles', () async {
@@ -176,7 +176,7 @@ void main() {
         await deps.prefs.setString('device_assignments_v1', jsonEncode(data));
         final assignments = await deps.persistence.loadAssignments();
 
-        expect(assignments.primaryTrainer?.deviceId, 'trainer-1');
+        expect(assignments.smartTrainer?.deviceId, 'trainer-1');
         expect(assignments.powerSource?.deviceId, 'trainer-1');
         expect(assignments.cadenceSource, isNull);
       });
@@ -222,7 +222,7 @@ void main() {
         await deps.prefs.setString('device_assignments_v1', jsonEncode(data));
         final assignments = await deps.persistence.loadAssignments();
 
-        expect(assignments.primaryTrainer, isNull);
+        expect(assignments.smartTrainer, isNull);
         expect(assignments.powerSource, isNull);
       });
 
@@ -236,7 +236,7 @@ void main() {
         await deps.prefs.setString('device_assignments_v1', jsonEncode(data));
         final assignments = await deps.persistence.loadAssignments();
 
-        expect(assignments.primaryTrainer, isNull);
+        expect(assignments.smartTrainer, isNull);
         expect(assignments.powerSource, isNull);
       });
 
@@ -245,7 +245,7 @@ void main() {
         await deps.prefs.setString('device_assignments_v1', 'not valid json');
         final assignments = await deps.persistence.loadAssignments();
 
-        expect(assignments.primaryTrainer, isNull);
+        expect(assignments.smartTrainer, isNull);
         expect(assignments.powerSource, isNull);
       });
 
@@ -265,7 +265,7 @@ void main() {
         await deps.prefs.setString('device_assignments_v1', jsonEncode(data));
         final assignments = await deps.persistence.loadAssignments();
 
-        expect(assignments.primaryTrainer, isNull);
+        expect(assignments.smartTrainer, isNull);
         expect(assignments.powerSource, isNull);
       });
     });
@@ -310,7 +310,7 @@ void main() {
 
         final trainer = MockTrainer(id: 'trainer-1', name: 'KICKR CORE');
         await deps.manager.addDevice(trainer);
-        deps.manager.assignPrimaryTrainer(trainer.id);
+        deps.manager.assignSmartTrainer(trainer.id);
         deps.manager.assignPowerSource(trainer.id);
 
         // Wait for auto-save via beacon subscription (needs extra time for async beacon + persistence)
@@ -319,8 +319,8 @@ void main() {
         // Load using the persistence API
         final loaded = await deps.persistence.loadAssignments();
 
-        expect(loaded.primaryTrainer?.deviceId, 'trainer-1');
-        expect(loaded.primaryTrainer?.deviceName, 'KICKR CORE');
+        expect(loaded.smartTrainer?.deviceId, 'trainer-1');
+        expect(loaded.smartTrainer?.deviceName, 'KICKR CORE');
         expect(loaded.powerSource?.deviceId, 'trainer-1');
         expect(loaded.powerSource?.deviceName, 'KICKR CORE');
       });

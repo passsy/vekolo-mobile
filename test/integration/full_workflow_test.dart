@@ -82,18 +82,18 @@ void main() {
       // =====================================================================
 
       // Assign devices to roles
-      deviceManager.assignPrimaryTrainer(trainer.id);
+      deviceManager.assignSmartTrainer(trainer.id);
       deviceManager.assignPowerSource(powerMeter.id); // Override trainer power
       deviceManager.assignHeartRateSource(hrMonitor.id);
 
       // Verify assignments
-      expect(deviceManager.primaryTrainerBeacon.value?.deviceId, equals(trainer.id));
+      expect(deviceManager.smartTrainerBeacon.value?.deviceId, equals(trainer.id));
       expect(deviceManager.powerSourceBeacon.value?.deviceId, equals(powerMeter.id));
       expect(deviceManager.heartRateSourceBeacon.value?.deviceId, equals(hrMonitor.id));
 
       // Wait for beacons to update
       await Future<void>.delayed(const Duration(milliseconds: 600));
-      expect(deviceManager.primaryTrainerBeacon.value?.deviceId, equals(trainer.id));
+      expect(deviceManager.smartTrainerBeacon.value?.deviceId, equals(trainer.id));
       expect(deviceManager.powerSourceBeacon.value?.deviceId, equals(powerMeter.id));
       expect(deviceManager.heartRateSourceBeacon.value?.deviceId, equals(hrMonitor.id));
 
@@ -192,7 +192,7 @@ void main() {
       await Future<void>.delayed(const Duration(milliseconds: 600));
 
       expect(deviceManager.devicesBeacon.value, hasLength(3));
-      expect(deviceManager.primaryTrainerBeacon.value, isNotNull);
+      expect(deviceManager.smartTrainerBeacon.value, isNotNull);
       expect(deviceManager.powerStream.value, isNotNull);
       expect(deviceManager.cadenceStream.value, isNotNull);
       expect(deviceManager.heartRateStream.value, isNotNull);
@@ -222,7 +222,7 @@ void main() {
       final trainer = DeviceSimulator.createRealisticTrainer(name: 'Test Trainer');
 
       await deviceManager.addDevice(trainer);
-      deviceManager.assignPrimaryTrainer(trainer.id);
+      deviceManager.assignSmartTrainer(trainer.id);
       await deviceManager.connectDevice(trainer.id).value;
 
       // Start syncing
@@ -254,7 +254,7 @@ void main() {
       final trainer1 = DeviceSimulator.createRealisticTrainer(name: 'Trainer 1');
 
       await deviceManager.addDevice(trainer1);
-      deviceManager.assignPrimaryTrainer(trainer1.id);
+      deviceManager.assignSmartTrainer(trainer1.id);
       await deviceManager.connectDevice(trainer1.id).value;
       await trainer1.setTargetPower(150);
 
@@ -298,7 +298,7 @@ void main() {
       await deviceManager.addDevice(trainer);
       await deviceManager.addDevice(hrMonitor);
 
-      deviceManager.assignPrimaryTrainer(trainer.id);
+      deviceManager.assignSmartTrainer(trainer.id);
       deviceManager.assignHeartRateSource(hrMonitor.id);
 
       // Connect all
@@ -345,7 +345,7 @@ void main() {
       final trainer = DeviceSimulator.createRealisticTrainer();
 
       await deviceManager.addDevice(trainer);
-      deviceManager.assignPrimaryTrainer(trainer.id);
+      deviceManager.assignSmartTrainer(trainer.id);
       await deviceManager.connectDevice(trainer.id).value;
 
       syncService.startSync();

@@ -36,9 +36,9 @@ class FakeDeviceManager implements DeviceManager {
   @override
   ReadableBeacon<HeartRateData?> get heartRateStream => _heartRateBeacon;
 
-  // Stub for primaryTrainerBeacon (required by WorkoutSyncService)
+  // Stub for smartTrainerBeacon (required by WorkoutSyncService)
   @override
-  ReadableBeacon<AssignedDevice?> get primaryTrainerBeacon => Beacon.writable(null);
+  ReadableBeacon<AssignedDevice?> get smartTrainerBeacon => Beacon.writable(null);
 
   // Test control methods
 

@@ -15,7 +15,40 @@ import 'package:chirp/chirp.dart';
 ///
 /// The scanner only stops when all outstanding tokens have been released.
 class ScanToken {
-  ScanToken._();
+  /// Stack trace captured when this token was created.
+  ///
+  /// Used for debugging to identify which code path started the scan.
+  final StackTrace stackTrace;
+
+  ScanToken._(this.stackTrace);
+
+  @override
+  String toString() {
+    // Extract relevant frame from stack trace (skip internal frames)
+    final frames = stackTrace.toString().split('\n');
+
+    // Skip the first few frames (ScanToken constructor, startScan method)
+    // and find the first frame that's not from ble_scanner.dart
+    for (final frame in frames.skip(2)) {
+      if (!frame.contains('ble_scanner.dart')) {
+        // Clean up the frame to show just the essential info
+        final cleaned = frame.trim();
+        // Extract just the file and line number part
+        final match = RegExp(r'\(([^)]+)\)').firstMatch(cleaned);
+        if (match != null) {
+          final location = match.group(1) ?? '';
+          // Extract method name if available
+          final methodMatch = RegExp(r'#\d+\s+(.+?)\s+\(').firstMatch(cleaned);
+          final method = methodMatch?.group(1) ?? 'unknown';
+          return 'ScanToken(from: $method at $location)';
+        }
+        return 'ScanToken(from: $cleaned)';
+      }
+    }
+
+    // Fallback if we couldn't find a good frame
+    return 'ScanToken(from: ${frames.skip(2).firstOrNull?.trim() ?? 'unknown'})';
+  }
 }
 
 /// A discovered BLE device with timing information.
@@ -34,7 +67,7 @@ class DiscoveredDevice {
 
   /// Current RSSI value (signal strength).
   ///
-  /// Null if device hasn't been seen recently (>5 seconds).
+  /// Null if device hasn't been seen recently (>15 seconds).
   /// Updated periodically by the scanner to reflect current signal status.
   final int? rssi;
 
@@ -349,7 +382,11 @@ class BleScanner with WidgetsBindingObserver {
   /// have their RSSI set to null, which triggers UI updates to show "No signal".
   void _updateDeviceSignalStatus() {
     final now = clock.now();
-    final recentSignalThreshold = const Duration(seconds: 5);
+    // Use 15 seconds threshold to account for:
+    // - Android BLE stack batching scan results
+    // - Scan pauses during connection attempts
+    // - Devices that advertise less frequently
+    final recentSignalThreshold = const Duration(seconds: 15);
     bool updated = false;
     int signalLostCount = 0;
     int signalRestoredCount = 0;
@@ -461,13 +498,46 @@ class BleScanner with WidgetsBindingObserver {
 
   /// Maybe auto-restart scanning if conditions are now favorable.
   void _maybeAutoRestartScanning() {
-    // Only auto-restart if we have active tokens but aren't currently scanning
-    if (_activeTokens.isNotEmpty &&
-        !_isScanningBeacon.value &&
-        !_isStartingScan &&
-        _bluetoothStateBeacon.value.canScan) {
-      chirp.info('Auto-restarting scan (conditions now favorable)');
+    // Check each condition and log why scan starts, stops, or doesn't start
+    final hasActiveTokens = _activeTokens.isNotEmpty;
+    final isNotScanning = !_isScanningBeacon.value;
+    final isNotStarting = !_isStartingScan;
+    final canScan = _bluetoothStateBeacon.value.canScan;
+
+    final allConditionsMet = hasActiveTokens && isNotScanning && isNotStarting && canScan;
+
+    if (allConditionsMet) {
+      chirp.info(
+        'Auto-restarting scan (conditions now favorable)',
+        data: {
+          'hasActiveTokens': hasActiveTokens,
+          'tokenCount': _activeTokens.length,
+          'isNotScanning': isNotScanning,
+          'isNotStarting': isNotStarting,
+          'canScan': canScan,
+          'bluetoothState': _bluetoothStateBeacon.value,
+        },
+      );
       _startPlatformScan();
+    } else {
+      // Log why scan is not starting
+      final reasons = <String>[];
+      if (!hasActiveTokens) reasons.add('no active tokens');
+      if (!isNotScanning) reasons.add('already scanning');
+      if (!isNotStarting) reasons.add('already starting');
+      if (!canScan) reasons.add('cannot scan (state=${_bluetoothStateBeacon.value})');
+
+      chirp.debug(
+        'Not auto-restarting scan',
+        data: {
+          'reasons': reasons,
+          'hasActiveTokens': hasActiveTokens,
+          'tokenCount': _activeTokens.length,
+          'isScanning': !isNotScanning,
+          'isStarting': !isNotStarting,
+          'bluetoothState': _bluetoothStateBeacon.value,
+        },
+      );
     }
   }
 
@@ -487,10 +557,10 @@ class BleScanner with WidgetsBindingObserver {
       throw StateError('Cannot start scan: BleScanner has been disposed');
     }
 
-    final token = ScanToken._();
+    final token = ScanToken._(StackTrace.current);
     _activeTokens.add(token);
 
-    chirp.info('Start scan requested (${_activeTokens.length} active tokens)');
+    chirp.info('Start scan requested (${_activeTokens.length} active tokens)', data: {'tokens': _activeTokens});
 
     // Start platform scan if not already scanning and conditions are met
     if (!_isScanningBeacon.value && !_isStartingScan) {
