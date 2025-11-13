@@ -2,9 +2,9 @@
 
 ## Overview
 
-This document describes the planned architecture for automatic device assignment, persistence, and reconnection. The goal is to create a seamless user experience where devices automatically connect when available, eliminating the need for users to manually reconnect devices each time they start the app.
+This document describes the architecture for automatic device assignment, persistence, and reconnection. The goal is to create a seamless user experience where devices automatically connect when available, eliminating the need for users to manually reconnect devices each time they start the app.
 
-**Status**: This architecture is planned but not yet fully implemented. The persistence functions exist but are not yet integrated with DeviceManager. Auto-reconnect functionality has not been implemented yet.
+**Status**: ✅ Fully implemented. DeviceManager integrates with persistence, handles auto-reconnect, and distinguishes between user-initiated and automatic disconnections.
 
 ## Architecture Principles
 
@@ -39,7 +39,34 @@ The system automatically handles device discovery and connection based on assign
 - **No assignments**: Scanner stays off, manual discovery only
 - **All assigned devices connected**: Scanner stays off
 - **Some assigned devices missing**: Scanner actively searching
-- **Assigned device disconnects**: Scanner starts immediately
+- **Assigned device disconnects unexpectedly**: Scanner starts immediately
+
+#### Manual vs. Automatic Disconnections
+
+The system distinguishes between two types of disconnections:
+
+**User-Initiated Disconnect:**
+- User clicks the "Disconnect" button in the UI
+- Device is marked as manually disconnected
+- Auto-reconnect is **disabled** for this device
+- Device will NOT automatically reconnect when it comes back online
+- User must manually reconnect via the "Connect" button to re-enable auto-reconnect
+- This prevents the frustrating scenario where the user tries to disconnect but the device keeps reconnecting
+
+**Automatic/Unexpected Disconnect:**
+- Device powers off (battery dies, device turned off)
+- Device goes out of Bluetooth range
+- Connection is lost due to interference or other technical issues
+- Auto-reconnect is **enabled**
+- Device will automatically reconnect when it comes back online
+- Scanner starts immediately to search for the device
+
+**Implementation Details:**
+- `DeviceManager` maintains a `_manuallyDisconnectedDeviceIds` set
+- When `disconnectDevice()` is called (via UI), the device ID is added to this set
+- When `connectDevice()` is called (via UI), the device ID is removed from this set
+- `_setupDeviceConnectionMonitoring()` checks this set before triggering auto-reconnect
+- Auto-connect scanning also skips devices in this set
 
 ## Components
 
@@ -87,18 +114,15 @@ The version field allows for schema evolution. Future versions can migrate old d
 - Load and restore assignments on initialization
 - Coordinate with scanner for auto-reconnect
 - Track which devices should auto-reconnect
+- Distinguish between manual and automatic disconnects
 
-**Key behaviors (planned):**
-- Assignment methods automatically persist changes (not yet implemented)
-- On initialization, loads saved assignments and restores them to connected devices (not yet implemented)
-- Monitors device list for disconnections (not yet implemented)
-- Controls scanner start/stop based on assignment state (not yet implemented)
-
-**Current state:**
-- DeviceManager manages device collection and role assignments
-- Assignment methods exist but don't persist changes
-- No auto-reconnect functionality exists yet
-- Devices are not automatically removed on disconnection
+**Key behaviors:**
+- Assignment methods automatically persist changes via `_saveAssignmentsAsync()`
+- On initialization (`initialize()`), loads saved assignments and restores them
+- Monitors device connection state via `_setupDeviceConnectionMonitoring()`
+- Controls scanner start/stop based on assignment state
+- Tracks manually disconnected devices to prevent unwanted auto-reconnect
+- Automatically starts scanning when assigned devices disconnect unexpectedly
 
 ### 3. BleScanner
 
@@ -107,15 +131,12 @@ The version field allows for schema evolution. Future versions can migrate old d
 - Device discovery and lifecycle management
 - Bluetooth state monitoring
 
-**Planned interaction with DeviceManager:**
-- DeviceManager will request scan tokens when needed (not yet implemented)
-- DeviceManager will listen to discovered devices (not yet implemented)
-- DeviceManager will release tokens when all devices connected (not yet implemented)
-
-**Current state:**
-- BleScanner provides token-based scanning
-- Scanner is manually controlled by UI (scanner_page.dart)
-- No automatic coordination with DeviceManager yet
+**Interaction with DeviceManager:**
+- DeviceManager requests scan tokens via `startScan()` when needed
+- DeviceManager subscribes to `scanner.devices` to monitor discovered devices
+- DeviceManager releases tokens via `stopScan()` when all assigned devices are connected
+- Both manual scanning (via UI) and auto-reconnect scanning can run simultaneously
+- Each scan request gets its own independent token
 
 ## User Flows
 
@@ -131,76 +152,101 @@ The version field allows for schema evolution. Future versions can migrate old d
 
 3. User selects device and connects
    → Device added to DeviceManager
-   → Auto-assigned to appropriate roles based on capabilities (current behavior)
-   → Assignments automatically persisted (planned, not yet implemented)
+   → User assigns device to appropriate roles via UI
+   → Assignments automatically persisted
 
 4. User closes app
-   → Assignments would be saved (planned, not yet implemented)
+   → Assignments are saved
 
-### App Restart Flow (Happy Path) - Planned
+### App Restart Flow (Happy Path)
 
 1. User opens app
-   → DeviceManager loads saved assignments (planned)
+   → DeviceManager loads saved assignments during `initialize()`
    → Finds assigned devices
 
 2. DeviceManager checks connected devices
    → Devices not connected yet
-   → Starts scanner automatically (planned)
+   → Starts scanner automatically via `_startAutoConnectScanning()`
 
 3. Scanner discovers assigned device
-   → Auto-connect triggered (planned)
+   → Auto-connect triggered via `_connectAndRestoreDevice()`
    → Device connects successfully
    → Device added to DeviceManager
-   → Role assignments restored from saved data (planned)
+   → Role assignments restored from saved data via `_restoreAssignmentsForDevice()`
    → Scanner continues (if other devices still missing)
 
 4. All assigned devices connected
-   → Scanner stops automatically (planned)
+   → Scanner stops automatically (checked in `_shouldStopAutoConnectScanning()`)
 
 5. User starts workout
    → All devices ready, seamless experience
 
-**Current state**: Users must manually reconnect devices after app restart.
-
-### Disconnection During Use Flow - Planned
+### Unexpected Disconnection During Use Flow
 
 1. User is mid-workout, all devices connected
    → Scanner is off
 
-2. Device disconnects (battery died, out of range, etc.)
-   → DeviceManager detects disconnection (planned)
-   → Scanner starts automatically (planned)
+2. Device disconnects unexpectedly (battery died, out of range, etc.)
+   → DeviceManager detects disconnection via `_setupDeviceConnectionMonitoring()`
+   → Device is NOT in `_manuallyDisconnectedDeviceIds` set
+   → Device has assigned role
+   → Scanner starts automatically via `_startAutoConnectScanning()`
 
 3. Device comes back online
    → Scanner discovers device
-   → Auto-connect triggered (planned)
+   → Auto-connect triggered
    → Device reconnects
-   → Role assignments restored (planned)
+   → Role assignments restored
    → Scanner stops (all devices connected)
 
 4. User continues workout
    → Minimal disruption
 
-**Current state**: Devices remain in DeviceManager when disconnected. Users must manually reconnect.
+### Manual Disconnect Flow
+
+1. User is mid-workout, device is connected and assigned
+   → Scanner is off
+
+2. User clicks "Disconnect" button in UI
+   → `_handleDisconnect()` calls `deviceManager.disconnectDevice(deviceId)`
+   → Device ID is added to `_manuallyDisconnectedDeviceIds` set
+   → Device disconnects
+
+3. Device disconnection detected
+   → `_setupDeviceConnectionMonitoring()` checks `_manuallyDisconnectedDeviceIds`
+   → Device is in the set, so auto-reconnect is skipped
+   → Scanner remains off
+
+4. Device comes back online and starts advertising
+   → Scanner is not running (or is running but skips this device)
+   → Device does NOT automatically reconnect
+   → User has control
+
+5. User manually clicks "Connect" button
+   → Device ID is removed from `_manuallyDisconnectedDeviceIds` set
+   → Device connects
+   → Auto-reconnect is re-enabled for this device
 
 ## Architecture Details
 
 ### Persistence Integration
 
-**When assignments are saved (planned):**
-- Automatically when any assignment method is called
-- Fire-and-forget pattern (doesn't block assignment operations)
+**When assignments are saved:**
+- Automatically when any assignment method is called (`assignPrimaryTrainer()`, `assignPowerSource()`, etc.)
+- Uses `_saveAssignmentsAsync()` with fire-and-forget pattern (doesn't block assignment operations)
+- Errors are logged but don't block the assignment
 
-**When assignments are loaded (planned):**
-- On app start when DeviceManager initializes auto-reconnect
-- Assignments are restored to devices that are already connected
+**When assignments are loaded:**
+- On app start when `DeviceManager.initialize()` is called
+- Loads via `persistence.loadAssignments()`
+- Creates `AssignedDevice` wrappers without connected devices (devices not yet connected)
+- These wrappers are updated when devices connect
 
-**Assignment restoration (planned):**
-- When a device connects, DeviceManager checks if it matches any saved assignments
-- If match found, automatically restores role assignments
-- Only restores if device still supports the required capabilities
-
-**Current state**: Persistence functions exist (`device_assignment_persistence.dart`) but are not called anywhere. Assignments are not persisted or restored.
+**Assignment restoration:**
+- When a device auto-connects via `_connectAndRestoreDevice()`, DeviceManager checks saved assignments
+- `_restoreAssignmentsForDevice()` updates `AssignedDevice` wrappers with actual device references
+- This links the persisted assignment to the now-connected device instance
+- Assignments are restored regardless of capabilities (assumes saved assignments were valid when created)
 
 ### Scanner Control
 
@@ -215,38 +261,43 @@ The version field allows for schema evolution. Future versions can migrate old d
 - Token released when scanning no longer needed
 - Token managed independently from manual scanning tokens
 
-### Connection Logic (Planned)
+### Connection Logic
 
-Auto-connect will use the same connection flow as manual connection:
-1. Detect device type (via transport registry)
-2. Create device instance
-3. Connect to device
-4. Add to DeviceManager
-5. Restore role assignments from saved data
+Auto-connect uses the same connection flow as manual connection:
+1. Detect device type via `transportRegistry.detectCompatibleTransports()`
+2. Create `BleDevice` instance with detected transports
+3. Add device to DeviceManager via `addDevice()`
+4. Connect to device via `connectDevice(deviceId).value`
+5. Restore role assignments from saved data via `_restoreAssignmentsForDevice()`
 
 This ensures consistency between manual and automatic connections.
 
-**Current state**: Manual connection exists in `scanner_page.dart`. Auto-connect has not been implemented yet.
+**Implementation:** See `_connectAndRestoreDevice()` in `DeviceManager`
 
-### Lifecycle Integration (Planned)
+### Lifecycle Integration
 
 **App start:**
-- DeviceManager initializes auto-reconnect system (planned)
-- Loads saved assignments (planned)
-- Starts scanner if needed (planned)
+- DeviceManager initializes auto-reconnect system via `initialize()`
+- Loads saved assignments via `persistence.loadAssignments()`
+- Restores assignment wrappers via `_restoreAssignments()`
+- Starts scanner if needed via `_startAutoConnectIfNeeded()`
 
 **App background:**
-- Auto-reconnect stops scanning (planned)
-- Assignments remain saved
+- Auto-reconnect continues scanning (no special handling)
+- Assignments remain in memory and storage
+- Connection monitoring continues
 
 **App foreground:**
-- Auto-reconnect resumes (planned)
-- Checks current state and starts scanner if needed (planned)
+- No special handling needed
+- Auto-reconnect continues working
 
 **App shutdown:**
-- Assignments already saved (saved on each change) (planned)
-
-**Current state**: No lifecycle integration exists. No auto-reconnect system to integrate.
+- Assignments already saved (saved on each change)
+- DeviceManager `dispose()` cleans up:
+  - Stops auto-connect scanning
+  - Cancels connection state subscriptions
+  - Disconnects all devices
+  - Disposes all beacons
 
 ## Error Handling
 

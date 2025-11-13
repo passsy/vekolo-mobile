@@ -245,7 +245,7 @@ class FtmsBleTransport
         error: e,
         stackTrace: stackTrace,
       );
-      _handleDisconnection();
+      _handleDetach();
       rethrow;
     }
   }
@@ -591,8 +591,8 @@ class FtmsBleTransport
     });
   }
 
-  void _handleDisconnection() {
-    chirp.info('Device disconnected');
+  void _handleDetach() {
+    chirp.info('detaching transport');
     _connectionSubscription?.cancel();
     _indoorBikeDataSubscription?.cancel();
     _controlPointSubscription?.cancel();
@@ -633,7 +633,7 @@ class FtmsBleTransport
   /// Does not disconnect the physical device.
   @override
   Future<void> detach() async {
-    _handleDisconnection();
+    _handleDetach();
   }
 
   /// Sets the target power for ERG mode.

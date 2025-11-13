@@ -132,20 +132,23 @@ class BleDevice extends FitnessDevice {
   /// This monitors the actual BLE connection and handles unexpected disconnections
   /// (device powered off, out of range, etc.).
   void _setupConnectionStateMonitoring() {
-    _connectionStateSubscription = _device.connectionState.listen((state) {
-      chirp.info('Device $_name connection state changed to $state');
+    _connectionStateSubscription = _device.connectionState.listen(
+      (state) {
+        chirp.info('Device $_name connection state changed to $state');
 
-      if (state == fbp.BluetoothConnectionState.disconnected) {
-        _handleDisconnection();
-      }
-    }, onError: (Object e, StackTrace stackTrace) {
-      chirp.error('Error monitoring connection state for $_name', error: e, stackTrace: stackTrace);
-    });
+        if (state == fbp.BluetoothConnectionState.disconnected) {
+          _handleDisconnection();
+        }
+      },
+      onError: (Object e, StackTrace stackTrace) {
+        chirp.error('Error monitoring connection state for $_name', error: e, stackTrace: stackTrace);
+      },
+    );
   }
 
   /// Handle unexpected disconnection by detaching all transports.
   Future<void> _handleDisconnection() async {
-    chirp.info('Device $_name disconnected, detaching transports');
+    chirp.notice('Device $_name disconnected, detaching transports');
     _connectionStateBeacon.value = ConnectionState.disconnected;
 
     // Detach all transports
@@ -172,7 +175,7 @@ class BleDevice extends FitnessDevice {
       // Connect via BlePlatform abstraction (works with FakeBlePlatform in tests)
       chirp.info('Connecting to physical device');
       await _platform.connect(_id, timeout: const Duration(seconds: 15));
-      chirp.info('Connected');
+      chirp.notice('Connected to $name', data: {'device': this});
 
       // Set up connection state monitoring to detect disconnections
       _setupConnectionStateMonitoring();
@@ -278,7 +281,7 @@ class BleDevice extends FitnessDevice {
 
   @override
   Future<void> disconnect() async {
-    chirp.info('Disconnecting device: $name');
+    chirp.notice('Disconnecting device: $name');
 
     // Cancel connection state monitoring
     await _connectionStateSubscription?.cancel();

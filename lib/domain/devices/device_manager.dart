@@ -166,6 +166,8 @@ class DeviceManager {
   /// Beacon automatically switches when device assignment changes.
   ReadableBeacon<HeartRateData?> get heartRateStream => _heartRateBeacon;
 
+  bool _disposed = false;
+
   // ============================================================================
   // Device Management API
   // ============================================================================
@@ -255,6 +257,9 @@ class DeviceManager {
     _deviceConnectionSubscriptions[deviceId]?.call();
     _deviceConnectionSubscriptions.remove(deviceId);
 
+    // Clear manual disconnect flag
+    _manuallyDisconnectedDeviceIds.remove(deviceId);
+
     _devices.remove(device);
     _devicesBeacon.value = List.unmodifiable(_devices);
   }
@@ -268,12 +273,19 @@ class DeviceManager {
   /// Initiates connection to the device with the given [deviceId]. The device must
   /// already be added to the manager via [addDevice] or [addOrGetExistingDevice].
   ///
+  /// If the device was previously manually disconnected, this clears that flag,
+  /// allowing auto-reconnect to work again if the device has an assigned role.
+  ///
   /// Returns a [CancelableOperation] that can be cancelled during connection.
   /// Cancelling will stop the connection attempt and clean up resources.
   ///
   /// Throws [ArgumentError] if no device with the given ID exists.
   CancelableOperation<void> connectDevice(String deviceId) {
     final device = _findDevice(deviceId);
+
+    // Clear manual disconnect flag when user manually connects
+    _manuallyDisconnectedDeviceIds.remove(deviceId);
+
     return device.connect();
   }
 
@@ -282,11 +294,19 @@ class DeviceManager {
   /// Cleanly tears down the connection to the device with the given [deviceId].
   /// The device remains in the manager but is disconnected.
   ///
+  /// This is treated as a user-initiated disconnect, so auto-reconnect will NOT
+  /// trigger even if the device has an assigned role. To re-enable auto-reconnect,
+  /// the user must manually reconnect via [connectDevice].
+  ///
   /// Safe to call even if the device is already disconnected.
   ///
   /// Throws [ArgumentError] if no device with the given ID exists.
   Future<void> disconnectDevice(String deviceId) async {
     final device = _findDevice(deviceId);
+
+    // Mark as manually disconnected to prevent auto-reconnect
+    _manuallyDisconnectedDeviceIds.add(deviceId);
+
     await device.disconnect();
   }
 
@@ -461,6 +481,9 @@ class DeviceManager {
 
   /// Devices currently being connected (to prevent duplicate connection attempts).
   final Set<String> _connectingDeviceIds = {};
+
+  /// Devices that were manually disconnected by the user (should not auto-reconnect).
+  final Set<String> _manuallyDisconnectedDeviceIds = {};
 
   /// Subscription for auto-saving assignments when they change.
   void Function()? _assignmentsPersistenceUnsubscribe;
@@ -787,6 +810,13 @@ class DeviceManager {
     _scannerDevicesUnsubscribe = scanner.devices.subscribe((discoveredDevices) {
       for (final discovered in discoveredDevices) {
         if (_autoConnectDeviceIds.contains(discovered.deviceId)) {
+          // Skip devices that were manually disconnected
+          if (_manuallyDisconnectedDeviceIds.contains(discovered.deviceId)) {
+            chirp.info('Skipping auto-connect for manually disconnected device ${discovered.deviceId}');
+            _autoConnectDeviceIds.remove(discovered.deviceId);
+            continue;
+          }
+
           // Check if device is already connected or being connected
           final existingDevice = _devices.where((d) => d.id == discovered.deviceId).firstOrNull;
           if (existingDevice != null && existingDevice.connectionState.value == ConnectionState.connected) {
@@ -803,13 +833,16 @@ class DeviceManager {
 
           // Found a device we're looking for - mark as connecting and connect it
           _connectingDeviceIds.add(discovered.deviceId);
-          chirp.info('Starting connection to ${discovered.deviceId}');
+          chirp.info('Starting auto-connection to ${discovered.deviceId}');
 
           _connectAndRestoreDevice(discovered.deviceId)
               .then((_) {
                 final connectedDeviceId = discovered.deviceId;
                 _autoConnectDeviceIds.remove(connectedDeviceId);
                 _connectingDeviceIds.remove(connectedDeviceId);
+                if (_disposed) {
+                  return;
+                }
 
                 // Restore assignments for the device that was just connected
                 _restoreAssignmentsForDevice(connectedDeviceId);
@@ -827,9 +860,10 @@ class DeviceManager {
                 // Remove from connecting set on error
                 _connectingDeviceIds.remove(discovered.deviceId);
                 chirp.error(
-                  'Failed to auto-connect ${discovered.deviceId}: $error',
+                  'Failed to auto-connect ${discovered.deviceId}',
                   error: error,
                   stackTrace: stackTrace as StackTrace?,
+                  data: {'device': discovered},
                 );
               });
         }
@@ -839,21 +873,32 @@ class DeviceManager {
 
   /// Sets up monitoring for device connection state to enable auto-reconnect.
   ///
-  /// When a device with an assigned role disconnects unexpectedly, it will be
-  /// added back to the auto-connect list and scanning will be started to detect
-  /// when the device comes back online.
+  /// When a device with an assigned role disconnects unexpectedly (e.g., device
+  /// powered off, out of range, connection lost), it will be added back to the
+  /// auto-connect list and scanning will be started to detect when the device
+  /// comes back online.
+  ///
+  /// User-initiated disconnects (via [disconnectDevice]) do NOT trigger auto-reconnect.
+  /// The user must manually reconnect via [connectDevice] to restore auto-reconnect.
   void _setupDeviceConnectionMonitoring(FitnessDevice device) {
     final unsubscribe = device.connectionState.subscribe((state) {
       if (state == ConnectionState.disconnected) {
+        // Skip auto-reconnect for user-initiated disconnects
+        if (_manuallyDisconnectedDeviceIds.contains(device.id)) {
+          chirp.info('Device ${device.id} was manually disconnected, skipping auto-reconnect');
+          return;
+        }
+
         // Check if device has an assigned role
-        final hasAssignedRole = _primaryTrainer?.deviceId == device.id ||
+        final hasAssignedRole =
+            _primaryTrainer?.deviceId == device.id ||
             _powerSource?.deviceId == device.id ||
             _cadenceSource?.deviceId == device.id ||
             _speedSource?.deviceId == device.id ||
             _heartRateSource?.deviceId == device.id;
 
         if (hasAssignedRole) {
-          chirp.info('Assigned device ${device.id} disconnected, enabling auto-reconnect');
+          chirp.info('Assigned device ${device.id} disconnected unexpectedly, enabling auto-reconnect');
           _autoConnectDeviceIds.add(device.id);
           _startAutoConnectScanning();
         }
@@ -898,6 +943,7 @@ class DeviceManager {
   /// Call this when the manager is no longer needed to prevent memory leaks.
   Future<void> dispose() async {
     chirp.info('dispose()');
+    _disposed = true;
 
     // Cancel all device connection state subscriptions
     for (final unsubscribe in _deviceConnectionSubscriptions.values) {

@@ -160,18 +160,18 @@ void main() {
       expect(device2.isConnected, isTrue);
     });
 
-    test('connection state persists when device stops advertising', () async {
+    test('turnOff disconnects the device', () async {
       final device = platform.addDevice('D1', 'Test Device');
       device.turnOn();
 
       await device.connect();
       expect(device.isConnected, isTrue);
 
-      // Turn off advertising (simulate device going out of range but still connected)
-      device.turnOff();
+      // Turn off device (simulate hardware power-off)
+      await device.turnOff();
 
-      // Connection state should persist
-      expect(device.isConnected, isTrue);
+      // Device should be disconnected
+      expect(device.isConnected, isFalse);
     });
   });
 }

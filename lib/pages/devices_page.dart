@@ -491,7 +491,20 @@ class DeviceCard extends StatelessWidget {
                       if (onConnect != null && !isConnected)
                         ElevatedButton(
                           onPressed: isConnecting ? null : onConnect,
-                          child: Text(isConnecting ? 'Connecting...' : 'Connect'),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (isConnecting) ...[
+                                const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                ),
+                                const SizedBox(width: 8),
+                              ],
+                              Text(isConnecting ? 'Connecting...' : 'Connect'),
+                            ],
+                          ),
                         ),
                       if (isConnected && onDisconnect != null)
                         ElevatedButton(
@@ -544,17 +557,17 @@ class DeviceCard extends StatelessWidget {
                         )
                       else
                         ElevatedButton(
-                          onPressed: onConnect,
+                          onPressed: isConnecting ? null : onConnect,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.blue[50],
                             foregroundColor: Colors.blue[900],
                           ),
-                          child: const Row(
+                          child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.bluetooth_connected),
-                              SizedBox(width: 8),
-                              Text('Connect'),
+                              Icon(isConnecting ? Icons.hourglass_empty : Icons.bluetooth_connected),
+                              const SizedBox(width: 8),
+                              Text(isConnecting ? 'Connecting...' : 'Connect'),
                             ],
                           ),
                         ),

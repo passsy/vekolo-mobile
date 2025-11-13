@@ -303,26 +303,270 @@ class VekoloRobot {
     connected.doesNotExist();
   }
 
-  void verifyDisconnectButtonEnabled() {
-    logger.robotLog('verify disconnect button is enabled');
-    final card = spot<DataSourceSection>().withChild(spotText('POWER SOURCE')).spot<DeviceCard>()..existsOnce();
+  /// Verify the state of a device card's buttons and connection state.
+  ///
+  /// Example usage:
+  /// ```dart
+  /// // Check that connect button exists and is enabled
+  /// robot.verifyDeviceState("POWER SOURCE", connectButtonEnabled: true);
+  ///
+  /// // Check that disconnect button exists and is enabled, and connect button is not visible
+  /// robot.verifyDeviceState("POWER SOURCE", disconnectButtonEnabled: true, connectButtonVisible: false);
+  ///
+  /// // Check device is connecting
+  /// robot.verifyDeviceState("POWER SOURCE", isConnecting: true);
+  ///
+  /// // Check unassign and remove buttons
+  /// robot.verifyDeviceState("HEART RATE", unassignButtonVisible: true, removeButtonVisible: true);
+  ///
+  /// // Check assignment buttons
+  /// robot.verifyDeviceState("POWER SOURCE", assignPowerButtonVisible: true, assignPowerButtonEnabled: true);
+  /// ```
+  ///
+  /// Parameters:
+  /// - [dataSourceName]: The name of the data source section (e.g., "POWER SOURCE", "HEART RATE")
+  /// - [connectButtonEnabled]: If specified, verifies the Connect button is enabled (onPressed != null)
+  /// - [connectButtonVisible]: If specified, verifies the Connect button exists or doesn't exist
+  /// - [isConnecting]: If specified, verifies the Connect button shows "Connecting..." state
+  /// - [disconnectButtonEnabled]: If specified, verifies the Disconnect button is enabled (onPressed != null)
+  /// - [disconnectButtonVisible]: If specified, verifies the Disconnect button exists or doesn't exist
+  /// - [unassignButtonEnabled]: If specified, verifies the Unassign button is enabled (onPressed != null)
+  /// - [unassignButtonVisible]: If specified, verifies the Unassign button exists or doesn't exist
+  /// - [removeButtonEnabled]: If specified, verifies the Remove button is enabled (onPressed != null)
+  /// - [removeButtonVisible]: If specified, verifies the Remove button exists or doesn't exist
+  /// - [assignPowerButtonEnabled]: If specified, verifies the "Assign to Power" button is enabled
+  /// - [assignPowerButtonVisible]: If specified, verifies the "Assign to Power" button exists
+  /// - [assignCadenceButtonEnabled]: If specified, verifies the "Assign to Cadence" button is enabled
+  /// - [assignCadenceButtonVisible]: If specified, verifies the "Assign to Cadence" button exists
+  /// - [assignSpeedButtonEnabled]: If specified, verifies the "Assign to Speed" button is enabled
+  /// - [assignSpeedButtonVisible]: If specified, verifies the "Assign to Speed" button exists
+  /// - [assignHRButtonEnabled]: If specified, verifies the "Assign to HR" button is enabled
+  /// - [assignHRButtonVisible]: If specified, verifies the "Assign to HR" button exists
+  void verifyDeviceState(
+    String dataSourceName, {
+    bool? connectButtonEnabled,
+    bool? connectButtonVisible,
+    bool? isConnecting,
+    bool? disconnectButtonEnabled,
+    bool? disconnectButtonVisible,
+    bool? unassignButtonEnabled,
+    bool? unassignButtonVisible,
+    bool? removeButtonEnabled,
+    bool? removeButtonVisible,
+    bool? assignPowerButtonEnabled,
+    bool? assignPowerButtonVisible,
+    bool? assignCadenceButtonEnabled,
+    bool? assignCadenceButtonVisible,
+    bool? assignSpeedButtonEnabled,
+    bool? assignSpeedButtonVisible,
+    bool? assignHRButtonEnabled,
+    bool? assignHRButtonVisible,
+  }) {
+    spot<DevicesPage>().existsOnce();
 
-    card
-        .spot<ElevatedButton>()
-        .withChild(spotText('Disconnect'))
-        .existsOnce()
-        .hasWidgetProp(prop: widgetProp('onPressed', (it) => it.onPressed), match: (it) => it.isNotNull());
+    // Build log message from specified checks
+    final checks = <String>[];
+    if (isConnecting != null) checks.add(isConnecting ? 'connecting' : 'not connecting');
+    if (connectButtonEnabled != null) checks.add('connect ${connectButtonEnabled ? "enabled" : "disabled"}');
+    if (connectButtonVisible != null) checks.add('connect ${connectButtonVisible ? "visible" : "hidden"}');
+    if (disconnectButtonEnabled != null) checks.add('disconnect ${disconnectButtonEnabled ? "enabled" : "disabled"}');
+    if (disconnectButtonVisible != null) checks.add('disconnect ${disconnectButtonVisible ? "visible" : "hidden"}');
+    if (unassignButtonEnabled != null) checks.add('unassign ${unassignButtonEnabled ? "enabled" : "disabled"}');
+    if (unassignButtonVisible != null) checks.add('unassign ${unassignButtonVisible ? "visible" : "hidden"}');
+    if (removeButtonEnabled != null) checks.add('remove ${removeButtonEnabled ? "enabled" : "disabled"}');
+    if (removeButtonVisible != null) checks.add('remove ${removeButtonVisible ? "visible" : "hidden"}');
+    if (assignPowerButtonEnabled != null) checks.add('assign-power ${assignPowerButtonEnabled ? "enabled" : "disabled"}');
+    if (assignPowerButtonVisible != null) checks.add('assign-power ${assignPowerButtonVisible ? "visible" : "hidden"}');
+    if (assignCadenceButtonEnabled != null) checks.add('assign-cadence ${assignCadenceButtonEnabled ? "enabled" : "disabled"}');
+    if (assignCadenceButtonVisible != null) checks.add('assign-cadence ${assignCadenceButtonVisible ? "visible" : "hidden"}');
+    if (assignSpeedButtonEnabled != null) checks.add('assign-speed ${assignSpeedButtonEnabled ? "enabled" : "disabled"}');
+    if (assignSpeedButtonVisible != null) checks.add('assign-speed ${assignSpeedButtonVisible ? "visible" : "hidden"}');
+    if (assignHRButtonEnabled != null) checks.add('assign-hr ${assignHRButtonEnabled ? "enabled" : "disabled"}');
+    if (assignHRButtonVisible != null) checks.add('assign-hr ${assignHRButtonVisible ? "visible" : "hidden"}');
+
+    logger.robotLog('verify device state: $dataSourceName [${checks.join(", ")}]');
+
+    final card = spot<DataSourceSection>().withChild(spotText(dataSourceName)).spot<DeviceCard>()..existsOnce();
+
+    // Verify connecting state
+    if (isConnecting != null) {
+      final connectingText = card.spotText('Connecting...');
+      if (isConnecting) {
+        connectingText.existsOnce();
+      } else {
+        connectingText.doesNotExist();
+      }
+    }
+
+    // Verify Connect button visibility
+    if (connectButtonVisible != null) {
+      final connectButton = card.spot<ElevatedButton>().withChild(spotText('Connect'));
+      if (connectButtonVisible) {
+        connectButton.existsOnce();
+      } else {
+        connectButton.doesNotExist();
+      }
+    }
+
+    // Verify Connect button enabled state
+    if (connectButtonEnabled != null) {
+      final connectButton = card.spot<ElevatedButton>().withChild(spotText('Connect')).existsOnce();
+      connectButton.hasWidgetProp(
+        prop: widgetProp('onPressed', (it) => it.onPressed),
+        match: (it) => connectButtonEnabled ? it.isNotNull() : it.isNull(),
+      );
+    }
+
+    // Verify Disconnect button visibility
+    if (disconnectButtonVisible != null) {
+      final disconnectButton = card.spot<ElevatedButton>().withChild(spotText('Disconnect'));
+      if (disconnectButtonVisible) {
+        disconnectButton.existsOnce();
+      } else {
+        disconnectButton.doesNotExist();
+      }
+    }
+
+    // Verify Disconnect button enabled state
+    if (disconnectButtonEnabled != null) {
+      final disconnectButton = card.spot<ElevatedButton>().withChild(spotText('Disconnect')).existsOnce();
+      disconnectButton.hasWidgetProp(
+        prop: widgetProp('onPressed', (it) => it.onPressed),
+        match: (it) => disconnectButtonEnabled ? it.isNotNull() : it.isNull(),
+      );
+    }
+
+    // Verify Unassign button visibility
+    if (unassignButtonVisible != null) {
+      final unassignButton = card.spot<OutlinedButton>().withChild(spotText('Unassign'));
+      if (unassignButtonVisible) {
+        unassignButton.existsOnce();
+      } else {
+        unassignButton.doesNotExist();
+      }
+    }
+
+    // Verify Unassign button enabled state
+    if (unassignButtonEnabled != null) {
+      final unassignButton = card.spot<OutlinedButton>().withChild(spotText('Unassign')).existsOnce();
+      unassignButton.hasWidgetProp(
+        prop: widgetProp('onPressed', (it) => it.onPressed),
+        match: (it) => unassignButtonEnabled ? it.isNotNull() : it.isNull(),
+      );
+    }
+
+    // Verify Remove button visibility
+    if (removeButtonVisible != null) {
+      final removeButton = card.spot<OutlinedButton>().withChild(spotText('Remove'));
+      if (removeButtonVisible) {
+        removeButton.existsOnce();
+      } else {
+        removeButton.doesNotExist();
+      }
+    }
+
+    // Verify Remove button enabled state
+    if (removeButtonEnabled != null) {
+      final removeButton = card.spot<OutlinedButton>().withChild(spotText('Remove')).existsOnce();
+      removeButton.hasWidgetProp(
+        prop: widgetProp('onPressed', (it) => it.onPressed),
+        match: (it) => removeButtonEnabled ? it.isNotNull() : it.isNull(),
+      );
+    }
+
+    // Verify Assign to Power button visibility
+    if (assignPowerButtonVisible != null) {
+      final assignButton = card.spot<OutlinedButton>().withChild(spotText('Assign to Power'));
+      if (assignPowerButtonVisible) {
+        assignButton.existsOnce();
+      } else {
+        assignButton.doesNotExist();
+      }
+    }
+
+    // Verify Assign to Power button enabled state
+    if (assignPowerButtonEnabled != null) {
+      final assignButton = card.spot<OutlinedButton>().withChild(spotText('Assign to Power')).existsOnce();
+      assignButton.hasWidgetProp(
+        prop: widgetProp('onPressed', (it) => it.onPressed),
+        match: (it) => assignPowerButtonEnabled ? it.isNotNull() : it.isNull(),
+      );
+    }
+
+    // Verify Assign to Cadence button visibility
+    if (assignCadenceButtonVisible != null) {
+      final assignButton = card.spot<OutlinedButton>().withChild(spotText('Assign to Cadence'));
+      if (assignCadenceButtonVisible) {
+        assignButton.existsOnce();
+      } else {
+        assignButton.doesNotExist();
+      }
+    }
+
+    // Verify Assign to Cadence button enabled state
+    if (assignCadenceButtonEnabled != null) {
+      final assignButton = card.spot<OutlinedButton>().withChild(spotText('Assign to Cadence')).existsOnce();
+      assignButton.hasWidgetProp(
+        prop: widgetProp('onPressed', (it) => it.onPressed),
+        match: (it) => assignCadenceButtonEnabled ? it.isNotNull() : it.isNull(),
+      );
+    }
+
+    // Verify Assign to Speed button visibility
+    if (assignSpeedButtonVisible != null) {
+      final assignButton = card.spot<OutlinedButton>().withChild(spotText('Assign to Speed'));
+      if (assignSpeedButtonVisible) {
+        assignButton.existsOnce();
+      } else {
+        assignButton.doesNotExist();
+      }
+    }
+
+    // Verify Assign to Speed button enabled state
+    if (assignSpeedButtonEnabled != null) {
+      final assignButton = card.spot<OutlinedButton>().withChild(spotText('Assign to Speed')).existsOnce();
+      assignButton.hasWidgetProp(
+        prop: widgetProp('onPressed', (it) => it.onPressed),
+        match: (it) => assignSpeedButtonEnabled ? it.isNotNull() : it.isNull(),
+      );
+    }
+
+    // Verify Assign to HR button visibility
+    if (assignHRButtonVisible != null) {
+      final assignButton = card.spot<OutlinedButton>().withChild(spotText('Assign to HR'));
+      if (assignHRButtonVisible) {
+        assignButton.existsOnce();
+      } else {
+        assignButton.doesNotExist();
+      }
+    }
+
+    // Verify Assign to HR button enabled state
+    if (assignHRButtonEnabled != null) {
+      final assignButton = card.spot<OutlinedButton>().withChild(spotText('Assign to HR')).existsOnce();
+      assignButton.hasWidgetProp(
+        prop: widgetProp('onPressed', (it) => it.onPressed),
+        match: (it) => assignHRButtonEnabled ? it.isNotNull() : it.isNull(),
+      );
+    }
   }
 
-  void verifyDisconnectButtonDisabled() {
-    logger.robotLog('verify disconnect button is disabled (not shown)');
+  Future<void> tapDisconnectButton() async {
+    logger.robotLog('tap disconnect button');
     final card = spot<DataSourceSection>().withChild(spotText('POWER SOURCE')).spot<DeviceCard>()..existsOnce();
 
-    // When disconnected, the Disconnect button should not exist (shows Connect instead)
-    card.spot<ElevatedButton>().withChild(spotText('Disconnect')).doesNotExist();
+    final disconnectButton = card.spot<ElevatedButton>().withChild(spotText('Disconnect'));
+    await act.tap(disconnectButton);
+    await idle(100);
+  }
 
-    // Verify Connect button is shown instead
-    card.spot<ElevatedButton>().withChild(spotText('Connect')).existsOnce();
+  Future<void> tapConnectButton() async {
+    logger.robotLog('tap connect button');
+    final card = spot<DataSourceSection>().withChild(spotText('POWER SOURCE')).spot<DeviceCard>()..existsOnce();
+
+    final connectButton = card.spot<ElevatedButton>().withChild(spotText('Connect'));
+    await act.tap(connectButton);
+    await idle(100);
   }
 
   /// Determines the transport ID from advertised service UUIDs.

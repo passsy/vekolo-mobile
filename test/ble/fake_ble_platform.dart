@@ -1,3 +1,5 @@
+// ignore_for_file: unnecessary_async
+
 import 'dart:async';
 import 'dart:typed_data';
 import 'package:clock/clock.dart';
@@ -94,6 +96,7 @@ class FakeBlePlatform implements BlePlatform {
       throw Exception('Device not found: $deviceId');
     }
     if (!device.isAdvertising) {
+      await Future.delayed(Duration(milliseconds: 200));
       throw Exception('Cannot connect to device that is not advertising: ${device.name}');
     }
     device._isConnected = true;
@@ -554,6 +557,7 @@ class FakeBluetoothCharacteristic implements BluetoothCharacteristic {
 ///
 /// This allows tests to control the connection state stream independently
 /// of the real flutter_blue_plus implementation.
+// ignore: avoid_implementing_value_types
 class FakeBluetoothDeviceWrapper implements BluetoothDevice {
   FakeBluetoothDeviceWrapper({
     required DeviceIdentifier remoteId,
@@ -563,6 +567,15 @@ class FakeBluetoothDeviceWrapper implements BluetoothDevice {
 
   final DeviceIdentifier _remoteId;
   final WritableBeacon<BluetoothConnectionState> _connectionStateBeacon;
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is FakeBluetoothDeviceWrapper && other._remoteId == _remoteId;
+  }
+
+  @override
+  int get hashCode => _remoteId.hashCode;
 
   @override
   DeviceIdentifier get remoteId => _remoteId;
@@ -786,15 +799,17 @@ class FakeDevice {
     platform._emitScanResults();
   }
 
-  /// Stop advertising and disconnect this device.
+  /// Turn off this device (simulate hardware power-off).
   ///
-  /// The device immediately disappears from scan results and disconnects from
-  /// the platform. This simulates the device being powered off or going out of range.
+  /// The device immediately stops advertising and disconnects from the platform.
+  /// This simulates the device being powered off or battery dying.
+  /// In reality, the BLE stack may take some time to detect the disconnection,
+  /// but for testing purposes we disconnect immediately.
   Future<void> turnOff() async {
     _isAdvertising = false;
     platform._emitScanResults();
 
-    // If connected, disconnect the device (simulates power off)
+    // Disconnect if connected (simulates power off)
     if (_isConnected) {
       await platform.disconnect(id);
     }
