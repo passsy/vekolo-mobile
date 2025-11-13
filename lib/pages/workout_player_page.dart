@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:chirp/chirp.dart';
+import 'package:clock/clock.dart';
 
 import 'package:context_plus/context_plus.dart';
 import 'package:flutter/material.dart';
@@ -46,6 +48,7 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
   VoidCallback? _powerSubscription;
   DateTime? _lowPowerStartTime;
   bool _isManualPause = false;
+  Timer? _autoPauseTimer;
 
   @override
   void initState() {
@@ -56,6 +59,7 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
   @override
   void dispose() {
     _powerSubscription?.call();
+    _autoPauseTimer?.cancel();
 
     // Call dispose immediately - the async operations inside will complete
     // even after the widget is disposed. This is okay because dispose() only
@@ -77,9 +81,7 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
       // Parse workout plan
       final workoutPlan = WorkoutPlan.fromJson(jsonData);
 
-      chirp.info(
-        'Loaded workout: ${workoutPlan.plan.length} items, ${workoutPlan.events.length} events',
-      );
+      chirp.info('Loaded workout: ${workoutPlan.plan.length} items, ${workoutPlan.events.length} events');
 
       // Initialize player service
       if (!mounted) return;
@@ -203,6 +205,7 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
     const autoPauseThreshold = 30; // Watts - power below this triggers auto-pause after delay
     const autoPauseDelay = Duration(seconds: 3); // Delay before auto-pausing
 
+    // Subscribe to power changes for auto-start and auto-resume
     _powerSubscription = deviceManager.powerStream.subscribe((powerData) {
       if (!mounted) return;
 
@@ -267,16 +270,38 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
           );
         }
       }
-      // Auto-pause: workout is running and power drops below threshold
-      else if (_hasStarted && !isPaused && currentPower < autoPauseThreshold) {
-        final now = DateTime.now();
+      // Power is above auto-pause threshold while running - reset timer
+      else if (_hasStarted && !isPaused && currentPower >= autoPauseThreshold) {
+        if (_lowPowerStartTime != null) {
+          setState(() => _lowPowerStartTime = null);
+        }
+      }
+    });
 
+    // Set up periodic timer to check for auto-pause conditions
+    // This runs independently of power stream updates, so it will catch
+    // stale data (when device stops sending data, powerStream becomes null)
+    _autoPauseTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+
+      final currentPower = deviceManager.powerStream.value?.watts ?? 0;
+      final isPaused = playerService.isPaused.value;
+      final isComplete = playerService.isComplete.value;
+
+      // Don't do anything if workout is complete or not started
+      if (isComplete || !_hasStarted) return;
+
+      // Only check for auto-pause when workout is running
+      if (!isPaused && currentPower < autoPauseThreshold) {
         if (_lowPowerStartTime == null) {
           // First time power dropped below threshold, start timer
-          setState(() => _lowPowerStartTime = now);
+          setState(() => _lowPowerStartTime = clock.now());
         } else {
           // Check if power has been low for long enough
-          final lowPowerDuration = now.difference(_lowPowerStartTime!);
+          final lowPowerDuration = clock.now().difference(_lowPowerStartTime!);
           if (lowPowerDuration >= autoPauseDelay) {
             chirp.info('Auto-pausing workout - low power detected: ${currentPower}W');
             playerService.pause();
@@ -295,12 +320,6 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
               );
             }
           }
-        }
-      }
-      // Power is above auto-pause threshold while running - reset timer
-      else if (_hasStarted && !isPaused && currentPower >= autoPauseThreshold) {
-        if (_lowPowerStartTime != null) {
-          setState(() => _lowPowerStartTime = null);
         }
       }
     });
@@ -576,7 +595,10 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
   Widget _buildTimerDisplay(int elapsedTime, int remainingTime) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceAround,
-      children: [TimeColumn(label: 'ELAPSED', timeMs: elapsedTime), TimeColumn(label: 'REMAINING', timeMs: remainingTime)],
+      children: [
+        TimeColumn(label: 'ELAPSED', timeMs: elapsedTime),
+        TimeColumn(label: 'REMAINING', timeMs: remainingTime),
+      ],
     );
   }
 

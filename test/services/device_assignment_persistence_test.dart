@@ -45,7 +45,7 @@ void main() {
         expect(json, isNull);
       });
 
-      test('saves primary trainer assignment', () async {
+      test('saves smart trainer assignment', () async {
         final deps = await createDeviceManager();
 
         final trainer = MockTrainer(id: 'trainer-1', name: 'KICKR CORE');
@@ -65,7 +65,7 @@ void main() {
         expect(assignments.length, 1);
         expect(pick(assignments[0], 'deviceId').asStringOrNull(), 'trainer-1');
         expect(pick(assignments[0], 'deviceName').asStringOrNull(), 'KICKR CORE');
-        expect(pick(assignments[0], 'role').asStringOrNull(), 'primaryTrainer');
+        expect(pick(assignments[0], 'role').asStringOrNull(), 'smartTrainer');
         expect(pick(assignments[0], 'transport').asStringOrNull(), isNotNull);
       });
 
@@ -87,7 +87,7 @@ void main() {
         expect(assignments.length, 2);
 
         final roles = assignments.map((a) => pick(a, 'role').asStringOrNull()!).toSet();
-        expect(roles, containsAll(['primaryTrainer', 'powerSource']));
+        expect(roles, containsAll(['smartTrainer', 'powerSource']));
       });
 
       test('saves all assigned role types', () async {
@@ -113,7 +113,7 @@ void main() {
         expect(assignments.length, 4);
 
         final roles = assignments.map((a) => pick(a, 'role').asStringOrNull()!).toSet();
-        expect(roles, containsAll(['primaryTrainer', 'powerSource', 'cadenceSource', 'speedSource']));
+        expect(roles, containsAll(['smartTrainer', 'powerSource', 'cadenceSource', 'speedSource']));
       });
     });
 
@@ -160,7 +160,7 @@ void main() {
             {
               'deviceId': 'trainer-1',
               'deviceName': 'KICKR CORE',
-              'role': 'primaryTrainer',
+              'role': 'smartTrainer',
               'transport': 'FTMS',
               'assignedAt': '2025-01-31T10:00:00.000Z',
             },

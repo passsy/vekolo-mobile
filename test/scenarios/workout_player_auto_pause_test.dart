@@ -140,4 +140,56 @@ void main() {
 
     addRobotEvent('Workout displaying metrics');
   });
+
+  robotTest('workout auto-pauses when power source stops sending data', (robot) async {
+    timeline.mode = TimelineMode.always;
+
+    // Setup: Create trainer device
+    final kickrCore = robot.aether.createDevice(
+      name: 'Kickr Core',
+      capabilities: {DeviceDataType.power, DeviceDataType.cadence, DeviceDataType.speed},
+    );
+
+    await robot.launchApp(pairedDevices: [kickrCore], loggedIn: true);
+    await robot.tapStartWorkout('Sweet Spot Workout');
+
+    addRobotEvent('Workout player loaded');
+
+    // Start workout with power data
+    final indoorBikeDataUuid = fbp.Guid('00002AD2-0000-1000-8000-00805f9b34fb');
+    final powerData = FtmsDataBuilder().withPower(150).withCadence(180).withSpeed(3000).build();
+
+    kickrCore.emitCharacteristic(indoorBikeDataUuid, powerData);
+    await robot.idle(1000);
+
+    addRobotEvent('Workout started with 150W power');
+
+    // Verify workout is running
+    spotText('Start pedaling to begin workout').doesNotExist();
+
+    // Continue emitting power for a few seconds to ensure workout is running
+    for (int i = 0; i < 3; i++) {
+      kickrCore.emitCharacteristic(indoorBikeDataUuid, powerData);
+      await robot.idle(1000);
+    }
+
+    addRobotEvent('Workout running for 3 seconds');
+
+    // Now stop sending data (device goes stale)
+    // Timeline from last data emission (~t=4s):
+    // - t=4s: last power data sent
+    // - t=9s: data goes stale (5s staleness threshold)
+    // - t=12s: auto-pause triggers (3s auto-pause delay after going stale)
+    // Total: need to wait 9s from last emission (to reach t=13s)
+
+    // Wait for staleness detection + auto-pause delay + extra buffer
+    await robot.idle(10000); // 9s needed + 1s extra buffer for timing jitter
+
+    addRobotEvent('Waited 10 seconds for stale data detection and auto-pause');
+
+    // Verify workout has auto-paused
+    spotText('Paused - Start pedaling to resume').existsAtLeastOnce();
+
+    addRobotEvent('Workout auto-paused successfully after data went stale');
+  });
 }

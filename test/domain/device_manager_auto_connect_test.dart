@@ -98,10 +98,12 @@ void main() {
         // Wait for auto-save via beacon subscription (needs extra time for async beacon + persistence)
         await Future.delayed(const Duration(milliseconds: 200));
 
-        // Remove device to simulate it not being discovered yet
-        await deps.manager.removeDevice(trainer.id);
+        // Dispose the first manager (but assignments remain saved in persistence)
+        await deps.manager.dispose();
+        deps.scanner.dispose();
 
         // Create new device manager with fresh dependencies
+        // The persistence still has the saved assignment, but the device hasn't been discovered yet
         final newDeps = await createDeviceManager();
 
         // Initialize should start scanning
@@ -229,10 +231,10 @@ void main() {
 
         // Wait for auto-save via beacon subscription (needs extra time for async beacon + persistence)
         await Future.delayed(const Duration(milliseconds: 200));
-        await deps.manager.removeDevice(trainer.id);
-        await deps.manager.removeDevice(powerMeter.id);
-        await deps.manager.removeDevice(cadenceSensor.id);
-        await deps.manager.removeDevice(hrMonitor.id);
+
+        // Dispose the first manager (but assignments remain saved in persistence)
+        await deps.manager.dispose();
+        deps.scanner.dispose();
 
         // Create new device manager (simulating app restart)
         final newDeps = await createDeviceManager();
@@ -298,7 +300,10 @@ void main() {
         deps.manager.assignSmartTrainer(trainer.id);
         // Wait for auto-save via beacon subscription (needs extra time for async beacon + persistence)
         await Future.delayed(const Duration(milliseconds: 200));
-        await deps.manager.removeDevice(trainer.id);
+
+        // Dispose the first manager (but assignments remain saved in persistence)
+        await deps.manager.dispose();
+        deps.scanner.dispose();
 
         // Create new manager with fresh dependencies
         final newDeps = await createDeviceManager();
@@ -337,7 +342,10 @@ void main() {
         deps.manager.assignSmartTrainer(trainer.id);
         // Wait for auto-save via beacon subscription (needs extra time for async beacon + persistence)
         await Future.delayed(const Duration(milliseconds: 200));
-        await deps.manager.removeDevice(trainer.id);
+
+        // Dispose the first manager (but assignments remain saved in persistence)
+        await deps.manager.dispose();
+        deps.scanner.dispose();
 
         // Create new manager with fresh dependencies
         final newDeps = await createDeviceManager();
@@ -367,7 +375,10 @@ void main() {
         deps.manager.assignSmartTrainer(trainer.id);
         // Wait for auto-save via beacon subscription (needs extra time for async beacon + persistence)
         await Future.delayed(const Duration(milliseconds: 200));
-        await deps.manager.removeDevice(trainer.id);
+
+        // Dispose the first manager (but assignments remain saved in persistence)
+        await deps.manager.dispose();
+        deps.scanner.dispose();
 
         // Create new manager with fresh dependencies
         final newDeps = await createDeviceManager();
@@ -411,7 +422,7 @@ void main() {
     });
 
     group('assignment restoration', () {
-      test('restores primary trainer assignment', () async {
+      test('restores smart trainer assignment', () async {
         final deps = await createDeviceManager();
 
         final trainer = MockTrainer(id: 'trainer-1', name: 'Trainer');
@@ -419,7 +430,10 @@ void main() {
         deps.manager.assignSmartTrainer(trainer.id);
         // Wait for auto-save via beacon subscription (needs extra time for async beacon + persistence)
         await Future.delayed(const Duration(milliseconds: 200));
-        await deps.manager.removeDevice(trainer.id);
+
+        // Dispose the first manager (but assignments remain saved in persistence)
+        await deps.manager.dispose();
+        deps.scanner.dispose();
 
         // Create new manager with fresh dependencies
         final newDeps = await createDeviceManager();
@@ -444,7 +458,10 @@ void main() {
         deps.manager.assignCadenceSource(trainer.id);
         // Wait for auto-save via beacon subscription (needs extra time for async beacon + persistence)
         await Future.delayed(const Duration(milliseconds: 200));
-        await deps.manager.removeDevice(trainer.id);
+
+        // Dispose the first manager (but assignments remain saved in persistence)
+        await deps.manager.dispose();
+        deps.scanner.dispose();
 
         // Create new manager with fresh dependencies
         final newDeps = await createDeviceManager();
