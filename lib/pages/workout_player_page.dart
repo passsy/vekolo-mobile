@@ -872,11 +872,11 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
                 if (!isComplete) ...[
                   Expanded(
                     child: ElevatedButton.icon(
-                      onPressed: onPlayPause,
-                      icon: const Icon(Icons.pause),
-                      label: const Text('Pause'),
+                      onPressed: (isPaused && !_isManualPause) ? null : onPlayPause,
+                      icon: Icon(isPaused ? Icons.play_arrow : Icons.pause),
+                      label: Text(isPaused ? 'Resume' : 'Pause'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.orange,
+                        backgroundColor: isPaused ? Colors.green : Colors.orange,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 16),
                       ),
