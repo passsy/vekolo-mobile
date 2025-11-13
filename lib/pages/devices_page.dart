@@ -865,10 +865,8 @@ class DataSourceSection extends StatelessWidget {
                   const Spacer(),
                   Builder(
                     builder: (context) {
-                      final connectedDevice = assignedDevice.connectedDevice;
-                      final liveData = connectedDevice != null
-                          ? _getLiveDataForDevice(context, connectedDevice, dataType)
-                          : 'Not connected';
+                      // Use aggregated streams from DeviceManager - they have staleness detection built in
+                      final liveData = _getLiveDataFromAggregatedStream(context, deviceManager, dataType);
                       return Text(
                         liveData,
                         style: Theme.of(
@@ -917,19 +915,31 @@ class DataSourceSection extends StatelessWidget {
     );
   }
 
-  String _getLiveDataForDevice(BuildContext context, FitnessDevice device, device_info.DeviceDataType dataType) {
+  /// Gets live data from DeviceManager's aggregated streams.
+  ///
+  /// These streams already have staleness detection built in - they return null
+  /// when data is older than 5 seconds, handling both disconnected devices and
+  /// packet loss automatically.
+  String _getLiveDataFromAggregatedStream(
+    BuildContext context,
+    DeviceManager deviceManager,
+    device_info.DeviceDataType dataType,
+  ) {
     switch (dataType) {
       case device_info.DeviceDataType.power:
-        final powerData = device.powerStream?.watch(context);
+        final powerData = deviceManager.powerStream.watch(context);
         return powerData != null ? '${powerData.watts}W' : '--W';
+
       case device_info.DeviceDataType.cadence:
-        final cadenceData = device.cadenceStream?.watch(context);
+        final cadenceData = deviceManager.cadenceStream.watch(context);
         return cadenceData != null ? '${cadenceData.rpm} RPM' : '-- RPM';
+
       case device_info.DeviceDataType.speed:
-        final speedData = device.speedStream?.watch(context);
+        final speedData = deviceManager.speedStream.watch(context);
         return speedData != null ? '${speedData.kmh.toStringAsFixed(1)} km/h' : '-- km/h';
+
       case device_info.DeviceDataType.heartRate:
-        final hrData = device.heartRateStream?.watch(context);
+        final hrData = deviceManager.heartRateStream.watch(context);
         return hrData != null ? '${hrData.bpm} BPM' : '-- BPM';
     }
   }
