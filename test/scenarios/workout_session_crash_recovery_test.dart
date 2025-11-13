@@ -17,8 +17,6 @@ void main() {
   // - State restoration on resume
 
   robotTest('workout session records samples and survives crash', (robot) async {
-    timeline.mode = TimelineMode.always;
-
     // Setup: Create trainer device with power/HR/cadence capabilities
     final kickrCore = robot.aether.createDevice(
       name: 'Kickr Core',
@@ -109,8 +107,6 @@ void main() {
   });
 
   robotTest('workout session crash recovery - resume option', (robot) async {
-    timeline.mode = TimelineMode.always;
-
     // Setup: Create trainer device
     final kickrCore = robot.aether.createDevice(
       name: 'Kickr Core',
@@ -173,8 +169,6 @@ void main() {
   });
 
   robotTest('workout session crash recovery - discard option', (robot) async {
-    timeline.mode = TimelineMode.always;
-
     // Setup: Create trainer device
     final kickrCore = robot.aether.createDevice(
       name: 'Kickr Core',
@@ -222,8 +216,6 @@ void main() {
   });
 
   robotTest('workout session crash recovery - start fresh option', (robot) async {
-    timeline.mode = TimelineMode.always;
-
     // Setup: Create trainer device
     final kickrCore = robot.aether.createDevice(
       name: 'Kickr Core',
@@ -273,8 +265,6 @@ void main() {
   });
 
   robotTest('stale metrics return null after 5 seconds', (robot) async {
-    timeline.mode = TimelineMode.always;
-
     // Setup: Create trainer device
     final kickrCore = robot.aether.createDevice(
       name: 'Kickr Core',

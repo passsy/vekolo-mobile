@@ -6,7 +6,6 @@ import '../robot/robot_kit.dart';
 
 void main() {
   robotTest('auto connect to device on app start', (robot) async {
-    timeline.mode = TimelineMode.always;
     // Do initial pairing
     final kickrCore = robot.aether.createDevice(
       name: 'Kickr Core',
@@ -32,7 +31,6 @@ void main() {
   });
 
   robotTest('auto reconnect when device turns off and back on', (robot) async {
-    timeline.mode = TimelineMode.always;
     // Do initial pairing
     final kickrCore = robot.aether.createDevice(
       name: 'Kickr Core',
@@ -74,7 +72,6 @@ void main() {
   });
 
   robotTest('manual disconnect prevents auto-reconnect', (robot) async {
-    timeline.mode = TimelineMode.always;
     // Do initial pairing
     final kickrCore = robot.aether.createDevice(
       name: 'Kickr Core',

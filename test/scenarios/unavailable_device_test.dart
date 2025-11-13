@@ -8,8 +8,6 @@ import '../robot/robot_kit.dart';
 
 void main() {
   robotTest('show unavailable assigned device', (robot) async {
-    timeline.mode = TimelineMode.always;
-
     // Create two devices
     final availableDevice = robot.aether.createDevice(
       name: 'Available Device',
@@ -89,8 +87,6 @@ void main() {
   });
 
   robotTest('unassign unavailable device removes it from assignments', (robot) async {
-    timeline.mode = TimelineMode.always;
-
     // Create a device and assign it
     final device = robot.aether.createDevice(name: 'Test Device', capabilities: {DeviceDataType.power});
 
