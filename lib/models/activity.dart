@@ -164,6 +164,7 @@ class ActivityWorkout with RekordMixin {
     final value = rekord.read('category').asStringOrNull();
     return value != null ? WorkoutCategory(value) : null;
   }
+
   int get duration => rekord.read('duration').asIntOrThrow();
   String get slug => rekord.read('slug').asStringOrThrow();
   int get starCount => rekord.read('starCount').asIntOrThrow();
@@ -173,7 +174,9 @@ class ActivityWorkout with RekordMixin {
 
   /// Workout plan with structured blocks and events
   WorkoutPlan get plan {
-    final planList = rekord.read('plan').asListOrThrow<Map<String, Object?>>((pick) => pick.asMapOrThrow<String, Object?>());
+    final planList = rekord
+        .read('plan')
+        .asListOrThrow<Map<String, Object?>>((pick) => pick.asMapOrThrow<String, Object?>());
     // Wrap the list in an object as expected by WorkoutPlan.fromJson
     return WorkoutPlan.fromJson({'plan': planList});
   }

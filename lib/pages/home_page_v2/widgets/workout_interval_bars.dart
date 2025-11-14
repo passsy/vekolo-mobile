@@ -39,10 +39,7 @@ class WorkoutIntervalBars extends StatelessWidget {
                       )
                     : Container(
                         height: height * interval.intensity,
-                        decoration: BoxDecoration(
-                          color: interval.color,
-                          borderRadius: BorderRadius.circular(2),
-                        ),
+                        decoration: BoxDecoration(color: interval.color, borderRadius: BorderRadius.circular(2)),
                       ),
               ),
             ),
@@ -145,10 +142,7 @@ class _RampBarPainter extends CustomPainter {
     canvas.drawPath(path, paint);
 
     // Draw rounded corners using a rounded rect clip
-    final rrect = RRect.fromRectAndRadius(
-      Rect.fromLTWH(0, 0, size.width, size.height),
-      const Radius.circular(2),
-    );
+    final rrect = RRect.fromRectAndRadius(Rect.fromLTWH(0, 0, size.width, size.height), const Radius.circular(2));
     canvas.clipRRect(rrect);
     canvas.drawPath(path, paint);
   }

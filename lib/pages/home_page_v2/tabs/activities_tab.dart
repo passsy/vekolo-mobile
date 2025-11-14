@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:state_beacon/state_beacon.dart';
 import 'package:vekolo/domain/models/workout/workout_models.dart';
 import 'package:vekolo/pages/home_page_v2/home_page_controller.dart';
+import 'package:vekolo/pages/home_page_v2/widgets/notification_card.dart';
 import 'package:vekolo/pages/home_page_v2/widgets/workout_card_v2.dart';
 import 'package:vekolo/pages/home_page_v2/widgets/workout_interval_bars.dart';
 
@@ -69,11 +71,36 @@ class ActivitiesTab extends StatelessWidget {
     final isLoading = controller.isLoadingActivities.watch(context);
     final error = controller.activitiesError.watch(context);
     final activities = controller.filteredActivities.watch(context);
+    final notifications = controller.notificationService.notifications.watch(context);
 
     return CustomScrollView(
       slivers: [
         // Top Bar (not an AppBar, just padding with icons)
         const SliverToBoxAdapter(child: SizedBox(height: 120)),
+
+        // Notifications
+        if (notifications.isNotEmpty)
+          SliverList(
+            delegate: SliverChildBuilderDelegate(
+              (context, index) {
+                final notification = notifications[index];
+                // Only allow dismissing notifications with autoDismissSeconds (not workout resume)
+                final canDismiss = notification.autoDismissSeconds != null;
+                return NotificationCard(
+                  icon: notification.icon,
+                  title: notification.title,
+                  message: notification.message,
+                  backgroundColor: notification.backgroundColor,
+                  iconColor: notification.iconColor,
+                  actionLabel: notification.actionLabel,
+                  onAction: notification.onAction,
+                  actions: notification.actions,
+                  onDismiss: canDismiss ? () => controller.notificationService.dismiss(notification.id) : null,
+                );
+              },
+              childCount: notifications.length,
+            ),
+          ),
 
         // Loading state
         if (isLoading)
@@ -141,7 +168,7 @@ class ActivitiesTab extends StatelessWidget {
                 intervals: generateIntervalsFromPlan(activity.workout.plan),
                 backgroundColor: _getBackgroundColorForCategory(activity.workout.category?.value),
                 onTap: () {
-                  // TODO: Navigate to workout details
+                  context.push('/activity/${activity.id}', extra: activity);
                 },
               );
             }, childCount: activities.length),

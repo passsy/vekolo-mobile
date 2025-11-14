@@ -200,9 +200,7 @@ class _SignupPageState extends State<SignupPage> {
                     prefixIcon: Icon(Icons.person),
                   ),
                   readOnly: _codeSent || _isLoading,
-                  validationMessages: {
-                    ValidationMessage.required: (_) => 'Please enter your name',
-                  },
+                  validationMessages: {ValidationMessage.required: (_) => 'Please enter your name'},
                 ),
                 const SizedBox(height: 16),
                 ReactiveTextField<String>(
@@ -216,22 +214,20 @@ class _SignupPageState extends State<SignupPage> {
                       onPressed: (_codeSent || _isLoading)
                           ? null
                           : () async {
-                        final date = await showDatePicker(
-                          context: context,
-                          initialDate: DateTime.now().subtract(const Duration(days: 365 * 25)),
-                          firstDate: DateTime(1900),
-                          lastDate: DateTime.now(),
-                        );
-                        if (date != null) {
-                          form.control('birthday').value = date.toIso8601String().split('T')[0];
-                        }
-                      },
+                              final date = await showDatePicker(
+                                context: context,
+                                initialDate: DateTime.now().subtract(const Duration(days: 365 * 25)),
+                                firstDate: DateTime(1900),
+                                lastDate: DateTime.now(),
+                              );
+                              if (date != null) {
+                                form.control('birthday').value = date.toIso8601String().split('T')[0];
+                              }
+                            },
                     ),
                   ),
                   readOnly: true,
-                  validationMessages: {
-                    ValidationMessage.required: (_) => 'Please select your birthday',
-                  },
+                  validationMessages: {ValidationMessage.required: (_) => 'Please select your birthday'},
                 ),
                 const SizedBox(height: 16),
                 Column(
@@ -249,10 +245,8 @@ class _SignupPageState extends State<SignupPage> {
                             Row(
                               children: [
                                 Expanded(
-                                  child: OutlinedButton.icon(
+                                  child: OutlinedButton(
                                     onPressed: (_codeSent || _isLoading) ? null : () => control.value = 'm',
-                                    icon: Icon(control.value == 'm' ? Icons.check_circle : Icons.circle_outlined),
-                                    label: const Text('Male'),
                                     style: OutlinedButton.styleFrom(
                                       padding: const EdgeInsets.symmetric(vertical: 12),
                                       backgroundColor: control.value == 'm' ? Colors.blue.withValues(alpha: 0.1) : null,
@@ -262,14 +256,20 @@ class _SignupPageState extends State<SignupPage> {
                                             : (control.value == 'm' ? Colors.blue : Colors.grey),
                                       ),
                                     ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(control.value == 'm' ? Icons.check_circle : Icons.circle_outlined),
+                                        const SizedBox(width: 8),
+                                        const Text('Male'),
+                                      ],
+                                    ),
                                   ),
                                 ),
                                 const SizedBox(width: 8),
                                 Expanded(
-                                  child: OutlinedButton.icon(
+                                  child: OutlinedButton(
                                     onPressed: (_codeSent || _isLoading) ? null : () => control.value = 'f',
-                                    icon: Icon(control.value == 'f' ? Icons.check_circle : Icons.circle_outlined),
-                                    label: const Text('Female'),
                                     style: OutlinedButton.styleFrom(
                                       padding: const EdgeInsets.symmetric(vertical: 12),
                                       backgroundColor: control.value == 'f' ? Colors.pink.withValues(alpha: 0.1) : null,
@@ -279,14 +279,20 @@ class _SignupPageState extends State<SignupPage> {
                                             : (control.value == 'f' ? Colors.pink : Colors.grey),
                                       ),
                                     ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(control.value == 'f' ? Icons.check_circle : Icons.circle_outlined),
+                                        const SizedBox(width: 8),
+                                        const Text('Female'),
+                                      ],
+                                    ),
                                   ),
                                 ),
                                 const SizedBox(width: 8),
                                 Expanded(
-                                  child: OutlinedButton.icon(
+                                  child: OutlinedButton(
                                     onPressed: (_codeSent || _isLoading) ? null : () => control.value = 'd',
-                                    icon: Icon(control.value == 'd' ? Icons.check_circle : Icons.circle_outlined),
-                                    label: const Text('Diverse'),
                                     style: OutlinedButton.styleFrom(
                                       padding: const EdgeInsets.symmetric(vertical: 12),
                                       backgroundColor: control.value == 'd'
@@ -297,6 +303,14 @@ class _SignupPageState extends State<SignupPage> {
                                             ? Colors.red
                                             : (control.value == 'd' ? Colors.purple : Colors.grey),
                                       ),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(control.value == 'd' ? Icons.check_circle : Icons.circle_outlined),
+                                        const SizedBox(width: 8),
+                                        const Text('Diverse'),
+                                      ],
                                     ),
                                   ),
                                 ),
@@ -328,28 +342,43 @@ class _SignupPageState extends State<SignupPage> {
                         return Row(
                           children: [
                             Expanded(
-                              child: OutlinedButton.icon(
+                              child: OutlinedButton(
                                 onPressed: (_codeSent || _isLoading) ? null : () => control.value = 'metric',
-                                icon: Icon(control.value == 'metric' ? Icons.check_circle : Icons.circle_outlined),
-                                label: const Text('Metric'),
                                 style: OutlinedButton.styleFrom(
                                   padding: const EdgeInsets.symmetric(vertical: 12),
-                                  backgroundColor: control.value == 'metric' ? Colors.blue.withValues(alpha: 0.1) : null,
+                                  backgroundColor: control.value == 'metric'
+                                      ? Colors.blue.withValues(alpha: 0.1)
+                                      : null,
                                   side: BorderSide(color: control.value == 'metric' ? Colors.blue : Colors.grey),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(control.value == 'metric' ? Icons.check_circle : Icons.circle_outlined),
+                                    const SizedBox(width: 8),
+                                    const Text('Metric'),
+                                  ],
                                 ),
                               ),
                             ),
                             const SizedBox(width: 8),
                             Expanded(
-                              child: OutlinedButton.icon(
+                              child: OutlinedButton(
                                 onPressed: (_codeSent || _isLoading) ? null : () => control.value = 'imperial',
-                                icon: Icon(control.value == 'imperial' ? Icons.check_circle : Icons.circle_outlined),
-                                label: const Text('Imperial'),
                                 style: OutlinedButton.styleFrom(
                                   padding: const EdgeInsets.symmetric(vertical: 12),
-                                  backgroundColor:
-                                      control.value == 'imperial' ? Colors.blue.withValues(alpha: 0.1) : null,
+                                  backgroundColor: control.value == 'imperial'
+                                      ? Colors.blue.withValues(alpha: 0.1)
+                                      : null,
                                   side: BorderSide(color: control.value == 'imperial' ? Colors.blue : Colors.grey),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(control.value == 'imperial' ? Icons.check_circle : Icons.circle_outlined),
+                                    const SizedBox(width: 8),
+                                    const Text('Imperial'),
+                                  ],
                                 ),
                               ),
                             ),
@@ -372,9 +401,7 @@ class _SignupPageState extends State<SignupPage> {
                         ),
                         keyboardType: TextInputType.number,
                         readOnly: _codeSent || _isLoading,
-                        validationMessages: {
-                          ValidationMessage.required: (_) => 'Required',
-                        },
+                        validationMessages: {ValidationMessage.required: (_) => 'Required'},
                       ),
                     ),
                     const SizedBox(width: 16),
@@ -388,9 +415,7 @@ class _SignupPageState extends State<SignupPage> {
                         ),
                         keyboardType: TextInputType.number,
                         readOnly: _codeSent || _isLoading,
-                        validationMessages: {
-                          ValidationMessage.required: (_) => 'Required',
-                        },
+                        validationMessages: {ValidationMessage.required: (_) => 'Required'},
                       ),
                     ),
                   ],
@@ -409,9 +434,7 @@ class _SignupPageState extends State<SignupPage> {
                     DropdownMenuItem(value: 'triathlete', child: Text('Triathlete')),
                     DropdownMenuItem(value: 'sports_enthusiast', child: Text('Sports Enthusiast')),
                   ],
-                  validationMessages: {
-                    ValidationMessage.required: (_) => 'Please select your athlete type',
-                  },
+                  validationMessages: {ValidationMessage.required: (_) => 'Please select your athlete type'},
                 ),
                 const SizedBox(height: 16),
                 ReactiveDropdownField<String>(
@@ -427,9 +450,7 @@ class _SignupPageState extends State<SignupPage> {
                     DropdownMenuItem(value: 'advanced', child: Text('Advanced')),
                     DropdownMenuItem(value: 'expert', child: Text('Expert')),
                   ],
-                  validationMessages: {
-                    ValidationMessage.required: (_) => 'Please select your level',
-                  },
+                  validationMessages: {ValidationMessage.required: (_) => 'Please select your level'},
                 ),
                 const SizedBox(height: 16),
                 ReactiveTextField<int>(
@@ -441,9 +462,7 @@ class _SignupPageState extends State<SignupPage> {
                   ),
                   keyboardType: TextInputType.number,
                   readOnly: _codeSent || _isLoading,
-                  validationMessages: {
-                    ValidationMessage.required: (_) => 'Required',
-                  },
+                  validationMessages: {ValidationMessage.required: (_) => 'Required'},
                 ),
                 const SizedBox(height: 16),
                 ReactiveCheckboxListTile(

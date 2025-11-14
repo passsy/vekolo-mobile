@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:vekolo/pages/home_page_v2/widgets/workout_interval_bars.dart';
+import 'package:vekolo/widgets/gradient_card_background.dart';
 
 /// A card displaying workout information with author, title, and interval visualization
 class WorkoutCardV2 extends StatelessWidget {
@@ -28,26 +29,13 @@ class WorkoutCardV2 extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      color: backgroundColor,
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       clipBehavior: Clip.antiAlias,
       child: Stack(
         children: [
-          // Background with solid color
-          // Container(decoration: BoxDecoration(color: workout.backgroundColor)),
-          // Gradient overlay
-          Positioned.fill(
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [Colors.black.withValues(alpha: 0.6), Colors.black.withValues(alpha: 1.0)],
-                ),
-              ),
-            ),
-          ),
+          // Background with solid color and gradient overlay
+          Positioned.fill(child: GradientCardBackground(color: backgroundColor)),
           // Content on top
           InkWell(
             onTap: onTap,
@@ -71,13 +59,16 @@ class WorkoutCardV2 extends StatelessWidget {
                             : null,
                       ),
                       const SizedBox(width: 12),
-                      Text(
-                        authorName,
-                        style: GoogleFonts.publicSans(
-                          color: Colors.white,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          textBaseline: TextBaseline.alphabetic,
+                      Flexible(
+                        child: Text(
+                          authorName,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.publicSans(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            textBaseline: TextBaseline.alphabetic,
+                          ),
                         ),
                       ),
                       const Spacer(),
@@ -112,6 +103,7 @@ class WorkoutCardV2 extends StatelessWidget {
                       const SizedBox(width: 16),
                       Text(
                         duration,
+                        textAlign: TextAlign.right,
                         style: GoogleFonts.sairaExtraCondensed(
                           color: Colors.white.withValues(alpha: 0.3),
                           fontSize: 36,

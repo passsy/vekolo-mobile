@@ -32,9 +32,11 @@ import 'package:vekolo/widgets/workout_screen_content.dart';
 /// The page integrates with WorkoutPlayerService for workout execution
 /// and DeviceManager for real-time sensor data.
 class WorkoutPlayerPage extends StatefulWidget {
-  const WorkoutPlayerPage({super.key, this.isResuming = false});
+  const WorkoutPlayerPage({super.key, this.isResuming = false, this.workoutPlan, this.workoutName});
 
   final bool isResuming;
+  final WorkoutPlan? workoutPlan;
+  final String? workoutName;
 
   @override
   State<WorkoutPlayerPage> createState() => _WorkoutPlayerPageState();
@@ -50,11 +52,21 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
   DateTime? _lowPowerStartTime;
   bool _isManualPause = false;
   Timer? _autoPauseTimer;
+  bool _hasLoadedWorkout = false;
 
   @override
   void initState() {
     super.initState();
-    _loadWorkout();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Load workout once after dependencies are available
+    if (!_hasLoadedWorkout) {
+      _hasLoadedWorkout = true;
+      _loadWorkout();
+    }
   }
 
   @override
@@ -73,16 +85,24 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
 
   Future<void> _loadWorkout() async {
     try {
-      chirp.info('Loading workout from save.json');
+      late final WorkoutPlan workoutPlan;
 
-      // Load workout JSON from assets
-      final jsonString = await rootBundle.loadString('save.json');
-      final jsonData = json.decode(jsonString) as Map<String, dynamic>;
+      // Use provided workout plan or load from save.json
+      if (widget.workoutPlan != null) {
+        chirp.info('Using provided workout plan');
+        workoutPlan = widget.workoutPlan!;
+      } else {
+        chirp.info('Loading workout from save.json');
 
-      // Parse workout plan
-      final workoutPlan = WorkoutPlan.fromJson(jsonData);
+        // Load workout JSON from assets
+        final jsonString = await rootBundle.loadString('save.json');
+        final jsonData = json.decode(jsonString) as Map<String, dynamic>;
 
-      chirp.info('Loaded workout: ${workoutPlan.plan.length} items, ${workoutPlan.events.length} events');
+        // Parse workout plan
+        workoutPlan = WorkoutPlan.fromJson(jsonData);
+      }
+
+      chirp.info('Loaded workout: ${workoutPlan.plan.length} items');
 
       // Initialize player service
       if (!mounted) return;
@@ -234,7 +254,7 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
           // Fire and forget - the async operation will complete in the background
           // ignore: unawaited_futures
           _recordingService!.startRecording(
-            'Workout', // TODO: Get workout name from route params or metadata
+            widget.workoutName ?? 'Workout',
             userId: user?.id,
             ftp: ftp,
           );

@@ -762,7 +762,10 @@ class DeviceManager {
         transport: assignment.transport,
       );
       _powerSourceBeacon.value = _powerSource;
-      chirp.info('Restored powerSource assignment', data: {'deviceId': assignment.deviceId, 'deviceName': assignment.deviceName});
+      chirp.info(
+        'Restored powerSource assignment',
+        data: {'deviceId': assignment.deviceId, 'deviceName': assignment.deviceName},
+      );
     }
 
     if (assignments.cadenceSource != null) {
@@ -773,7 +776,10 @@ class DeviceManager {
         transport: assignment.transport,
       );
       _cadenceSourceBeacon.value = _cadenceSource;
-      chirp.info('Restored cadenceSource assignment', data: {'deviceId': assignment.deviceId, 'deviceName': assignment.deviceName});
+      chirp.info(
+        'Restored cadenceSource assignment',
+        data: {'deviceId': assignment.deviceId, 'deviceName': assignment.deviceName},
+      );
     }
 
     if (assignments.speedSource != null) {
@@ -784,7 +790,10 @@ class DeviceManager {
         transport: assignment.transport,
       );
       _speedSourceBeacon.value = _speedSource;
-      chirp.info('Restored speedSource assignment', data: {'deviceId': assignment.deviceId, 'deviceName': assignment.deviceName});
+      chirp.info(
+        'Restored speedSource assignment',
+        data: {'deviceId': assignment.deviceId, 'deviceName': assignment.deviceName},
+      );
     }
 
     if (assignments.heartRateSource != null) {
@@ -795,7 +804,10 @@ class DeviceManager {
         transport: assignment.transport,
       );
       _heartRateSourceBeacon.value = _heartRateSource;
-      chirp.info('Restored heartRateSource assignment', data: {'deviceId': assignment.deviceId, 'deviceName': assignment.deviceName});
+      chirp.info(
+        'Restored heartRateSource assignment',
+        data: {'deviceId': assignment.deviceId, 'deviceName': assignment.deviceName},
+      );
     }
 
     chirp.info('Restored assignments from persistence (devices not yet connected)');
@@ -963,7 +975,8 @@ class DeviceManager {
   /// Only removes from auto-connect if the device is not assigned to any other role.
   void _handleDeviceUnassigned(String deviceId) {
     // Check if device is still assigned to any role
-    final stillAssigned = _smartTrainer?.deviceId == deviceId ||
+    final stillAssigned =
+        _smartTrainer?.deviceId == deviceId ||
         _powerSource?.deviceId == deviceId ||
         _cadenceSource?.deviceId == deviceId ||
         _speedSource?.deviceId == deviceId ||
@@ -972,7 +985,10 @@ class DeviceManager {
     if (!stillAssigned) {
       // Device is no longer assigned to any role, remove from auto-connect
       if (_autoConnectDeviceIds.remove(deviceId)) {
-        chirp.info('Removed device from auto-connect', data: {'deviceId': deviceId, 'remaining': _autoConnectDeviceIds});
+        chirp.info(
+          'Removed device from auto-connect',
+          data: {'deviceId': deviceId, 'remaining': _autoConnectDeviceIds},
+        );
       }
 
       // Check if we should stop scanning

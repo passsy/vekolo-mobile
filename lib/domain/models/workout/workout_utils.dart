@@ -3,7 +3,6 @@
 /// Based on the web implementation at `/vekolo-web/shared/utils/workout.ts`.
 library;
 
-
 import 'package:chirp/chirp.dart';
 import 'package:vekolo/domain/models/workout/workout_models.dart';
 

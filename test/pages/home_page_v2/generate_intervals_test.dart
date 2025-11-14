@@ -18,12 +18,7 @@ void main() {
         'id': 'RoN7Qh6caaQI_zry3e5Dd',
         'maxSpeed': 38.17,
         'stravaActivityId': null,
-        'user': {
-          'avatar': null,
-          'id': 'xzx3AHjmOcEXkEHMjd7iY',
-          'name': 'Martin ',
-          'stravaId': null,
-        },
+        'user': {'avatar': null, 'id': 'xzx3AHjmOcEXkEHMjd7iY', 'name': 'Martin ', 'stravaId': null},
         'visibility': 'public',
         'workout': {
           'category': 'endurance',
@@ -42,18 +37,8 @@ void main() {
               'description': 'SIT Set 1',
               'id': 'TwRTxhQ0',
               'parts': [
-                {
-                  'duration': 30000,
-                  'id': 'upHxYiXd',
-                  'power': 1.6676557863501484,
-                  'type': 'power',
-                },
-                {
-                  'duration': 270000,
-                  'id': 'zScKPA2Z',
-                  'power': 0.658753709198813,
-                  'type': 'power',
-                },
+                {'duration': 30000, 'id': 'upHxYiXd', 'power': 1.6676557863501484, 'type': 'power'},
+                {'duration': 270000, 'id': 'zScKPA2Z', 'power': 0.658753709198813, 'type': 'power'},
               ],
               'repeat': 5,
               'type': 'interval',
@@ -69,18 +54,8 @@ void main() {
               'description': 'SIT Set 2',
               'id': 'aI8vTSHL',
               'parts': [
-                {
-                  'duration': 30000,
-                  'id': 'B3kyT77v',
-                  'power': 1.6676557863501484,
-                  'type': 'power',
-                },
-                {
-                  'duration': 270000,
-                  'id': 'Wqkr3dAf',
-                  'power': 0.658753709198813,
-                  'type': 'power',
-                },
+                {'duration': 30000, 'id': 'B3kyT77v', 'power': 1.6676557863501484, 'type': 'power'},
+                {'duration': 270000, 'id': 'Wqkr3dAf', 'power': 0.658753709198813, 'type': 'power'},
               ],
               'repeat': 5,
               'type': 'interval',
@@ -96,7 +71,8 @@ void main() {
           ],
           'slug': null,
           'starCount': 1,
-          'summary': 'Explosives SIT-Training mit 2x5 Sprint-Intervallen à 30 Sekunden bei maximaler Power und aktiver Erholung.',
+          'summary':
+              'Explosives SIT-Training mit 2x5 Sprint-Intervallen à 30 Sekunden bei maximaler Power und aktiver Erholung.',
           'title': 'Hermes',
           'tss': 102,
         },
@@ -118,7 +94,11 @@ void main() {
       final intervals = generateIntervalsFromPlan(plan);
 
       // Verify total number of intervals
-      expect(intervals.length, 23, reason: 'Should have 23 total blocks (1 warmup + 10 SIT1 + 1 recovery + 10 SIT2 + 1 cooldown)');
+      expect(
+        intervals.length,
+        23,
+        reason: 'Should have 23 total blocks (1 warmup + 10 SIT1 + 1 recovery + 10 SIT2 + 1 cooldown)',
+      );
 
       // Verify structure
       // Block 0: Warm-up ramp (10 minutes)
@@ -130,11 +110,19 @@ void main() {
       for (var i = 0; i < 5; i++) {
         final baseIdx = 1 + i * 2;
         // High power block (30s = 0.5 minutes, rounded to 1)
-        expect(intervals[baseIdx].duration, 1, reason: 'SIT Set 1 repeat ${i + 1} high power should be 1 minute (rounded from 0.5)');
+        expect(
+          intervals[baseIdx].duration,
+          1,
+          reason: 'SIT Set 1 repeat ${i + 1} high power should be 1 minute (rounded from 0.5)',
+        );
         expect(intervals[baseIdx].intensity, closeTo(1.67, 0.01), reason: 'SIT Set 1 high power should be ~1.67 FTP');
 
         // Recovery block (270s = 4.5 minutes, rounded to 5)
-        expect(intervals[baseIdx + 1].duration, 5, reason: 'SIT Set 1 repeat ${i + 1} recovery should be 5 minutes (rounded from 4.5)');
+        expect(
+          intervals[baseIdx + 1].duration,
+          5,
+          reason: 'SIT Set 1 repeat ${i + 1} recovery should be 5 minutes (rounded from 4.5)',
+        );
         expect(intervals[baseIdx + 1].intensity, closeTo(0.66, 0.01), reason: 'SIT Set 1 recovery should be ~0.66 FTP');
       }
 
@@ -146,11 +134,19 @@ void main() {
       for (var i = 0; i < 5; i++) {
         final baseIdx = 12 + i * 2;
         // High power block
-        expect(intervals[baseIdx].duration, 1, reason: 'SIT Set 2 repeat ${i + 1} high power should be 1 minute (rounded from 0.5)');
+        expect(
+          intervals[baseIdx].duration,
+          1,
+          reason: 'SIT Set 2 repeat ${i + 1} high power should be 1 minute (rounded from 0.5)',
+        );
         expect(intervals[baseIdx].intensity, closeTo(1.67, 0.01), reason: 'SIT Set 2 high power should be ~1.67 FTP');
 
         // Recovery block
-        expect(intervals[baseIdx + 1].duration, 5, reason: 'SIT Set 2 repeat ${i + 1} recovery should be 5 minutes (rounded from 4.5)');
+        expect(
+          intervals[baseIdx + 1].duration,
+          5,
+          reason: 'SIT Set 2 repeat ${i + 1} recovery should be 5 minutes (rounded from 4.5)',
+        );
         expect(intervals[baseIdx + 1].intensity, closeTo(0.66, 0.01), reason: 'SIT Set 2 recovery should be ~0.66 FTP');
       }
 

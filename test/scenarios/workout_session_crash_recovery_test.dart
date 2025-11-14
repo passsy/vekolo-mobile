@@ -16,6 +16,7 @@ void main() {
   // - State restoration on resume
 
   robotTest('workout session records samples and survives crash', (robot) async {
+    timeline.mode = TimelineMode.always;
     // Setup: Create trainer device with power/HR/cadence capabilities
     final kickrCore = robot.aether.createDevice(
       name: 'Kickr Core',
@@ -62,7 +63,7 @@ void main() {
     await robot.launchApp(pairedDevices: [kickrCore, hrMonitor], loggedIn: true);
 
     // Wait for resume dialog to appear
-    await robot.waitForCrashRecoveryDialog();
+    await robot.waitForCrashRecoveryDialog("Sweet Spot Workout");
     spotText('We found an incomplete workout session from earlier.').existsAtLeastOnce();
 
     // Dismiss dialog by choosing Resume
@@ -137,7 +138,7 @@ void main() {
     await robot.launchApp(pairedDevices: [kickrCore], loggedIn: true);
 
     // Wait for resume dialog to appear
-    await robot.waitForCrashRecoveryDialog();
+    await robot.waitForCrashRecoveryDialog("Sweet Spot Workout");
     spotText('We found an incomplete workout session from earlier.').existsAtLeastOnce();
     spotText('Resume').existsAtLeastOnce();
     spotText('Discard').existsAtLeastOnce();
@@ -189,7 +190,7 @@ void main() {
     await robot.idle(1000);
 
     // Resume dialog should appear
-    await robot.waitForCrashRecoveryDialog();
+    await robot.waitForCrashRecoveryDialog("Sweet Spot Workout");
 
     // Choose Discard
     await robot.discardWorkout();
@@ -236,7 +237,7 @@ void main() {
     await robot.idle(1000);
 
     // Resume dialog should appear
-    await robot.waitForCrashRecoveryDialog();
+    await robot.waitForCrashRecoveryDialog("Sweet Spot Workout");
 
     // Choose Start Fresh
     await robot.startFreshWorkout();

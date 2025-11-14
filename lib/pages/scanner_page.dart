@@ -299,16 +299,22 @@ class _ScannerPageState extends State<ScannerPage> {
             ),
             Padding(
               padding: const EdgeInsets.all(16.0),
-              child: OutlinedButton.icon(
+              child: OutlinedButton(
                 onPressed: () {
                   chirp.info('Navigating to unknown device report page');
                   context.push('/unknown-device');
                 },
-                icon: const Icon(Icons.help_outline),
-                label: const Text('My device is not listed'),
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                   minimumSize: const Size(double.infinity, 48),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.help_outline),
+                    SizedBox(width: 8),
+                    Text('My device is not listed'),
+                  ],
                 ),
               ),
             ),
@@ -536,9 +542,7 @@ class _DeviceConnectingDialogState extends State<_DeviceConnectingDialog> {
       if (!mounted) return;
 
       setState(() => _statusMessage = 'Establishing Bluetooth connection...');
-      chirp.info(
-        '${isReconnect ? 'Reconnecting' : 'Connecting'} device: ${fitnessDevice.name}',
-      );
+      chirp.info('${isReconnect ? 'Reconnecting' : 'Connecting'} device: ${fitnessDevice.name}');
       await deviceManager.connectDevice(fitnessDevice.id).value;
 
       if (!mounted) return;

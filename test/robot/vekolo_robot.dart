@@ -5,6 +5,7 @@ import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_blue_plus/flutter_blue_plus.dart' as fbp;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:spot/spot.dart';
 import 'package:vekolo/app/app.dart';
@@ -13,7 +14,6 @@ import 'package:vekolo/app/logger.dart';
 import 'package:vekolo/app/refs.dart';
 import 'package:vekolo/domain/models/device_info.dart';
 import 'package:vekolo/pages/devices_page.dart';
-import 'package:vekolo/pages/home_page.dart';
 import 'package:vekolo/pages/scanner_page.dart';
 import 'package:vekolo/services/device_assignment_persistence.dart';
 
@@ -65,6 +65,12 @@ class VekoloRobot {
     if (_isSetup) return;
 
     await loadAppFonts();
+    await GoogleFonts.pendingFonts([
+      GoogleFonts.publicSans(fontWeight: FontWeight.w300),
+      GoogleFonts.publicSans(fontWeight: FontWeight.w400),
+      GoogleFonts.publicSans(fontWeight: FontWeight.w600),
+      GoogleFonts.sairaExtraCondensed(fontWeight: FontWeight.w400),
+    ]);
 
     // Setup mock SharedPreferences and SecureStorage ONCE per test
     // This ensures data persists across app restarts within the same test
@@ -273,8 +279,9 @@ class VekoloRobot {
 
   Future<void> openManageDevicesPage() async {
     logger.robotLog('open DevicesPage');
-    final button = spot<IconButton>().withChild(spotIcon(Icons.devices));
-    await act.tap(button);
+    // In the new UI, the devices button is an Icon inside a GestureDetector, not an IconButton
+    final devicesIcon = spotIcon(Icons.devices);
+    await act.tap(devicesIcon);
     await idle(500);
     spot<DevicesPage>().existsOnce();
   }
@@ -295,12 +302,48 @@ class VekoloRobot {
 
   Future<void> waitUntilConnected() async {
     logger.robotLog('waiting until connected');
-    final connected = spot<AlertDialog>().spotText('Connected!');
-    await tester.verify.waitUntilExistsAtLeastOnce(connected);
-    // wait another 1s for the dialog to disappear
     await idle(1000);
-    await idle();
-    connected.doesNotExist();
+
+    // Check if we're already on devices page by looking for "Devices" text
+    final onDevicesPage = tester.verify.existsAtLeastOnce(spot<DevicesPage>());
+    if (onDevicesPage) {
+      logger.robotLog('already on devices page');
+    } else {
+      logger.robotLog('not on devices page, need to navigate there');
+    }
+
+    if (!onDevicesPage) {
+      // Navigate back to home first if needed
+      bool foundBackButton = true;
+      while (foundBackButton) {
+        await tester.pumpAndSettle();
+        try {
+          final backButton = spotIcon(Icons.arrow_back);
+          backButton.existsAtLeastOnce();
+          logger.robotLog('found back button, navigating back');
+          await act.tap(backButton);
+          await idle(500);
+          await idle(500);
+        } catch (e) {
+          foundBackButton = false;
+          logger.robotLog('no back button found');
+        }
+      }
+
+      // Make sure we're settled
+      await idle(500);
+
+      // Navigate to devices page from home
+      logger.robotLog('navigating to devices page');
+      await act.tap(spotIcon(Icons.devices));
+      await idle(1000);
+    }
+
+    // Wait for device to be connected (Disconnect button appears)
+    // Using longer timeout to allow for auto-reconnect
+    logger.robotLog('waiting for device to be connected (looking for Disconnect button)');
+    final disconnectButton = spotText('Disconnect');
+    await tester.verify.waitUntilExistsAtLeastOnce(disconnectButton, timeout: const Duration(seconds: 10));
   }
 
   /// Verify the state of a device card's buttons and connection state.
@@ -375,11 +418,15 @@ class VekoloRobot {
     if (unassignButtonVisible != null) checks.add('unassign ${unassignButtonVisible ? "visible" : "hidden"}');
     if (removeButtonEnabled != null) checks.add('remove ${removeButtonEnabled ? "enabled" : "disabled"}');
     if (removeButtonVisible != null) checks.add('remove ${removeButtonVisible ? "visible" : "hidden"}');
-    if (assignPowerButtonEnabled != null) checks.add('assign-power ${assignPowerButtonEnabled ? "enabled" : "disabled"}');
+    if (assignPowerButtonEnabled != null)
+      checks.add('assign-power ${assignPowerButtonEnabled ? "enabled" : "disabled"}');
     if (assignPowerButtonVisible != null) checks.add('assign-power ${assignPowerButtonVisible ? "visible" : "hidden"}');
-    if (assignCadenceButtonEnabled != null) checks.add('assign-cadence ${assignCadenceButtonEnabled ? "enabled" : "disabled"}');
-    if (assignCadenceButtonVisible != null) checks.add('assign-cadence ${assignCadenceButtonVisible ? "visible" : "hidden"}');
-    if (assignSpeedButtonEnabled != null) checks.add('assign-speed ${assignSpeedButtonEnabled ? "enabled" : "disabled"}');
+    if (assignCadenceButtonEnabled != null)
+      checks.add('assign-cadence ${assignCadenceButtonEnabled ? "enabled" : "disabled"}');
+    if (assignCadenceButtonVisible != null)
+      checks.add('assign-cadence ${assignCadenceButtonVisible ? "visible" : "hidden"}');
+    if (assignSpeedButtonEnabled != null)
+      checks.add('assign-speed ${assignSpeedButtonEnabled ? "enabled" : "disabled"}');
     if (assignSpeedButtonVisible != null) checks.add('assign-speed ${assignSpeedButtonVisible ? "visible" : "hidden"}');
     if (assignHRButtonEnabled != null) checks.add('assign-hr ${assignHRButtonEnabled ? "enabled" : "disabled"}');
     if (assignHRButtonVisible != null) checks.add('assign-hr ${assignHRButtonVisible ? "visible" : "hidden"}');
@@ -600,13 +647,23 @@ class VekoloRobot {
   Future<void> tapStartWorkout(String name) async {
     logger.robotLog('starting workout: $name');
 
-    // Find the WorkoutCard widget that contains the workout name
-    final workoutCard = spot<WorkoutCard>().withChild(spotText(name));
+    // Wait for activities to load - look for the workout card with the matching title
+    final workoutCardTitle = spotText(name);
+    await tester.verify.waitUntilExistsAtLeastOnce(workoutCardTitle, timeout: const Duration(seconds: 10));
+    await idle(500);
 
-    // Within that card, tap the Start button
-    final startButton = workoutCard.spotText('Start');
-    await act.tap(startButton);
+    // Tap the workout card to open activity detail page
+    await act.tap(workoutCardTitle);
+    await idle(500);
+
+    // Wait for activity detail page to load - look for "Ride Now" button
+    final rideNowButton = spotText('Ride Now');
+    await tester.verify.waitUntilExistsAtLeastOnce(rideNowButton, timeout: const Duration(seconds: 5));
     await idle(300);
+
+    // Tap "Ride Now" button to start the workout
+    await act.tap(rideNowButton);
+    await idle(500);
 
     // Wait for workout player page to fully load by waiting for a key indicator
     await tester.verify.waitUntilExistsAtLeastOnce(spotText('CURRENT BLOCK'), timeout: const Duration(seconds: 5));
@@ -614,31 +671,35 @@ class VekoloRobot {
   }
 
   Future<void> resumeWorkout() async {
-    logger.robotLog('resuming workout from crash recovery dialog');
-    // Tap second "Resume" match (first is in title "Resume Workout?", second is the button)
+    logger.robotLog('resuming workout from crash recovery notification');
+    // Tap the "Resume" button (there will be 2 matches: title has "Resume Workout?" and button has "Resume")
     await act.tap(spotText('Resume').atIndex(1));
-    // Wait for dialog to close, navigation and workout player to load
+    // Wait for navigation and workout player to load
     await idle(3000);
   }
 
   Future<void> discardWorkout() async {
-    logger.robotLog('discarding workout from crash recovery dialog');
-    await act.tap(spotText('Discard', exact: true));
+    logger.robotLog('discarding workout from crash recovery notification');
+    await act.tap(spotText('Discard'));
     await idle(500);
   }
 
   Future<void> startFreshWorkout() async {
-    logger.robotLog('starting fresh workout from crash recovery dialog');
-    await act.tap(spotText('Start Fresh', exact: true));
-    // Wait for dialog to close, navigation and workout player to load
+    logger.robotLog('starting fresh workout from crash recovery notification');
+    await act.tap(spotText('Start Fresh'));
+    // Wait for navigation and workout player to load
     await idle(3000);
   }
 
-  /// Wait for the crash recovery dialog to appear
-  Future<void> waitForCrashRecoveryDialog() async {
-    logger.robotLog('waiting for crash recovery dialog');
-    await tester.verify.waitUntilExistsAtLeastOnce(spotText('Resume Workout?'), timeout: const Duration(seconds: 5));
-    await idle(500); // wait for dialog to be faded in
+  /// Wait for the crash recovery notification card to appear
+  Future<void> waitForCrashRecoveryDialog(String workoutName) async {
+    logger.robotLog('waiting for crash recovery notification card');
+    // Note: Title includes workout name, currently hardcoded to "Workout" in workout_player_page.dart
+    await tester.verify.waitUntilExistsAtLeastOnce(
+      spotText('Resume $workoutName?'),
+      timeout: const Duration(seconds: 5),
+    );
+    await idle(500); // wait for notification to appear
   }
 
   /// Wait for a workout session to be created and marked as active.

@@ -9,6 +9,7 @@ import 'package:vekolo/ble/transport_registry.dart';
 import 'package:vekolo/domain/devices/device_manager.dart';
 import 'package:vekolo/services/auth_service.dart';
 import 'package:vekolo/services/device_assignment_persistence.dart';
+import 'package:vekolo/services/notification_service.dart';
 import 'package:vekolo/services/workout_session_persistence.dart';
 import 'package:vekolo/services/workout_sync_service.dart';
 
@@ -25,6 +26,7 @@ abstract final class Refs {
   static final workoutSessionPersistence = Ref<WorkoutSessionPersistence>();
   static final deviceManager = Ref<DeviceManager>();
   static final workoutSyncService = Ref<WorkoutSyncService>();
+  static final notificationService = Ref<NotificationService>();
   static final router = Ref<GoRouter>();
 }
 

@@ -20,11 +20,7 @@ void main() {
         createdAt: '2025-01-01T00:00:00Z',
         visibility: ActivityVisibility.public,
         user: ActivityUser.create(id: 'user1', name: 'Test User'),
-        workout: ActivityWorkout.create(
-          id: 'workout1',
-          title: 'Test Workout',
-          duration: 3600000,
-        ),
+        workout: ActivityWorkout.create(id: 'workout1', title: 'Test Workout', duration: 3600000),
       );
 
       expect(activity.visibility.value, 'public');
@@ -36,15 +32,8 @@ void main() {
         'duration': 3600000,
         'createdAt': '2025-01-01T00:00:00Z',
         'visibility': 'private',
-        'user': {
-          'id': 'user1',
-          'name': 'Test User',
-        },
-        'workout': {
-          'id': 'workout1',
-          'title': 'Test Workout',
-          'duration': 3600000,
-        },
+        'user': {'id': 'user1', 'name': 'Test User'},
+        'workout': {'id': 'workout1', 'title': 'Test Workout', 'duration': 3600000},
       };
 
       final activity = Activity.fromData(activityData);
@@ -92,12 +81,7 @@ void main() {
     });
 
     test('handles null category', () {
-      final workoutData = {
-        'id': 'workout1',
-        'title': 'Test Workout',
-        'duration': 3600000,
-        'plan': [],
-      };
+      final workoutData = {'id': 'workout1', 'title': 'Test Workout', 'duration': 3600000, 'plan': []};
 
       final workout = ActivityWorkout.fromData(workoutData);
       expect(workout.category, null);
