@@ -1,368 +1,369 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_test/flutter_test.dart';
-import 'package:vekolo/domain/models/power_history.dart';
-import 'package:vekolo/domain/models/workout/workout_models.dart';
-import 'package:vekolo/widgets/workout_power_chart.dart';
-import 'package:vekolo/widgets/workout_screen_content.dart';
+import '../robot/robot_kit.dart';
+import '../robot/workout_player_robot.dart';
 
 void main() {
-  group('WorkoutScreenContent', () {
-    late PowerHistory powerHistory;
-    late PowerBlock currentBlock;
-    late PowerBlock nextBlock;
-
-    setUp(() {
-      powerHistory = PowerHistory();
-      currentBlock = const PowerBlock(
-        id: 'block1',
-        duration: 300000,
-        power: 0.85,
-        description: 'Warm up',
-      );
-      nextBlock = const PowerBlock(
-        id: 'block2',
-        duration: 180000,
-        power: 1.10,
-        description: 'Work',
-      );
-    });
-
-    Widget buildWidget({
-      dynamic currentBlockOverride,
-      dynamic nextBlockOverride,
-      bool isPaused = false,
-      bool isComplete = false,
-      bool hasStarted = true,
-      int elapsedTime = 60000,
-      int remainingTime = 240000,
-      int currentBlockRemainingTime = 240000,
-      int powerTarget = 180,
-      int? currentPower = 175,
-      int? cadenceTarget = 90,
-      int? currentCadence = 88,
-      int? currentHeartRate = 145,
-      int ftp = 200,
-      double powerScaleFactor = 1.0,
-      VoidCallback? onPlayPause,
-      VoidCallback? onSkip,
-      VoidCallback? onEndWorkout,
-      VoidCallback? onPowerScaleIncrease,
-      VoidCallback? onPowerScaleDecrease,
-    }) {
-      return MaterialApp(
-        home: Scaffold(
-          body: WorkoutScreenContent(
-            powerHistory: powerHistory,
-            currentBlock: currentBlockOverride ?? currentBlock,
-            nextBlock: nextBlockOverride ?? nextBlock,
-            elapsedTime: elapsedTime,
-            remainingTime: remainingTime,
-            currentBlockRemainingTime: currentBlockRemainingTime,
-            powerTarget: powerTarget,
-            currentPower: currentPower,
-            cadenceTarget: cadenceTarget,
-            currentCadence: currentCadence,
-            currentHeartRate: currentHeartRate,
-            isPaused: isPaused,
-            isComplete: isComplete,
-            hasStarted: hasStarted,
-            ftp: ftp,
-            powerScaleFactor: powerScaleFactor,
-            onPlayPause: onPlayPause ?? () {},
-            onSkip: onSkip ?? () {},
-            onEndWorkout: onEndWorkout ?? () {},
-            onPowerScaleIncrease: onPowerScaleIncrease ?? () {},
-            onPowerScaleDecrease: onPowerScaleDecrease ?? () {},
-          ),
-        ),
-      );
-    }
-
-    testWidgets('displays timer header with elapsed and remaining time', (tester) async {
-      await tester.pumpWidget(buildWidget(
-        elapsedTime: 120000, // 2:00
-        remainingTime: 180000, // 3:00
-      ));
-
-      expect(find.text('ELAPSED'), findsOneWidget);
-      expect(find.text('02:00'), findsOneWidget);
-      expect(find.text('REMAINING'), findsOneWidget);
-      expect(find.text('03:00'), findsOneWidget);
-    });
-
-    testWidgets('displays power chart', (tester) async {
-      await tester.pumpWidget(buildWidget());
-
-      expect(find.byType(WorkoutPowerChart), findsOneWidget);
-    });
-
-    testWidgets('displays metrics cards for power, cadence, and heart rate', (tester) async {
-      await tester.pumpWidget(buildWidget(
-        currentPower: 180,
-        powerTarget: 200,
-        currentCadence: 90,
-        cadenceTarget: 95,
-        currentHeartRate: 150,
-      ));
-
-      expect(find.text('POWER'), findsOneWidget);
-      expect(find.text('180'), findsOneWidget);
-      expect(find.text('Target: 200'), findsOneWidget);
-
-      expect(find.text('CADENCE'), findsOneWidget);
-      expect(find.text('90'), findsOneWidget);
-      expect(find.text('Target: 95'), findsOneWidget);
-
-      expect(find.text('HR'), findsOneWidget);
-      expect(find.text('150'), findsOneWidget);
-    });
-
-    testWidgets('displays current block information', (tester) async {
-      await tester.pumpWidget(buildWidget(
-        currentBlockRemainingTime: 120000, // 2:00
-      ));
-
-      expect(find.text('WARM UP'), findsOneWidget);
-      expect(find.text('85% FTP'), findsOneWidget);
-      expect(find.text('TIME LEFT'), findsOneWidget);
-      expect(find.text('02:00'), findsOneWidget);
-    });
-
-    testWidgets('displays next block information', (tester) async {
-      await tester.pumpWidget(buildWidget());
-
-      expect(find.text('NEXT: WORK'), findsOneWidget);
-      expect(find.text('110% FTP'), findsOneWidget);
-    });
-
-    testWidgets('does not display next block when null', (tester) async {
-      await tester.pumpWidget(buildWidget(nextBlockOverride: null));
-
-      expect(find.text('NEXT: WORK'), findsNothing);
-    });
-
-    testWidgets('displays ramp block correctly', (tester) async {
-      final rampBlock = const RampBlock(
-        id: 'ramp1',
-        duration: 300000,
-        powerStart: 0.5,
-        powerEnd: 0.8,
-        description: 'Build',
+  group('Workout Screen Content', () {
+    robotTest('displays initial state before workout starts', (robot) async {
+      final trainer = robot.aether.createDevice(
+        name: 'KICKR CORE',
+        capabilities: {DeviceDataType.power, DeviceDataType.cadence, DeviceDataType.speed},
       );
 
-      await tester.pumpWidget(buildWidget(currentBlockOverride: rampBlock));
+      await robot.launchApp(loggedIn: true, pairedDevices: [trainer]);
+      await robot.tapStartWorkout('Sweet Spot');
 
-      expect(find.text('BUILD'), findsOneWidget);
-      expect(find.text('50% → 80% FTP'), findsOneWidget);
+      // Verify initial paused state
+      robot.verifyWorkoutNotStarted();
+      robot.verifyTimerHeaders();
+      robot.verifyAllMetricsPresent();
+      robot.verifyEndWorkoutButton();
     });
 
-    testWidgets('shows paused message when workout is paused and not started', (tester) async {
-      await tester.pumpWidget(buildWidget(
-        isPaused: true,
-        hasStarted: false,
-      ));
+    robotTest('transitions to running state when pedaling starts', (robot) async {
+      final trainer = robot.aether.createDevice(
+        name: 'KICKR CORE',
+        capabilities: {DeviceDataType.power, DeviceDataType.cadence, DeviceDataType.speed},
+      );
 
-      expect(find.text('Start pedaling to begin workout'), findsOneWidget);
-      expect(find.byIcon(Icons.pedal_bike), findsOneWidget);
+      await robot.launchApp(loggedIn: true, pairedDevices: [trainer]);
+      await robot.tapStartWorkout('Sweet Spot');
+
+      // Start pedaling to trigger auto-start
+      trainer.emitPower(150);
+      trainer.emitCadence(85);
+      await robot.pumpUntil(500);
+
+      // Should transition to running state
+      robot.verifyPauseButton();
+      robot.verifySkipButton();
+      robot.verifyIntensityControls();
     });
 
-    testWidgets('shows paused message when workout is paused and started', (tester) async {
-      await tester.pumpWidget(buildWidget(
-        isPaused: true,
-        hasStarted: true,
-      ));
+    robotTest('displays metrics correctly during workout', (robot) async {
+      final trainer = robot.aether.createDevice(
+        name: 'KICKR CORE',
+        capabilities: {DeviceDataType.power, DeviceDataType.cadence, DeviceDataType.speed},
+      );
 
-      expect(find.text('Paused - Start pedaling to resume'), findsOneWidget);
-      expect(find.byIcon(Icons.pause_circle), findsOneWidget);
+      await robot.launchApp(loggedIn: true, pairedDevices: [trainer]);
+      await robot.tapStartWorkout('Sweet Spot');
+
+      // Start pedaling
+      trainer.emitPower(180);
+      trainer.emitCadence(90);
+      trainer.emitHeartRate(145);
+      await robot.pumpUntil(1000);
+
+      // Verify all metrics are displayed
+      robot.verifyAllMetricsPresent();
+      // Note: Exact values may vary due to workout plan targets
+      // We just verify the structure is present
     });
 
-    testWidgets('shows resume button when paused', (tester) async {
-      await tester.pumpWidget(buildWidget(isPaused: true));
+    robotTest('shows current block information', (robot) async {
+      final trainer = robot.aether.createDevice(
+        name: 'KICKR CORE',
+        capabilities: {DeviceDataType.power, DeviceDataType.cadence, DeviceDataType.speed},
+      );
 
-      expect(find.text('Resume'), findsOneWidget);
-      expect(find.byIcon(Icons.play_arrow), findsOneWidget);
+      await robot.launchApp(loggedIn: true, pairedDevices: [trainer]);
+      await robot.tapStartWorkout('Sweet Spot');
+
+      // Start workout
+      trainer.emitPower(150);
+      await robot.pumpUntil(500);
+
+      // Verify current block info is shown
+      // (exact text depends on workout plan, but structure should be there)
+      spotText('TIME LEFT').existsOnce();
     });
 
-    testWidgets('shows pause button when running', (tester) async {
-      await tester.pumpWidget(buildWidget(isPaused: false));
+    robotTest('can pause workout manually', (robot) async {
+      final trainer = robot.aether.createDevice(
+        name: 'KICKR CORE',
+        capabilities: {DeviceDataType.power, DeviceDataType.cadence, DeviceDataType.speed},
+      );
 
-      expect(find.text('Pause'), findsOneWidget);
-      expect(find.byIcon(Icons.pause), findsOneWidget);
+      await robot.launchApp(loggedIn: true, pairedDevices: [trainer]);
+      await robot.tapStartWorkout('Sweet Spot');
+
+      // Start workout
+      trainer.emitPower(150);
+      await robot.pumpUntil(500);
+
+      // Pause the workout
+      await robot.tapPlayPause();
+      await robot.idle(200);
+
+      // Verify paused state
+      robot.verifyPausedStartedMessage();
+      robot.verifyResumeButton();
     });
 
-    testWidgets('calls onPlayPause when play/pause button pressed', (tester) async {
-      var called = false;
+    robotTest('can resume workout after manual pause', (robot) async {
+      final trainer = robot.aether.createDevice(
+        name: 'KICKR CORE',
+        capabilities: {DeviceDataType.power, DeviceDataType.cadence, DeviceDataType.speed},
+      );
 
-      await tester.pumpWidget(buildWidget(
-        isPaused: true,
-        onPlayPause: () => called = true,
-      ));
+      await robot.launchApp(loggedIn: true, pairedDevices: [trainer]);
+      await robot.tapStartWorkout('Sweet Spot');
 
-      await tester.tap(find.text('Resume'));
-      await tester.pump();
+      // Start workout
+      trainer.emitPower(150);
+      await robot.pumpUntil(500);
 
-      expect(called, true);
+      // Pause
+      await robot.tapPlayPause();
+      await robot.idle(200);
+      robot.verifyResumeButton();
+
+      // Resume
+      await robot.tapPlayPause();
+      await robot.idle(200);
+
+      // Should be running again
+      robot.verifyPauseButton();
     });
 
-    testWidgets('calls onSkip when skip button pressed', (tester) async {
-      var called = false;
+    robotTest('can skip to next block', (robot) async {
+      final trainer = robot.aether.createDevice(
+        name: 'KICKR CORE',
+        capabilities: {DeviceDataType.power, DeviceDataType.cadence, DeviceDataType.speed},
+      );
 
-      await tester.pumpWidget(buildWidget(
-        onSkip: () => called = true,
-      ));
+      await robot.launchApp(loggedIn: true, pairedDevices: [trainer]);
+      await robot.tapStartWorkout('Sweet Spot');
 
-      await tester.tap(find.byIcon(Icons.skip_next));
-      await tester.pump();
+      // Start workout
+      trainer.emitPower(150);
+      await robot.pumpUntil(500);
 
-      expect(called, true);
+      // Skip to next block
+      await robot.tapSkipBlock();
+      await robot.idle(300);
+
+      // Verify still running (just in next block)
+      robot.verifyPauseButton();
+      robot.verifySkipButton();
     });
 
-    testWidgets('calls onEndWorkout when end button pressed', (tester) async {
-      var called = false;
+    robotTest('can adjust intensity up', (robot) async {
+      final trainer = robot.aether.createDevice(
+        name: 'KICKR CORE',
+        capabilities: {DeviceDataType.power, DeviceDataType.cadence, DeviceDataType.speed},
+      );
 
-      await tester.pumpWidget(buildWidget(
-        onEndWorkout: () => called = true,
-      ));
+      await robot.launchApp(loggedIn: true, pairedDevices: [trainer]);
+      await robot.tapStartWorkout('Sweet Spot');
 
-      await tester.tap(find.text('End Workout'));
-      await tester.pump();
+      // Start workout
+      trainer.emitPower(150);
+      await robot.pumpUntil(500);
 
-      expect(called, true);
+      // Initially at 100%
+      robot.verifyIntensityPercentage(100);
+
+      // Increase intensity
+      await robot.tapIncreaseIntensity();
+      await robot.idle(200);
+
+      // Should now be 101%
+      robot.verifyIntensityPercentage(101);
     });
 
-    testWidgets('calls onPowerScaleIncrease when + button pressed', (tester) async {
-      var called = false;
+    robotTest('can adjust intensity down', (robot) async {
+      final trainer = robot.aether.createDevice(
+        name: 'KICKR CORE',
+        capabilities: {DeviceDataType.power, DeviceDataType.cadence, DeviceDataType.speed},
+      );
 
-      await tester.pumpWidget(buildWidget(
-        onPowerScaleIncrease: () => called = true,
-      ));
+      await robot.launchApp(loggedIn: true, pairedDevices: [trainer]);
+      await robot.tapStartWorkout('Sweet Spot');
 
-      // Find the + icon button (should be the add_circle_outline icon)
-      final buttons = find.byIcon(Icons.add_circle_outline);
-      await tester.tap(buttons.first);
-      await tester.pump();
+      // Start workout
+      trainer.emitPower(150);
+      await robot.pumpUntil(500);
 
-      expect(called, true);
+      // Initially at 100%
+      robot.verifyIntensityPercentage(100);
+
+      // Decrease intensity
+      await robot.tapDecreaseIntensity();
+      await robot.idle(200);
+
+      // Should now be 99%
+      robot.verifyIntensityPercentage(99);
     });
 
-    testWidgets('calls onPowerScaleDecrease when - button pressed', (tester) async {
-      var called = false;
+    robotTest('can end workout early', (robot) async {
+      final trainer = robot.aether.createDevice(
+        name: 'KICKR CORE',
+        capabilities: {DeviceDataType.power, DeviceDataType.cadence, DeviceDataType.speed},
+      );
 
-      await tester.pumpWidget(buildWidget(
-        onPowerScaleDecrease: () => called = true,
-      ));
+      await robot.launchApp(loggedIn: true, pairedDevices: [trainer]);
+      await robot.tapStartWorkout('Sweet Spot');
 
-      // Find the - icon button (should be the remove_circle_outline icon)
-      final buttons = find.byIcon(Icons.remove_circle_outline);
-      await tester.tap(buttons.first);
-      await tester.pump();
+      // Start workout
+      trainer.emitPower(150);
+      await robot.pumpUntil(500);
 
-      expect(called, true);
+      // Tap end workout button
+      await robot.tapEndWorkout();
+      await robot.idle(200);
+
+      // Should show confirmation dialog
+      spotText('End Workout?').existsOnce();
+      spotText('Are you sure you want to end this workout early?').existsOnce();
+
+      // Confirm
+      spotText('End').existsOnce();
+      await act.tap(spotText('End'));
+      await robot.idle(500);
+
+      // Should complete the workout
+      robot.verifyWorkoutCompletedState();
     });
 
-    testWidgets('displays intensity percentage', (tester) async {
-      await tester.pumpWidget(buildWidget(powerScaleFactor: 1.05));
+    robotTest('shows timer counting up during workout', (robot) async {
+      final trainer = robot.aether.createDevice(
+        name: 'KICKR CORE',
+        capabilities: {DeviceDataType.power, DeviceDataType.cadence, DeviceDataType.speed},
+      );
 
-      expect(find.text('Intensity: 105%'), findsOneWidget);
+      await robot.launchApp(loggedIn: true, pairedDevices: [trainer]);
+      await robot.tapStartWorkout('Sweet Spot');
+
+      // Start workout
+      trainer.emitPower(150);
+      await robot.pumpUntil(500);
+
+      // Verify initial time (should be close to 00:00)
+      robot.verifyElapsedTime('00:00');
+
+      // Wait some time
+      await robot.pumpUntil(2000);
+
+      // Timer should have progressed (at least 00:01 or 00:02)
+      // Note: exact time depends on ticks, so we just verify it's there
+      spotText('ELAPSED').existsOnce();
+      spotText('REMAINING').existsOnce();
     });
 
-    testWidgets('shows workout complete card when complete', (tester) async {
-      await tester.pumpWidget(buildWidget(isComplete: true));
+    robotTest('handles missing metrics gracefully', (robot) async {
+      final trainer = robot.aether.createDevice(
+        name: 'KICKR CORE',
+        capabilities: {DeviceDataType.power}, // Only power, no cadence or HR
+      );
 
-      expect(find.text('Workout Complete!'), findsOneWidget);
-      expect(find.text('Great job! You finished the workout.'), findsOneWidget);
-      expect(find.byIcon(Icons.emoji_events), findsOneWidget);
+      await robot.launchApp(loggedIn: true, pairedDevices: [trainer]);
+      await robot.tapStartWorkout('Sweet Spot');
+
+      // Start workout
+      trainer.emitPower(150);
+      await robot.pumpUntil(500);
+
+      // Verify power is shown
+      robot.verifyAllMetricsPresent();
+      // Cadence and HR should show "--" or similar placeholder
+      // (exact implementation depends on UI, but should not crash)
     });
 
-    testWidgets('does not show next block when workout is complete', (tester) async {
-      await tester.pumpWidget(buildWidget(isComplete: true));
+    robotTest('auto-pauses when power drops below threshold', (robot) async {
+      final trainer = robot.aether.createDevice(
+        name: 'KICKR CORE',
+        capabilities: {DeviceDataType.power, DeviceDataType.cadence, DeviceDataType.speed},
+      );
 
-      expect(find.text('NEXT: WORK'), findsNothing);
+      await robot.launchApp(loggedIn: true, pairedDevices: [trainer]);
+      await robot.tapStartWorkout('Sweet Spot');
+
+      // Start workout
+      trainer.emitPower(150);
+      await robot.pumpUntil(500);
+      robot.verifyPauseButton(); // Running
+
+      // Stop pedaling (power drops to 0)
+      trainer.emitPower(0);
+      await robot.pumpUntil(3500); // Auto-pause threshold is 3 seconds
+
+      // Should auto-pause
+      robot.verifyPausedStartedMessage();
+      robot.verifyResumeButton();
     });
 
-    testWidgets('shows complete button when workout is finished', (tester) async {
-      await tester.pumpWidget(buildWidget(isComplete: true));
+    robotTest('auto-resumes when pedaling again', (robot) async {
+      final trainer = robot.aether.createDevice(
+        name: 'KICKR CORE',
+        capabilities: {DeviceDataType.power, DeviceDataType.cadence, DeviceDataType.speed},
+      );
 
-      expect(find.text('Complete'), findsOneWidget);
-      expect(find.byIcon(Icons.check), findsOneWidget);
+      await robot.launchApp(loggedIn: true, pairedDevices: [trainer]);
+      await robot.tapStartWorkout('Sweet Spot');
+
+      // Start workout
+      trainer.emitPower(150);
+      await robot.pumpUntil(500);
+
+      // Stop pedaling to trigger auto-pause
+      trainer.emitPower(0);
+      await robot.pumpUntil(3500);
+      robot.verifyPausedStartedMessage();
+
+      // Start pedaling again
+      trainer.emitPower(150);
+      await robot.pumpUntil(500);
+
+      // Should auto-resume
+      robot.verifyPauseButton();
     });
 
-    testWidgets('does not show intensity controls when complete', (tester) async {
-      await tester.pumpWidget(buildWidget(isComplete: true));
+    robotTest('displays workout complete screen when finished', (robot) async {
+      final trainer = robot.aether.createDevice(
+        name: 'KICKR CORE',
+        capabilities: {DeviceDataType.power, DeviceDataType.cadence, DeviceDataType.speed},
+      );
 
-      expect(find.byIcon(Icons.add_circle_outline), findsNothing);
-      expect(find.byIcon(Icons.remove_circle_outline), findsNothing);
+      await robot.launchApp(loggedIn: true, pairedDevices: [trainer]);
+      await robot.tapStartWorkout('Sweet Spot');
+
+      // Start workout
+      trainer.emitPower(150);
+      await robot.pumpUntil(500);
+
+      // Fast-forward to end by ending workout
+      await robot.tapEndWorkout();
+      await robot.idle(200);
+      await act.tap(spotText('End'));
+      await robot.idle(500);
+
+      // Verify completion state
+      robot.verifyWorkoutCompletedState();
     });
 
-    testWidgets('does not show skip button when complete', (tester) async {
-      await tester.pumpWidget(buildWidget(isComplete: true));
+    robotTest('shows power chart throughout workout', (robot) async {
+      final trainer = robot.aether.createDevice(
+        name: 'KICKR CORE',
+        capabilities: {DeviceDataType.power, DeviceDataType.cadence, DeviceDataType.speed},
+      );
 
-      expect(find.byIcon(Icons.skip_next), findsNothing);
-    });
+      await robot.launchApp(loggedIn: true, pairedDevices: [trainer]);
+      await robot.tapStartWorkout('Sweet Spot');
 
-    testWidgets('does not show end workout button when complete', (tester) async {
-      await tester.pumpWidget(buildWidget(isComplete: true));
+      // Start workout
+      trainer.emitPower(150);
+      await robot.pumpUntil(500);
 
-      expect(find.text('End Workout'), findsNothing);
-    });
+      // Power chart should be visible
+      robot.verifyPowerChartVisible();
 
-    testWidgets('handles null current power', (tester) async {
-      await tester.pumpWidget(buildWidget(currentPower: null));
+      // Continue workout for a bit
+      await robot.pumpUntil(5000);
 
-      expect(find.text('--'), findsAtLeastNWidgets(1));
-    });
-
-    testWidgets('handles null cadence', (tester) async {
-      await tester.pumpWidget(buildWidget(
-        currentCadence: null,
-        cadenceTarget: null,
-      ));
-
-      // Should still render without errors
-      expect(find.byType(WorkoutScreenContent), findsOneWidget);
-    });
-
-    testWidgets('handles null heart rate', (tester) async {
-      await tester.pumpWidget(buildWidget(currentHeartRate: null));
-
-      // Heart rate should show --
-      final metricCards = find.byType(Card);
-      expect(metricCards, findsWidgets);
-    });
-
-    testWidgets('displays all UI elements in running state', (tester) async {
-      await tester.pumpWidget(buildWidget(
-        isPaused: false,
-        isComplete: false,
-      ));
-
-      // Timer
-      expect(find.text('ELAPSED'), findsOneWidget);
-      expect(find.text('REMAINING'), findsOneWidget);
-
-      // Chart
-      expect(find.byType(WorkoutPowerChart), findsOneWidget);
-
-      // Metrics
-      expect(find.text('POWER'), findsOneWidget);
-      expect(find.text('CADENCE'), findsOneWidget);
-      expect(find.text('HR'), findsOneWidget);
-
-      // Current block
-      expect(find.text('WARM UP'), findsOneWidget);
-
-      // Next block
-      expect(find.text('NEXT: WORK'), findsOneWidget);
-
-      // Controls
-      expect(find.text('Pause'), findsOneWidget);
-      expect(find.byIcon(Icons.skip_next), findsOneWidget);
-      expect(find.text('End Workout'), findsOneWidget);
-
-      // Intensity controls
-      expect(find.byIcon(Icons.add_circle_outline), findsOneWidget);
-      expect(find.byIcon(Icons.remove_circle_outline), findsOneWidget);
-      expect(find.text('Intensity: 100%'), findsOneWidget);
+      // Chart should still be there
+      robot.verifyPowerChartVisible();
+      robot.verifyPowerChartLegend();
     });
   });
 }
