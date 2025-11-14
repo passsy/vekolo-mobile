@@ -130,7 +130,10 @@ extension WorkoutPlayerRobot on VekoloRobot {
   void verifyNoNextBlock() {
     logger.robotLog('verify no next block displayed');
     // Check that no text starting with "NEXT:" exists (which indicates a next block card)
-    final nextTexts = spot<Text>().withProp((w) => w.data?.startsWith('NEXT:') ?? false);
+    final nextTexts = spot<Text>().withProp(
+      (w) => w.data,
+      match: (value) => value?.startsWith('NEXT:') ?? false,
+    );
     nextTexts.doesNotExist();
   }
 
@@ -238,9 +241,9 @@ extension WorkoutPlayerRobot on VekoloRobot {
     final pauseButton = spot<ElevatedButton>().withChild(spotText('Pause'));
     final completeButton = spot<ElevatedButton>().withChild(spotText('Complete'));
 
-    if (resumeButton.existsOnce().evaluated.length > 0) {
+    if (existsAtLeastOnce(resumeButton)) {
       await act.tap(resumeButton);
-    } else if (pauseButton.existsOnce().evaluated.length > 0) {
+    } else if (existsAtLeastOnce(pauseButton)) {
       await act.tap(pauseButton);
     } else {
       await act.tap(completeButton);
