@@ -441,7 +441,11 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
               }
             }
           },
-          child: Scaffold(body: _buildWorkoutPlayer()),
+          child: Scaffold(
+            body: SafeArea(
+              child: _buildWorkoutPlayer(),
+            ),
+          ),
         );
       },
     );

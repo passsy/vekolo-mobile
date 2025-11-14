@@ -2,8 +2,10 @@ import 'package:chirp/chirp.dart';
 
 import 'package:context_plus/context_plus.dart';
 import 'package:flutter/material.dart';
+import 'package:wiredash/wiredash.dart';
 import 'package:vekolo/api/pretty_log_interceptor.dart';
 import 'package:vekolo/api/vekolo_api_client.dart';
+import 'package:vekolo/app/colors.dart';
 import 'package:vekolo/app/refs.dart';
 import 'package:vekolo/ble/ble_permissions.dart';
 import 'package:vekolo/ble/ble_platform.dart' hide LogLevel;
@@ -36,9 +38,11 @@ class _VekoloAppState extends State<VekoloApp> {
   bool _initialized = false;
   String? _initializationError;
   String? _initializationStackTrace;
+  DateTime? _initializationStartTime;
 
   /// Perform async initialization of services before mounting the main app / drawing the first frame
   Future<void> _initialize(BuildContext context) async {
+    _initializationStartTime ??= DateTime.now();
     if (!mounted) return;
     try {
       // Initialize SharedPreferences first (required by other services)
@@ -64,6 +68,13 @@ class _VekoloAppState extends State<VekoloApp> {
         await authService.refreshAccessToken();
       } catch (e, stack) {
         chirp.error('No valid refresh token found during initialization', error: e, stackTrace: stack);
+      }
+
+      // Ensure splash screen is shown for at least the animation duration
+      final elapsedTime = DateTime.now().difference(_initializationStartTime!);
+      final remainingTime = splashScreenAnimationDuration - elapsedTime;
+      if (remainingTime.inMilliseconds > 0) {
+        await Future<void>.delayed(remainingTime);
       }
 
       // Mark initialization as complete
@@ -196,35 +207,73 @@ class _VekoloAppState extends State<VekoloApp> {
               _initialize(context); // Fire and forget - setState will rebuild
             }
 
-            return MaterialApp(
-              debugShowCheckedModeBanner: false,
-              title: 'Vekolo',
-              home: _initializationError != null
-                  ? InitializationErrorScreen(
-                      error: _initializationError!,
-                      stackTrace: _initializationStackTrace,
-                      onRetry: () {
-                        setState(() {
-                          _initializationError = null;
-                          _initializationStackTrace = null;
-                        });
-                        _initialize(context);
-                      },
-                    )
-                  : const SplashScreen(),
+            return Wiredash(
+              projectId: 'vekolo-6hc06gd',
+              secret: 'gMdvLXLa3Xd8B6uXlpIr2uCmcUsflaOe',
+              theme: WiredashThemeData.fromColor(
+                primaryColor: VekoloColors.laser,
+                brightness: Brightness.dark,
+              ).copyWith(
+                primaryContainerColor: VekoloColors.calm,
+                secondaryContainerColor: VekoloColors.beige,
+                primaryBackgroundColor: VekoloColors.offBlack,
+                secondaryBackgroundColor: Colors.black,
+                textOnPrimaryContainerColor: VekoloColors.offWhite,
+                textOnSecondaryContainerColor: VekoloColors.offBlack,
+                firstPenColor: VekoloColors.firelineOrange,
+                secondPenColor: VekoloColors.limitBreakPink,
+                thirdPenColor: VekoloColors.vitalSurgeGreen,
+                fourthPenColor: VekoloColors.oxygenRushLightBlue,
+              ),
+              child: MaterialApp(
+                debugShowCheckedModeBanner: false,
+                title: 'Vekolo',
+                home: _initializationError != null
+                    ? InitializationErrorScreen(
+                        error: _initializationError!,
+                        stackTrace: _initializationStackTrace,
+                        onRetry: () {
+                          setState(() {
+                            _initializationError = null;
+                            _initializationStackTrace = null;
+                          });
+                          _initialize(context);
+                        },
+                      )
+                    : const SplashScreen(),
+              ),
             );
           }
 
           // After initialization, render main app
-          return VekoloRouter(
-            builder: (context) {
-              return MaterialApp.router(
-                title: 'Vekolo',
-                theme: ThemeData(colorScheme: ColorScheme.fromSeed(seedColor: Colors.orange)),
-                debugShowCheckedModeBanner: false,
-                routerConfig: Refs.router.of(context),
-              );
-            },
+          return Wiredash(
+            projectId: 'vekolo-6hc06gd',
+            secret: 'gMdvLXLa3Xd8B6uXlpIr2uCmcUsflaOe',
+            theme: WiredashThemeData.fromColor(
+              primaryColor: VekoloColors.laser,
+              brightness: Brightness.dark,
+            ).copyWith(
+              primaryContainerColor: VekoloColors.calm,
+              secondaryContainerColor: VekoloColors.beige,
+              primaryBackgroundColor: VekoloColors.offBlack,
+              secondaryBackgroundColor: Colors.black,
+              textOnPrimaryContainerColor: VekoloColors.offWhite,
+              textOnSecondaryContainerColor: VekoloColors.offBlack,
+              firstPenColor: VekoloColors.firelineOrange,
+              secondPenColor: VekoloColors.limitBreakPink,
+              thirdPenColor: VekoloColors.vitalSurgeGreen,
+              fourthPenColor: VekoloColors.oxygenRushLightBlue,
+            ),
+            child: VekoloRouter(
+              builder: (context) {
+                return MaterialApp.router(
+                  title: 'Vekolo',
+                  theme: ThemeData(colorScheme: ColorScheme.fromSeed(seedColor: Colors.orange)),
+                  debugShowCheckedModeBanner: false,
+                  routerConfig: Refs.router.of(context),
+                );
+              },
+            ),
           );
         },
       ),

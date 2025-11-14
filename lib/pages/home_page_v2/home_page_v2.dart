@@ -1,7 +1,9 @@
 import 'package:context_plus/context_plus.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:state_beacon/state_beacon.dart';
+import 'package:wiredash/wiredash.dart';
 import 'package:vekolo/app/refs.dart';
 import 'package:vekolo/pages/home_page_v2/home_page_controller.dart';
 import 'package:vekolo/pages/home_page_v2/tabs/activities_tab.dart';
@@ -163,47 +165,64 @@ class _HomePage2State extends State<HomePage2> with SingleTickerProviderStateMix
             _closeFilterModal();
           }
         },
-        child: Scaffold(
-          backgroundColor: Colors.black,
-          body: Stack(
-            children: [
-              // Tab content
-              IndexedStack(
-                index: selectedIndex,
-                children: [
-                  ActivitiesTab(controller: controller, onFilterTap: _showFilterModal),
-                  const LibraryTab(),
-                  const CreateTab(),
-                ],
-              ),
-
-              // Top bar
-              Positioned(
-                top: 0,
-                left: 0,
-                right: 0,
-                child: HomeTopBar(
-                  user: user,
-                  activeFilters: activeFilterColors,
-                  filterButtonKey: _filterButtonKey,
-                  onFilterTap: _showFilterModal,
-                  onBookmarkTap: () {
-                    // Switch to Library tab
-                    controller.selectTab(1);
-                  },
-                  onDevicesTap: () {
-                    context.push('/devices');
-                  },
-                  onProfileTap: () {
-                    if (user != null) {
-                      context.push('/profile');
-                    } else {
-                      context.push('/login');
-                    }
-                  },
+        child: AnnotatedRegion<SystemUiOverlayStyle>(
+          value: const SystemUiOverlayStyle(
+            statusBarColor: Colors.transparent,
+            statusBarIconBrightness: Brightness.light,
+            statusBarBrightness: Brightness.dark,
+            systemNavigationBarColor: Colors.transparent,
+            systemNavigationBarIconBrightness: Brightness.light,
+          ),
+          child: Scaffold(
+            backgroundColor: Colors.black,
+            body: Stack(
+              children: [
+                // Tab content
+                IndexedStack(
+                  index: selectedIndex,
+                  children: [
+                    ActivitiesTab(controller: controller, onFilterTap: _showFilterModal),
+                    const LibraryTab(),
+                    const CreateTab(),
+                  ],
                 ),
-              ),
-            ],
+
+                // Top bar
+                Positioned(
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  child: HomeTopBar(
+                    user: user,
+                    activeFilters: activeFilterColors,
+                    filterButtonKey: _filterButtonKey,
+                    onFilterTap: _showFilterModal,
+                    onBookmarkTap: () {
+                      // Switch to Library tab
+                      controller.selectTab(1);
+                    },
+                    onDevicesTap: () {
+                      context.push('/devices');
+                    },
+                    onProfileTap: () {
+                      if (user != null) {
+                        context.push('/profile');
+                      } else {
+                        context.push('/login');
+                      }
+                    },
+                  ),
+                ),
+              ],
+            ),
+            floatingActionButton: selectedIndex == 0
+                ? FloatingActionButton.extended(
+                    onPressed: () => Wiredash.of(context).show(),
+                    backgroundColor: const Color(0xFFFF6F00),
+                    icon: const Icon(Icons.feedback, color: Colors.white),
+                    label: const Text('Feedback', style: TextStyle(color: Colors.white, fontSize: 16)),
+                  )
+                : null,
           ),
         ),
       ),

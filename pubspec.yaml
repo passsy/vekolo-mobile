@@ -29,10 +29,12 @@ dependencies:
   nanoid2: ^2.0.1
   path_provider: ^2.1.5
   google_fonts: ^6.2.1
+  wiredash: ^2.4.0
   chirp:
     git:
       url: git@github.com:passsy/chirp.git
       ref: main
+  flutter_svg: ^2.2.2
 
 dev_dependencies:
   flutter_blue_plus_platform_interface: ^7.0.0
@@ -70,3 +72,5 @@ flutter:
   assets:
     - save.json
     - assets/fonts/
+    - assets/images/logo-outline.svg
+    - assets/images/logo-filled.svg

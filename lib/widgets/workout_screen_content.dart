@@ -15,6 +15,60 @@ import 'package:vekolo/domain/models/workout/workout_models.dart';
 import 'package:vekolo/pages/home_page_v2/widgets/workout_interval_bars.dart';
 import 'package:vekolo/widgets/gradient_card_background.dart';
 
+/// Responsive spacing configuration based on screen height.
+class _ResponsiveSpacing {
+  _ResponsiveSpacing({
+    required this.small,
+    required this.medium,
+    required this.large,
+    required this.section,
+    required this.horizontal,
+    required this.kpiValue,
+    required this.metricValue,
+    required this.metricLabel,
+    required this.intervalHeight,
+  });
+
+  factory _ResponsiveSpacing.fromHeight(double height) {
+    // Define min and max values for smooth interpolation
+    const minHeight = 500.0; // Small phone screens
+    const maxHeight = 900.0; // Large screens/tablets
+
+    // Clamp height to valid range
+    final clampedHeight = height.clamp(minHeight, maxHeight);
+
+    // Calculate interpolation factor (0.0 = min, 1.0 = max)
+    final t = (clampedHeight - minHeight) / (maxHeight - minHeight);
+
+    return _ResponsiveSpacing(
+      small: _lerp(1, 8, t), // Much tighter spacing on small screens
+      medium: _lerp(4, 16, t), // Reduced from 6
+      large: _lerp(6, 32, t), // Reduced from 10
+      section: _lerp(8, 32, t), // Reduced from 12
+      horizontal: _lerp(8, 16, t), // Reduced from 10
+      kpiValue: _lerp(16, 36, t), // Smaller text on small screens
+      metricValue: _lerp(48, 64, t), // Reduced from 38
+      metricLabel: _lerp(16, 16, t), // Reduced from 8
+      intervalHeight: _lerp(60, 150, t), // Much shorter on small screens
+    );
+  }
+
+  /// Linear interpolation between min and max values
+  static double _lerp(double min, double max, double t) {
+    return min + (max - min) * t;
+  }
+
+  final double small;
+  final double medium;
+  final double large;
+  final double section;
+  final double horizontal;
+  final double kpiValue;
+  final double metricValue;
+  final double metricLabel;
+  final double intervalHeight;
+}
+
 /// Modern workout screen layout.
 class WorkoutScreenContent extends StatelessWidget {
   const WorkoutScreenContent({
@@ -74,79 +128,99 @@ class WorkoutScreenContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        // Background gradient
-        const Positioned.fill(
-          child: GradientCardBackground(color: Color(0xFF1B4332), gradientStart: 0.0, gradientEnd: 0.8),
-        ),
-        // Content
-        SafeArea(
-          child: Column(
-            children: [
-              const SizedBox(height: 24),
-              // KPI row at top
-              _buildKPIRow(),
-              const SizedBox(height: 32),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final height = constraints.maxHeight;
+        final spacing = _ResponsiveSpacing.fromHeight(height);
 
-              // Progress bar
-              _buildProgressBar(),
-              const SizedBox(height: 48),
-
-              // TIME metric - only show remaining time in current interval
-              _buildSimpleMetricRow('TIME', currentBlockRemainingTime, Colors.white),
-              const SizedBox(height: 32),
-
-              // Large interval visualization
-              Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: _buildIntervalVisualization()),
-              const SizedBox(height: 32),
-
-              // WATT metric with current target and next target
-              _buildSimpleMetricRow(
-                'WATT',
-                currentPower ?? 0,
-                _getMetricColor(currentPower ?? 0, powerTarget, threshold: 10),
-                target: powerTarget,
-                nextTarget: _getNextPower(),
-              ),
-              const SizedBox(height: 24),
-
-              // RPM metric with current target and next target
-              _buildSimpleMetricRow(
-                'RPM',
-                currentCadence ?? 0,
-                _getMetricColor(currentCadence ?? 0, cadenceTarget, threshold: 5),
-                target: cadenceTarget,
-                nextTarget: _getNextCadence(),
-              ),
-              const SizedBox(height: 40),
-
-              // Control buttons: Skip and Difficulty adjustment
-              _buildControlButtons(),
-
-              const Spacer(),
-
-              // Bottom timeline and timestamps
-              _buildBottomTimeline(),
-              const SizedBox(height: 8),
-              _buildTimestamps(),
-              const SizedBox(height: 16),
-            ],
-          ),
-        ),
-        // Close button at top-right
-        Positioned(
-          top: 0,
-          right: 0,
-          child: SafeArea(
-            child: IconButton(
-              icon: const Icon(Icons.close, color: Colors.white, size: 28),
-              onPressed: onClose,
-              padding: const EdgeInsets.all(16),
+        return Stack(
+          children: [
+            // Background gradient
+            const Positioned.fill(
+              child: GradientCardBackground(color: Color(0xFF1B4332), gradientStart: 0.0, gradientEnd: 0.8),
             ),
-          ),
-        ),
-      ],
+            // Content with scrollable area and fixed bottom
+            SafeArea(
+              child: Column(
+                children: [
+                  // Scrollable content area
+                  Expanded(
+                    child: SingleChildScrollView(
+                      child: Column(
+                        children: [
+                          SizedBox(height: spacing.section),
+                          // KPI row at top
+                          _buildKPIRow(spacing),
+                          SizedBox(height: spacing.section),
+
+                          // Progress bar
+                          _buildProgressBar(spacing),
+                          SizedBox(height: spacing.large),
+
+                          // TIME metric - only show remaining time in current interval
+                          _buildSimpleMetricRow('TIME', currentBlockRemainingTime, Colors.white, spacing: spacing),
+                          SizedBox(height: spacing.section),
+
+                          // Large interval visualization
+                          Padding(
+                            padding: EdgeInsets.symmetric(horizontal: spacing.horizontal),
+                            child: _buildIntervalVisualization(spacing),
+                          ),
+                          SizedBox(height: spacing.section),
+
+                          // WATT metric with current target and next target
+                          _buildSimpleMetricRow(
+                            'WATT',
+                            currentPower ?? 0,
+                            _getMetricColor(currentPower ?? 0, powerTarget, threshold: 10),
+                            target: powerTarget,
+                            nextTarget: _getNextPower(),
+                            spacing: spacing,
+                          ),
+                          SizedBox(height: spacing.medium),
+
+                          // RPM metric with current target and next target
+                          _buildSimpleMetricRow(
+                            'RPM',
+                            currentCadence ?? 0,
+                            _getMetricColor(currentCadence ?? 0, cadenceTarget, threshold: 5),
+                            target: cadenceTarget,
+                            nextTarget: _getNextCadence(),
+                            spacing: spacing,
+                          ),
+                          SizedBox(height: spacing.large),
+
+                          // Control buttons: Skip and Difficulty adjustment
+                          _buildControlButtons(spacing),
+                          SizedBox(height: spacing.medium),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  // Fixed bottom timeline and timestamps
+                  _buildBottomTimeline(),
+                  SizedBox(height: spacing.small),
+                  _buildTimestamps(),
+                  SizedBox(height: spacing.medium),
+                ],
+              ),
+            ),
+            // Close button at top-right
+            Positioned(
+              top: 0,
+              right: 0,
+              child: SafeArea(
+                child: IconButton(
+                  icon: const Icon(Icons.close, color: Colors.white, size: 28),
+                  onPressed: onClose,
+                  padding: const EdgeInsets.all(16),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -200,25 +274,25 @@ class WorkoutScreenContent extends StatelessWidget {
     }
   }
 
-  Widget _buildKPIRow() {
+  Widget _buildKPIRow(_ResponsiveSpacing spacing) {
     return InkWell(
       onTap: onDevicesPressed,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: EdgeInsets.symmetric(horizontal: spacing.horizontal, vertical: spacing.small),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
-            _buildKPI('WATT', (currentPower ?? 0).toString()),
-            _buildKPI('RPM', (currentCadence ?? 0).toString()),
-            _buildKPI('HR', (currentHeartRate ?? 0).toString()),
-            _buildKPI('SPEED', currentSpeed != null ? currentSpeed!.toStringAsFixed(1) : '0'),
+            _buildKPI('WATT', (currentPower ?? 0).toString(), spacing),
+            _buildKPI('RPM', (currentCadence ?? 0).toString(), spacing),
+            _buildKPI('HR', (currentHeartRate ?? 0).toString(), spacing),
+            _buildKPI('SPEED', currentSpeed != null ? currentSpeed!.toStringAsFixed(1) : '0', spacing),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildKPI(String label, String value) {
+  Widget _buildKPI(String label, String value, _ResponsiveSpacing spacing) {
     return Column(
       children: [
         Text(
@@ -229,19 +303,23 @@ class WorkoutScreenContent extends StatelessWidget {
             fontWeight: FontWeight.w600,
           ),
         ),
-        const SizedBox(height: 4),
+        SizedBox(height: spacing.small / 2),
         Text(
           value,
-          style: GoogleFonts.sairaExtraCondensed(color: Colors.white, fontSize: 36, fontWeight: FontWeight.w400),
+          style: GoogleFonts.sairaExtraCondensed(
+            color: Colors.white,
+            fontSize: spacing.kpiValue,
+            fontWeight: FontWeight.w400,
+          ),
         ),
       ],
     );
   }
 
-  Widget _buildProgressBar() {
+  Widget _buildProgressBar(_ResponsiveSpacing spacing) {
     final progress = remainingTime > 0 ? elapsedTime / (elapsedTime + remainingTime) : 1.0;
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 48),
+      padding: EdgeInsets.symmetric(horizontal: spacing.horizontal * 3),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(4),
         child: LinearProgressIndicator(
@@ -254,9 +332,9 @@ class WorkoutScreenContent extends StatelessWidget {
     );
   }
 
-  Widget _buildControlButtons() {
+  Widget _buildControlButtons(_ResponsiveSpacing spacing) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 32),
+      padding: EdgeInsets.symmetric(horizontal: spacing.horizontal * 2),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -269,25 +347,21 @@ class WorkoutScreenContent extends StatelessWidget {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
           ),
-          const SizedBox(width: 16),
+          SizedBox(width: spacing.medium),
 
           // Difficulty indicator
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding: EdgeInsets.symmetric(horizontal: spacing.medium, vertical: spacing.small),
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
               '${(powerScaleFactor * 100).toStringAsFixed(0)}%',
-              style: GoogleFonts.publicSans(
-                color: Colors.white,
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-              ),
+              style: GoogleFonts.publicSans(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600),
             ),
           ),
-          const SizedBox(width: 16),
+          SizedBox(width: spacing.medium),
 
           // Difficulty increase button
           IconButton(
@@ -298,7 +372,7 @@ class WorkoutScreenContent extends StatelessWidget {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
           ),
-          const SizedBox(width: 32),
+          SizedBox(width: spacing.large),
 
           // Skip button
           ElevatedButton.icon(
@@ -308,13 +382,9 @@ class WorkoutScreenContent extends StatelessWidget {
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.white.withValues(alpha: 0.15),
               foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              padding: EdgeInsets.symmetric(horizontal: spacing.large, vertical: spacing.medium),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              textStyle: GoogleFonts.publicSans(
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 1.0,
-              ),
+              textStyle: GoogleFonts.publicSans(fontSize: 14, fontWeight: FontWeight.w700, letterSpacing: 1.0),
             ),
           ),
         ],
@@ -328,20 +398,21 @@ class WorkoutScreenContent extends StatelessWidget {
     Color valueColor, {
     int? target,
     int? nextTarget,
+    required _ResponsiveSpacing spacing,
   }) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 32),
+      padding: EdgeInsets.symmetric(horizontal: spacing.horizontal * 2),
       child: Column(
         children: [
           Text(
             label,
             style: GoogleFonts.publicSans(
               color: Colors.white.withValues(alpha: 0.6),
-              fontSize: 11,
+              fontSize: spacing.metricLabel,
               fontWeight: FontWeight.w600,
             ),
           ),
-          const SizedBox(height: 4),
+          SizedBox(height: spacing.small / 2),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.baseline,
@@ -352,32 +423,32 @@ class WorkoutScreenContent extends StatelessWidget {
                 _formatValue(current),
                 style: GoogleFonts.sairaExtraCondensed(
                   color: valueColor,
-                  fontSize: 64,
+                  fontSize: spacing.metricValue,
                   fontWeight: FontWeight.w400,
                   height: 1.0,
                 ),
               ),
               if (target != null) ...[
-                const SizedBox(width: 16),
+                SizedBox(width: spacing.medium),
                 // Target value of current block (dim)
                 Text(
                   _formatValue(target),
                   style: GoogleFonts.sairaExtraCondensed(
                     color: Colors.white.withValues(alpha: 0.3),
-                    fontSize: 64,
+                    fontSize: spacing.metricValue,
                     fontWeight: FontWeight.w400,
                     height: 1.0,
                   ),
                 ),
               ],
               if (nextTarget != null) ...[
-                const SizedBox(width: 16),
+                SizedBox(width: spacing.medium),
                 // Target value of next block (dim)
                 Text(
                   _formatValue(nextTarget),
                   style: GoogleFonts.sairaExtraCondensed(
                     color: Colors.white.withValues(alpha: 0.3),
-                    fontSize: 64,
+                    fontSize: spacing.metricValue,
                     fontWeight: FontWeight.w400,
                     height: 1.0,
                   ),
@@ -452,7 +523,7 @@ class WorkoutScreenContent extends StatelessWidget {
     return const Color(0xFFE91E63); // Anaerobic - pink
   }
 
-  Widget _buildIntervalVisualization() {
+  Widget _buildIntervalVisualization(_ResponsiveSpacing spacing) {
     final intervals = _generateZoomedIntervals();
     const windowSize = 15 * 60 * 1000; // 15 minutes in milliseconds
     final windowStart = (elapsedTime - windowSize).clamp(0, double.infinity).toInt();
@@ -460,14 +531,11 @@ class WorkoutScreenContent extends StatelessWidget {
     // Calculate current position relative to the zoomed window
     final currentTimeInWindow = elapsedTime - windowStart;
     // Calculate actual total duration of visible intervals (sum of all interval durations)
-    final totalWindowDuration = intervals.fold<int>(
-      0,
-      (sum, interval) => sum + (interval.duration * 1000),
-    );
+    final totalWindowDuration = intervals.fold<int>(0, (sum, interval) => sum + (interval.duration * 1000));
 
     return WorkoutIntervalBars(
       intervals: intervals,
-      height: 150,
+      height: spacing.intervalHeight,
       currentTimeMs: currentTimeInWindow,
       totalDurationMs: totalWindowDuration,
     );
@@ -504,10 +572,10 @@ class WorkoutScreenContent extends StatelessWidget {
             final startFraction = (visibleStart - intervalStart) / intervalDuration;
             final endFraction = (visibleEnd - intervalStart) / intervalDuration;
 
-            final adjustedIntensityStart = interval.intensityStart! +
-              (interval.intensityEnd! - interval.intensityStart!) * startFraction;
-            final adjustedIntensityEnd = interval.intensityStart! +
-              (interval.intensityEnd! - interval.intensityStart!) * endFraction;
+            final adjustedIntensityStart =
+                interval.intensityStart! + (interval.intensityEnd! - interval.intensityStart!) * startFraction;
+            final adjustedIntensityEnd =
+                interval.intensityStart! + (interval.intensityEnd! - interval.intensityStart!) * endFraction;
 
             zoomedIntervals.add(
               IntervalBar(
@@ -520,11 +588,7 @@ class WorkoutScreenContent extends StatelessWidget {
             );
           } else {
             zoomedIntervals.add(
-              IntervalBar(
-                intensity: interval.intensity,
-                duration: visibleDuration,
-                color: interval.color,
-              ),
+              IntervalBar(intensity: interval.intensity, duration: visibleDuration, color: interval.color),
             );
           }
         }
@@ -545,11 +609,7 @@ class WorkoutScreenContent extends StatelessWidget {
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: WorkoutIntervalBars(
-        intervals: intervals,
-        currentTimeMs: elapsedTime,
-        totalDurationMs: totalDuration,
-      ),
+      child: WorkoutIntervalBars(intervals: intervals, currentTimeMs: elapsedTime, totalDurationMs: totalDuration),
     );
   }
 
