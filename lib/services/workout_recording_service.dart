@@ -68,7 +68,12 @@ class WorkoutRecordingService {
   ///
   /// Creates a new session and begins sampling metrics at 1Hz.
   /// Returns the generated session ID.
-  Future<String> startRecording(String workoutName, {String? userId, required int ftp}) async {
+  Future<String> startRecording(
+    String workoutName, {
+    String? userId,
+    required int ftp,
+    String? sourceWorkoutId,
+  }) async {
     if (_isRecording) {
       chirp.info('Already recording session: $_sessionId');
       return _sessionId!;
@@ -77,7 +82,13 @@ class WorkoutRecordingService {
     chirp.info('Starting recording: $workoutName');
 
     // Create new session
-    _sessionId = await _persistence.createSession(workoutName, _playerService.workoutPlan, userId: userId, ftp: ftp);
+    _sessionId = await _persistence.createSession(
+      workoutName,
+      _playerService.workoutPlan,
+      userId: userId,
+      ftp: ftp,
+      sourceWorkoutId: sourceWorkoutId,
+    );
 
     // Start sampling
     _startSampling();

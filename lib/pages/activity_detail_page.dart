@@ -1,5 +1,7 @@
+import 'package:context_plus/context_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:vekolo/app/refs.dart';
 import 'package:vekolo/domain/models/workout/workout_models.dart';
 import 'package:vekolo/models/activity.dart';
 
@@ -9,13 +11,29 @@ class ActivityDetailPage extends StatelessWidget {
 
   final Activity activity;
 
+  bool get _isLocalWorkout => activity.id.startsWith('local-');
+
+  String get _localWorkoutId {
+    // Remove 'local-' prefix to get the actual workout ID
+    return activity.id.substring('local-'.length);
+  }
+
   @override
   Widget build(BuildContext context) {
     final workout = activity.workout;
     final plan = workout.plan;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Workout Details')),
+      appBar: AppBar(
+        title: const Text('Workout Details'),
+        actions: [
+          if (_isLocalWorkout)
+            IconButton(
+              icon: const Icon(Icons.delete),
+              onPressed: () => _showDeleteConfirmation(context),
+            ),
+        ],
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -79,7 +97,7 @@ class ActivityDetailPage extends StatelessWidget {
             // Ride Now button
             ElevatedButton.icon(
               onPressed: () {
-                context.push('/workout-player', extra: {'plan': workout.plan, 'name': workout.title});
+                context.push('/workout-player', extra: {'workoutId': workout.id});
               },
               icon: const Icon(Icons.play_circle_filled, size: 32),
               label: const Text('Ride Now', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
@@ -227,6 +245,57 @@ class ActivityDetailPage extends StatelessWidget {
         return 'FTP Test';
       default:
         return category.value;
+    }
+  }
+
+  Future<void> _showDeleteConfirmation(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Workout?'),
+        content: const Text('Are you sure you want to delete this workout? This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && context.mounted) {
+      await _deleteWorkout(context);
+    }
+  }
+
+  Future<void> _deleteWorkout(BuildContext context) async {
+    try {
+      final persistence = Refs.workoutSessionPersistence.of(context);
+      await persistence.deleteSession(_localWorkoutId);
+
+      if (context.mounted) {
+        // Show success message
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Workout deleted successfully')),
+        );
+
+        // Navigate back and trigger a refresh by returning true
+        context.pop(true);
+      }
+    } catch (e, stackTrace) {
+      print('[ActivityDetailPage._deleteWorkout] Error deleting workout: $e');
+      print(stackTrace);
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to delete workout: $e')),
+        );
+      }
     }
   }
 }

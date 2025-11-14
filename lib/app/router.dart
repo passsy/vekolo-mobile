@@ -60,20 +60,27 @@ class _VekoloRouterState extends State<VekoloRouter> {
         builder: (context, state) {
           final resuming = state.uri.queryParameters['resuming'] == 'true';
 
-          // Extract workout plan and name from extra data
+          // Extract workout data from extra
+          String? workoutId;
           WorkoutPlan? workoutPlan;
           String? workoutName;
 
           if (state.extra is Map) {
             final extra = state.extra! as Map;
+            workoutId = extra['workoutId'] as String?;
             workoutPlan = extra['plan'] as WorkoutPlan?;
             workoutName = extra['name'] as String?;
-          } else if (state.extra is WorkoutPlan) {
-            // Legacy support for direct WorkoutPlan passing
-            workoutPlan = state.extra! as WorkoutPlan;
+          } else if (state.extra is String) {
+            // Direct workout ID passing
+            workoutId = state.extra! as String;
           }
 
-          return WorkoutPlayerPage(isResuming: resuming, workoutPlan: workoutPlan, workoutName: workoutName);
+          return WorkoutPlayerPage(
+            isResuming: resuming,
+            workoutId: workoutId,
+            workoutPlan: workoutPlan,
+            workoutName: workoutName,
+          );
         },
       ),
     ],

@@ -9,15 +9,18 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:vekolo/domain/models/power_history.dart';
 import 'package:vekolo/domain/models/workout/workout_models.dart';
-import 'package:vekolo/widgets/workout_power_chart.dart';
+import 'package:vekolo/pages/home_page_v2/widgets/workout_interval_bars.dart';
+import 'package:vekolo/widgets/gradient_card_background.dart';
 
 /// Modern workout screen layout.
 class WorkoutScreenContent extends StatelessWidget {
   const WorkoutScreenContent({
     super.key,
     required this.powerHistory,
+    required this.workoutPlan,
     required this.currentBlock,
     required this.nextBlock,
     required this.elapsedTime,
@@ -28,6 +31,7 @@ class WorkoutScreenContent extends StatelessWidget {
     required this.cadenceTarget,
     required this.currentCadence,
     required this.currentHeartRate,
+    required this.currentSpeed,
     required this.isPaused,
     required this.isComplete,
     required this.hasStarted,
@@ -38,9 +42,12 @@ class WorkoutScreenContent extends StatelessWidget {
     required this.onEndWorkout,
     required this.onPowerScaleIncrease,
     required this.onPowerScaleDecrease,
+    required this.onDevicesPressed,
+    required this.onClose,
   });
 
   final PowerHistory powerHistory;
+  final WorkoutPlan workoutPlan;
   final dynamic currentBlock;
   final dynamic nextBlock;
   final int elapsedTime;
@@ -51,6 +58,7 @@ class WorkoutScreenContent extends StatelessWidget {
   final int? cadenceTarget;
   final int? currentCadence;
   final int? currentHeartRate;
+  final double? currentSpeed;
   final bool isPaused;
   final bool isComplete;
   final bool hasStarted;
@@ -61,479 +69,443 @@ class WorkoutScreenContent extends StatelessWidget {
   final VoidCallback onEndWorkout;
   final VoidCallback onPowerScaleIncrease;
   final VoidCallback onPowerScaleDecrease;
+  final VoidCallback onDevicesPressed;
+  final VoidCallback onClose;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    return Stack(
       children: [
-        // Timer header
-        _buildTimerHeader(),
-        const SizedBox(height: 16),
+        // Background gradient
+        const Positioned.fill(
+          child: GradientCardBackground(color: Color(0xFF1B4332), gradientStart: 0.0, gradientEnd: 0.8),
+        ),
+        // Content
+        SafeArea(
+          child: Column(
+            children: [
+              const SizedBox(height: 24),
+              // KPI row at top
+              _buildKPIRow(),
+              const SizedBox(height: 32),
 
-        // Main metrics display
-        Expanded(
-          child: SingleChildScrollView(
-            child: Column(
-              children: [
-                // Power chart
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: _buildPowerChartCard(),
-                ),
-                const SizedBox(height: 16),
+              // Progress bar
+              _buildProgressBar(),
+              const SizedBox(height: 48),
 
-                // Current metrics
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: _buildMetricsRow(),
-                ),
-                const SizedBox(height: 16),
+              // TIME metric - only show remaining time in current interval
+              _buildSimpleMetricRow('TIME', currentBlockRemainingTime, Colors.white),
+              const SizedBox(height: 32),
 
-                // Current block info
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: _buildCurrentBlockCard(),
-                ),
-                const SizedBox(height: 12),
+              // Large interval visualization
+              Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: _buildIntervalVisualization()),
+              const SizedBox(height: 32),
 
-                // Next block preview
-                if (nextBlock != null && !isComplete)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: _buildNextBlockCard(),
-                  ),
+              // WATT metric with current target and next target
+              _buildSimpleMetricRow(
+                'WATT',
+                currentPower ?? 0,
+                _getMetricColor(currentPower ?? 0, powerTarget, threshold: 10),
+                target: powerTarget,
+                nextTarget: _getNextPower(),
+              ),
+              const SizedBox(height: 24),
 
-                if (isComplete)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: _buildWorkoutCompleteCard(),
-                  ),
+              // RPM metric with current target and next target
+              _buildSimpleMetricRow(
+                'RPM',
+                currentCadence ?? 0,
+                _getMetricColor(currentCadence ?? 0, cadenceTarget, threshold: 5),
+                target: cadenceTarget,
+                nextTarget: _getNextCadence(),
+              ),
 
-                const SizedBox(height: 16),
-              ],
+              const Spacer(),
+
+              // Bottom timeline and timestamps
+              _buildBottomTimeline(),
+              const SizedBox(height: 8),
+              _buildTimestamps(),
+              const SizedBox(height: 16),
+            ],
+          ),
+        ),
+        // Close button at top-right
+        Positioned(
+          top: 0,
+          right: 0,
+          child: SafeArea(
+            child: IconButton(
+              icon: const Icon(Icons.close, color: Colors.white, size: 28),
+              onPressed: onClose,
+              padding: const EdgeInsets.all(16),
             ),
           ),
         ),
-
-        // Bottom controls
-        _buildBottomControls(),
       ],
     );
   }
 
-  Widget _buildTimerHeader() {
-    final totalSeconds = (elapsedTime / 1000).floor();
-    final minutes = totalSeconds ~/ 60;
-    final seconds = totalSeconds % 60;
+  // Helper methods to get next block values
+  int _getNextPower() {
+    if (nextBlock == null) return 0;
+    if (nextBlock is PowerBlock) {
+      final block = nextBlock as PowerBlock;
+      return (block.power * ftp).round();
+    } else if (nextBlock is RampBlock) {
+      final block = nextBlock as RampBlock;
+      return (block.powerStart * ftp).round();
+    }
+    return 0;
+  }
+
+  int _getNextCadence() {
+    if (nextBlock == null) return 0;
+    if (nextBlock is PowerBlock) {
+      final block = nextBlock as PowerBlock;
+      return block.cadence ?? 0;
+    } else if (nextBlock is RampBlock) {
+      final block = nextBlock as RampBlock;
+      return block.cadenceStart ?? 0;
+    }
+    return 0;
+  }
+
+  /// Calculate color for metric based on how close it is to target
+  ///
+  /// - Red: when current > target + threshold (too high)
+  /// - Yellow: when current < target - threshold (too low)
+  /// - Green: when within threshold range (good)
+  Color _getMetricColor(int current, int? target, {required int threshold}) {
+    if (target == null || target == 0) {
+      // No target set, use default green
+      return const Color(0xFF52B788);
+    }
+
+    final difference = current - target;
+
+    if (difference > threshold) {
+      // Too high - red
+      return const Color(0xFFE74C3C); // Red
+    } else if (difference < -threshold) {
+      // Too low - yellow
+      return const Color(0xFFF39C12); // Yellow/Orange
+    } else {
+      // Within range - green
+      return const Color(0xFF52B788); // Green
+    }
+  }
+
+  Widget _buildKPIRow() {
+    return InkWell(
+      onTap: onDevicesPressed,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            _buildKPI('WATT', (currentPower ?? 0).toString()),
+            _buildKPI('RPM', (currentCadence ?? 0).toString()),
+            _buildKPI('HR', (currentHeartRate ?? 0).toString()),
+            _buildKPI('SPEED', currentSpeed != null ? currentSpeed!.toStringAsFixed(1) : '0'),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildKPI(String label, String value) {
+    return Column(
+      children: [
+        Text(
+          label,
+          style: GoogleFonts.publicSans(
+            color: Colors.white.withValues(alpha: 0.6),
+            fontSize: 10,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: GoogleFonts.sairaExtraCondensed(color: Colors.white, fontSize: 36, fontWeight: FontWeight.w400),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildProgressBar() {
+    final progress = remainingTime > 0 ? elapsedTime / (elapsedTime + remainingTime) : 1.0;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 48),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(4),
+        child: LinearProgressIndicator(
+          value: progress,
+          minHeight: 6,
+          backgroundColor: Colors.white.withValues(alpha: 0.2),
+          valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF52B788)),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSimpleMetricRow(
+    String label,
+    int current,
+    Color valueColor, {
+    int? target,
+    int? nextTarget,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 32),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Text(
+            label,
+            style: GoogleFonts.publicSans(
+              color: Colors.white.withValues(alpha: 0.6),
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: [
+              // Current value (highlighted)
+              Text(
+                _formatValue(current),
+                style: GoogleFonts.sairaExtraCondensed(
+                  color: valueColor,
+                  fontSize: 64,
+                  fontWeight: FontWeight.w400,
+                  height: 1.0,
+                ),
+              ),
+              if (target != null) ...[
+                const SizedBox(width: 16),
+                // Target value of current block (dim)
+                Text(
+                  _formatValue(target),
+                  style: GoogleFonts.sairaExtraCondensed(
+                    color: Colors.white.withValues(alpha: 0.3),
+                    fontSize: 64,
+                    fontWeight: FontWeight.w400,
+                    height: 1.0,
+                  ),
+                ),
+              ],
+              if (nextTarget != null) ...[
+                const SizedBox(width: 16),
+                // Target value of next block (dim)
+                Text(
+                  _formatValue(nextTarget),
+                  style: GoogleFonts.sairaExtraCondensed(
+                    color: Colors.white.withValues(alpha: 0.3),
+                    fontSize: 64,
+                    fontWeight: FontWeight.w400,
+                    height: 1.0,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatValue(int value) {
+    // Convert milliseconds to seconds for time values (values >= 1000)
+    if (value >= 1000) {
+      final totalSeconds = (value / 1000).floor();
+      final minutes = totalSeconds ~/ 60;
+      final seconds = totalSeconds % 60;
+      return '$minutes:${seconds.toString().padLeft(2, '0')}';
+    }
+    return value.toString();
+  }
+
+  /// Converts workout plan blocks into interval bars for visualization
+  List<IntervalBar> _generateIntervalsFromWorkout() {
+    final intervals = <IntervalBar>[];
+
+    for (final block in workoutPlan.plan) {
+      _addBlockIntervals(block, intervals);
+    }
+
+    return intervals;
+  }
+
+  void _addBlockIntervals(dynamic block, List<IntervalBar> intervals) {
+    if (block is PowerBlock) {
+      final color = _getPowerZoneColor(block.power);
+      intervals.add(
+        IntervalBar(
+          intensity: block.power,
+          duration: block.duration ~/ 1000, // Convert ms to seconds for flex value
+          color: color,
+        ),
+      );
+    } else if (block is RampBlock) {
+      final color = _getPowerZoneColor((block.powerStart + block.powerEnd) / 2);
+      intervals.add(
+        IntervalBar(
+          intensity: (block.powerStart + block.powerEnd) / 2,
+          intensityStart: block.powerStart,
+          intensityEnd: block.powerEnd,
+          duration: block.duration ~/ 1000,
+          color: color,
+        ),
+      );
+    } else if (block is WorkoutInterval) {
+      // Expand intervals into individual parts
+      for (var i = 0; i < block.repeat; i++) {
+        for (final part in block.parts) {
+          _addBlockIntervals(part, intervals);
+        }
+      }
+    }
+  }
+
+  Color _getPowerZoneColor(double powerFraction) {
+    if (powerFraction < 0.55) return const Color(0xFF00BCD4); // Recovery - cyan
+    if (powerFraction < 0.75) return const Color(0xFF4CAF50); // Endurance - green
+    if (powerFraction < 0.90) return const Color(0xFF8BC34A); // Tempo - light green
+    if (powerFraction < 1.05) return const Color(0xFFFFA726); // Threshold - orange
+    if (powerFraction < 1.20) return const Color(0xFFFF6F00); // VO2max - deep orange
+    return const Color(0xFFE91E63); // Anaerobic - pink
+  }
+
+  Widget _buildIntervalVisualization() {
+    final intervals = _generateZoomedIntervals();
+    const windowSize = 15 * 60 * 1000; // 15 minutes in milliseconds
+    final windowStart = (elapsedTime - windowSize).clamp(0, double.infinity).toInt();
+
+    // Calculate current position relative to the zoomed window
+    final currentTimeInWindow = elapsedTime - windowStart;
+    final totalWindowDuration = windowSize * 2; // ±15 minutes = 30 minute window
+
+    return WorkoutIntervalBars(
+      intervals: intervals,
+      height: 150,
+      currentTimeMs: currentTimeInWindow,
+      totalDurationMs: totalWindowDuration,
+    );
+  }
+
+  /// Generate a zoomed view of intervals (±15 minutes around current position)
+  List<IntervalBar> _generateZoomedIntervals() {
+    final allIntervals = _generateIntervalsFromWorkout();
+    const windowSize = 15 * 60 * 1000; // 15 minutes in milliseconds
+    final currentTime = elapsedTime;
+    final windowStart = (currentTime - windowSize).clamp(0, double.infinity).toInt();
+    final windowEnd = currentTime + windowSize;
+
+    // Calculate cumulative times for each interval
+    final zoomedIntervals = <IntervalBar>[];
+    var cumulativeTime = 0;
+
+    for (final interval in allIntervals) {
+      final intervalDuration = interval.duration * 1000; // Convert seconds to ms
+      final intervalStart = cumulativeTime;
+      final intervalEnd = cumulativeTime + intervalDuration;
+
+      // Check if this interval overlaps with our window
+      if (intervalEnd > windowStart && intervalStart < windowEnd) {
+        // Calculate the visible portion of this interval
+        final visibleStart = intervalStart < windowStart ? windowStart : intervalStart;
+        final visibleEnd = intervalEnd > windowEnd ? windowEnd : intervalEnd;
+        final visibleDuration = ((visibleEnd - visibleStart) / 1000).round(); // Back to seconds
+
+        if (visibleDuration > 0) {
+          // For partially visible intervals, we need to adjust the intensity if it's a ramp
+          if (interval.intensityStart != null && interval.intensityEnd != null) {
+            // Calculate where we are in the ramp
+            final startFraction = (visibleStart - intervalStart) / intervalDuration;
+            final endFraction = (visibleEnd - intervalStart) / intervalDuration;
+
+            final adjustedIntensityStart = interval.intensityStart! +
+              (interval.intensityEnd! - interval.intensityStart!) * startFraction;
+            final adjustedIntensityEnd = interval.intensityStart! +
+              (interval.intensityEnd! - interval.intensityStart!) * endFraction;
+
+            zoomedIntervals.add(
+              IntervalBar(
+                intensity: (adjustedIntensityStart + adjustedIntensityEnd) / 2,
+                intensityStart: adjustedIntensityStart,
+                intensityEnd: adjustedIntensityEnd,
+                duration: visibleDuration,
+                color: interval.color,
+              ),
+            );
+          } else {
+            zoomedIntervals.add(
+              IntervalBar(
+                intensity: interval.intensity,
+                duration: visibleDuration,
+                color: interval.color,
+              ),
+            );
+          }
+        }
+      }
+
+      cumulativeTime = intervalEnd;
+
+      // Early exit if we're past the window
+      if (intervalStart > windowEnd) break;
+    }
+
+    return zoomedIntervals;
+  }
+
+  Widget _buildBottomTimeline() {
+    final intervals = _generateIntervalsFromWorkout();
+    final totalDuration = elapsedTime + remainingTime;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: WorkoutIntervalBars(
+        intervals: intervals,
+        height: 40,
+        currentTimeMs: elapsedTime,
+        totalDurationMs: totalDuration,
+      ),
+    );
+  }
+
+  Widget _buildTimestamps() {
+    final elapsedSeconds = (elapsedTime / 1000).floor();
+    final elapsedMinutes = elapsedSeconds ~/ 60;
+    final elapsedSecondsOnly = elapsedSeconds % 60;
 
     final remainingSeconds = (remainingTime / 1000).floor();
     final remainingMinutes = remainingSeconds ~/ 60;
     final remainingSecondsOnly = remainingSeconds % 60;
 
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-      color: Colors.grey[100],
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Column(
-            children: [
-              Text(
-                'ELAPSED',
-                style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey[700]),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}',
-                style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
-              ),
-            ],
+          Text(
+            '${elapsedMinutes.toString().padLeft(2, '0')}:${elapsedSecondsOnly.toString().padLeft(2, '0')}',
+            style: GoogleFonts.publicSans(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600),
           ),
-          Column(
-            children: [
-              Text(
-                'REMAINING',
-                style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey[700]),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                '${remainingMinutes.toString().padLeft(2, '0')}:${remainingSecondsOnly.toString().padLeft(2, '0')}',
-                style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
-              ),
-            ],
+          Text(
+            '${remainingMinutes.toString().padLeft(2, '0')}:${remainingSecondsOnly.toString().padLeft(2, '0')}',
+            style: GoogleFonts.publicSans(
+              color: Colors.white.withValues(alpha: 0.3),
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildPowerChartCard() {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'POWER',
-              style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey[700]),
-            ),
-            const SizedBox(height: 12),
-            WorkoutPowerChart(
-              powerHistory: powerHistory,
-              maxVisibleBars: 20,
-              height: 120,
-              ftp: ftp,
-            ),
-            const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      width: 12,
-                      height: 12,
-                      decoration: BoxDecoration(
-                        color: Colors.grey[400],
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    Text('Target', style: TextStyle(fontSize: 10, color: Colors.grey[600])),
-                  ],
-                ),
-                Row(
-                  children: [
-                    Container(
-                      width: 12,
-                      height: 12,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFFA726),
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    Text('Actual', style: TextStyle(fontSize: 10, color: Colors.grey[600])),
-                  ],
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMetricsRow() {
-    return Row(
-      children: [
-        Expanded(child: _buildMetricCard('POWER', currentPower, powerTarget, 'W', Icons.bolt, Colors.orange)),
-        const SizedBox(width: 8),
-        Expanded(
-          child: _buildMetricCard('CADENCE', currentCadence, cadenceTarget, 'RPM', Icons.refresh, Colors.blue),
-        ),
-        const SizedBox(width: 8),
-        Expanded(child: _buildMetricCard('HR', currentHeartRate, null, 'BPM', Icons.favorite, Colors.red)),
-      ],
-    );
-  }
-
-  Widget _buildMetricCard(String label, int? current, int? target, String unit, IconData icon, Color color) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
-        child: Column(
-          children: [
-            Icon(icon, color: color, size: 20),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.grey[600]),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              current?.toString() ?? '--',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: color),
-            ),
-            Text(unit, style: TextStyle(fontSize: 10, color: Colors.grey[600])),
-            if (target != null) ...[
-              const SizedBox(height: 2),
-              Text(
-                'Target: $target',
-                style: const TextStyle(fontSize: 9, color: Colors.grey),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCurrentBlockCard() {
-    if (currentBlock == null) {
-      return const SizedBox.shrink();
-    }
-
-    final blockSeconds = (currentBlockRemainingTime / 1000).floor();
-    final blockMinutes = blockSeconds ~/ 60;
-    final blockSecondsOnly = blockSeconds % 60;
-
-    String blockTitle = 'Current Block';
-    String blockDescription = '';
-
-    if (currentBlock is PowerBlock) {
-      final block = currentBlock as PowerBlock;
-      blockTitle = block.description ?? 'Power Block';
-      final powerPercent = (block.power * 100).toStringAsFixed(0);
-      blockDescription = '$powerPercent% FTP';
-    } else if (currentBlock is RampBlock) {
-      final block = currentBlock as RampBlock;
-      blockTitle = block.description ?? 'Ramp Block';
-      final startPercent = (block.powerStart * 100).toStringAsFixed(0);
-      final endPercent = (block.powerEnd * 100).toStringAsFixed(0);
-      blockDescription = '$startPercent% → $endPercent% FTP';
-    }
-
-    return Card(
-      color: Colors.blue[50],
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            Icon(Icons.play_circle_filled, color: Colors.blue[700], size: 32),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    blockTitle.toUpperCase(),
-                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    blockDescription,
-                    style: TextStyle(fontSize: 16, color: Colors.grey[800]),
-                  ),
-                ],
-              ),
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  'TIME LEFT',
-                  style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.grey[700]),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  '${blockMinutes.toString().padLeft(2, '0')}:${blockSecondsOnly.toString().padLeft(2, '0')}',
-                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNextBlockCard() {
-    if (nextBlock == null) {
-      return const SizedBox.shrink();
-    }
-
-    String blockTitle = 'Next Block';
-    String blockDescription = '';
-
-    if (nextBlock is PowerBlock) {
-      final block = nextBlock as PowerBlock;
-      blockTitle = block.description ?? 'Power Block';
-      final powerPercent = (block.power * 100).toStringAsFixed(0);
-      blockDescription = '$powerPercent% FTP';
-    } else if (nextBlock is RampBlock) {
-      final block = nextBlock as RampBlock;
-      blockTitle = block.description ?? 'Ramp Block';
-      final startPercent = (block.powerStart * 100).toStringAsFixed(0);
-      final endPercent = (block.powerEnd * 100).toStringAsFixed(0);
-      blockDescription = '$startPercent% → $endPercent% FTP';
-    }
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Row(
-          children: [
-            Icon(Icons.next_plan_outlined, color: Colors.grey[600], size: 24),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'NEXT: ${blockTitle.toUpperCase()}',
-                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey[700]),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    blockDescription,
-                    style: TextStyle(fontSize: 14, color: Colors.grey[800]),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildWorkoutCompleteCard() {
-    return Card(
-      color: Colors.green[50],
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          children: [
-            const Icon(Icons.emoji_events, size: 64, color: Colors.amber),
-            const SizedBox(height: 16),
-            const Text('Workout Complete!', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            Text(
-              'Great job! You finished the workout.',
-              style: TextStyle(fontSize: 16, color: Colors.grey[700]),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildBottomControls() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
-            blurRadius: 8,
-            offset: const Offset(0, -2),
-          ),
-        ],
-      ),
-      child: SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Status message when paused
-            if (!isComplete && isPaused) ...[
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: hasStarted ? Colors.orange.withValues(alpha: 0.1) : Colors.blue.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: hasStarted ? Colors.orange.withValues(alpha: 0.3) : Colors.blue.withValues(alpha: 0.3),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      hasStarted ? Icons.pause_circle : Icons.pedal_bike,
-                      color: hasStarted ? Colors.orange : Colors.blue,
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        hasStarted ? 'Paused - Start pedaling to resume' : 'Start pedaling to begin workout',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                          color: hasStarted ? Colors.orange[900] : Colors.blue[900],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 12),
-            ],
-
-            // Control buttons
-            Row(
-              children: [
-                // Intensity decrease
-                if (!isComplete) ...[
-                  IconButton(
-                    onPressed: onPowerScaleDecrease,
-                    icon: const Icon(Icons.remove_circle_outline),
-                    iconSize: 32,
-                    color: Colors.red,
-                  ),
-                  const SizedBox(width: 8),
-                ],
-
-                // Play/Pause button
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: isComplete ? null : onPlayPause,
-                    icon: Icon(isComplete ? Icons.check : (isPaused ? Icons.play_arrow : Icons.pause)),
-                    label: Text(isComplete ? 'Complete' : (isPaused ? 'Resume' : 'Pause')),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: isComplete ? Colors.green : (isPaused ? Colors.green : Colors.orange),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      disabledBackgroundColor: Colors.grey,
-                    ),
-                  ),
-                ),
-
-                // Skip button
-                if (!isComplete) ...[
-                  const SizedBox(width: 8),
-                  IconButton(
-                    onPressed: onSkip,
-                    icon: const Icon(Icons.skip_next),
-                    iconSize: 32,
-                    color: Colors.blue,
-                  ),
-                ],
-
-                // Intensity increase
-                if (!isComplete) ...[
-                  const SizedBox(width: 8),
-                  IconButton(
-                    onPressed: onPowerScaleIncrease,
-                    icon: const Icon(Icons.add_circle_outline),
-                    iconSize: 32,
-                    color: Colors.green,
-                  ),
-                ],
-              ],
-            ),
-
-            // End workout button
-            if (!isComplete) ...[
-              const SizedBox(height: 8),
-              TextButton.icon(
-                onPressed: onEndWorkout,
-                icon: const Icon(Icons.stop),
-                label: const Text('End Workout'),
-                style: TextButton.styleFrom(foregroundColor: Colors.red),
-              ),
-            ],
-
-            // Power scale indicator
-            if (!isComplete)
-              Text(
-                'Intensity: ${(powerScaleFactor * 100).toStringAsFixed(0)}%',
-                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-              ),
-          ],
-        ),
       ),
     );
   }

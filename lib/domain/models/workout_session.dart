@@ -61,6 +61,7 @@ class WorkoutSessionMetadata {
     required this.lastUpdated,
     this.endTime,
     this.userId,
+    this.sourceWorkoutId,
   });
 
   /// Creates from JSON using deep_pick.
@@ -78,6 +79,7 @@ class WorkoutSessionMetadata {
       currentBlockIndex: pick(json, 'currentBlockIndex').asIntOrThrow(),
       elapsedMs: pick(json, 'elapsedMs').asIntOrThrow(),
       lastUpdated: DateTime.parse(pick(json, 'lastUpdated').asStringOrThrow()),
+      sourceWorkoutId: pick(json, 'sourceWorkoutId').asStringOrNull(),
     );
   }
 
@@ -101,6 +103,9 @@ class WorkoutSessionMetadata {
 
   /// User ID (null if not logged in).
   final String? userId;
+
+  /// Source workout ID from library/API (for re-riding the same workout).
+  final String? sourceWorkoutId;
 
   /// FTP at time of workout (for historical comparison).
   final int ftp;
@@ -127,6 +132,7 @@ class WorkoutSessionMetadata {
       if (endTime != null) 'endTime': endTime!.toIso8601String(),
       'status': status.value,
       if (userId != null) 'userId': userId,
+      if (sourceWorkoutId != null) 'sourceWorkoutId': sourceWorkoutId,
       'ftp': ftp,
       'totalSamples': totalSamples,
       'currentBlockIndex': currentBlockIndex,
@@ -144,6 +150,7 @@ class WorkoutSessionMetadata {
     DateTime? endTime,
     SessionStatus? status,
     String? userId,
+    String? sourceWorkoutId,
     int? ftp,
     int? totalSamples,
     int? currentBlockIndex,
@@ -158,6 +165,7 @@ class WorkoutSessionMetadata {
       endTime: endTime ?? this.endTime,
       status: status ?? this.status,
       userId: userId ?? this.userId,
+      sourceWorkoutId: sourceWorkoutId ?? this.sourceWorkoutId,
       ftp: ftp ?? this.ftp,
       totalSamples: totalSamples ?? this.totalSamples,
       currentBlockIndex: currentBlockIndex ?? this.currentBlockIndex,

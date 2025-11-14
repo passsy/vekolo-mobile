@@ -1,11 +1,9 @@
 import 'dart:async';
-import 'dart:convert';
 import 'package:chirp/chirp.dart';
 import 'package:clock/clock.dart';
 
 import 'package:context_plus/context_plus.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:state_beacon/state_beacon.dart';
 import 'package:vekolo/app/refs.dart';
@@ -31,10 +29,21 @@ import 'package:vekolo/widgets/workout_screen_content.dart';
 ///
 /// The page integrates with WorkoutPlayerService for workout execution
 /// and DeviceManager for real-time sensor data.
+///
+/// The page can be initialized in two ways:
+/// 1. With a [workoutId] - loads the workout from the API (for starting new workouts)
+/// 2. With a [workoutPlan] and [workoutName] - uses provided data (for resuming workouts)
 class WorkoutPlayerPage extends StatefulWidget {
-  const WorkoutPlayerPage({super.key, this.isResuming = false, this.workoutPlan, this.workoutName});
+  const WorkoutPlayerPage({
+    super.key,
+    this.isResuming = false,
+    this.workoutId,
+    this.workoutPlan,
+    this.workoutName,
+  }) : assert(workoutId != null || workoutPlan != null, 'Either workoutId or workoutPlan must be provided');
 
   final bool isResuming;
+  final String? workoutId;
   final WorkoutPlan? workoutPlan;
   final String? workoutName;
 
@@ -47,6 +56,7 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
   WorkoutRecordingService? _recordingService;
   bool _isLoading = true;
   String? _loadError;
+  String? _workoutName;
   bool _hasStarted = false;
   VoidCallback? _powerSubscription;
   DateTime? _lowPowerStartTime;
@@ -86,23 +96,27 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
   Future<void> _loadWorkout() async {
     try {
       late final WorkoutPlan workoutPlan;
+      late final String workoutName;
 
-      // Use provided workout plan or load from save.json
-      if (widget.workoutPlan != null) {
-        chirp.info('Using provided workout plan');
-        workoutPlan = widget.workoutPlan!;
-      } else {
-        chirp.info('Loading workout from save.json');
+      // Option 1: Load from API using workout ID (for new workouts)
+      if (widget.workoutId != null) {
+        chirp.info('Loading workout from API: ${widget.workoutId}');
 
-        // Load workout JSON from assets
-        final jsonString = await rootBundle.loadString('save.json');
-        final jsonData = json.decode(jsonString) as Map<String, dynamic>;
+        if (!mounted) return;
+        final apiClient = Refs.apiClient.of(context);
+        final workoutResponse = await apiClient.workout(slug: widget.workoutId!);
 
-        // Parse workout plan
-        workoutPlan = WorkoutPlan.fromJson(jsonData);
+        workoutPlan = workoutResponse.plan;
+        workoutName = workoutResponse.title;
+
+        chirp.info('Loaded workout: $workoutName with ${workoutPlan.plan.length} blocks');
       }
-
-      chirp.info('Loaded workout: ${workoutPlan.plan.length} items');
+      // Option 2: Use provided workout plan (for resume)
+      else {
+        chirp.info('Using provided workout plan for resume: ${widget.workoutName}');
+        workoutPlan = widget.workoutPlan!;
+        workoutName = widget.workoutName ?? 'Workout';
+      }
 
       // Initialize player service
       if (!mounted) return;
@@ -188,6 +202,7 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
       setState(() {
         _playerService = playerService;
         _recordingService = recordingService;
+        _workoutName = workoutName;
         _isLoading = false;
       });
 
@@ -254,9 +269,10 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
           // Fire and forget - the async operation will complete in the background
           // ignore: unawaited_futures
           _recordingService!.startRecording(
-            widget.workoutName ?? 'Workout',
+            _workoutName ?? 'Workout',
             userId: user?.id,
             ftp: ftp,
+            sourceWorkoutId: widget.workoutId,
           );
         }
 
@@ -425,29 +441,7 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
               }
             }
           },
-          child: Scaffold(
-            appBar: AppBar(
-              title: const Text('Workout'),
-              automaticallyImplyLeading: false,
-              actions: [
-                IconButton(
-                  icon: const Icon(Icons.devices),
-                  onPressed: () => builderContext.push('/devices'),
-                  tooltip: 'Manage Devices',
-                ),
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () async {
-                    final shouldPop = await _onWillPop(builderContext);
-                    if (shouldPop && builderContext.mounted) {
-                      Navigator.of(builderContext).pop();
-                    }
-                  },
-                ),
-              ],
-            ),
-            body: _buildWorkoutPlayer(),
-          ),
+          child: Scaffold(body: _buildWorkoutPlayer()),
         );
       },
     );
@@ -474,6 +468,7 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
         final currentPower = deviceManager.powerStream.watch(context);
         final currentCadence = deviceManager.cadenceStream.watch(context);
         final currentHeartRate = deviceManager.heartRateStream.watch(context);
+        final currentSpeed = deviceManager.speedStream.watch(context);
 
         // Get FTP from user profile (fallback to default if not set)
         final authService = Refs.authService.of(context);
@@ -482,6 +477,7 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
 
         return WorkoutScreenContent(
           powerHistory: player.powerHistory,
+          workoutPlan: player.workoutPlan,
           currentBlock: currentBlock,
           nextBlock: nextBlock,
           elapsedTime: elapsedTime,
@@ -492,6 +488,7 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
           cadenceTarget: cadenceTarget,
           currentCadence: currentCadence?.rpm,
           currentHeartRate: currentHeartRate?.bpm,
+          currentSpeed: currentSpeed?.kmh,
           isPaused: isPaused,
           isComplete: isComplete,
           hasStarted: _hasStarted,
@@ -507,9 +504,10 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
                 final ftp = user?.ftp ?? ProfileDefaults.ftp;
                 if (_recordingService != null) {
                   await _recordingService!.startRecording(
-                    'Workout', // TODO: Get workout name from route params or metadata
+                    _workoutName ?? 'Workout',
                     userId: user?.id,
                     ftp: ftp,
+                    sourceWorkoutId: widget.workoutId,
                   );
                 }
                 setState(() {
@@ -548,6 +546,62 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
           },
           onPowerScaleIncrease: () => player.setPowerScaleFactor(powerScaleFactor + 0.01),
           onPowerScaleDecrease: () => player.setPowerScaleFactor(powerScaleFactor - 0.01),
+          onDevicesPressed: () => context.push('/devices'),
+          onClose: () async {
+            if (!context.mounted) return;
+
+            // Check if workout has been running for at least 60 seconds
+            final hasMinimumDuration = elapsedTime >= 60000; // 60 seconds in ms
+
+            // Show different dialog based on duration
+            final result = await showDialog<String>(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                title: const Text('Exit Workout?'),
+                content: Text(
+                  hasMinimumDuration
+                      ? 'Do you want to finish and save this workout, or discard it?'
+                      : 'Workout duration is too short to save. Discard this workout?',
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(ctx).pop('cancel'),
+                    child: const Text('Cancel'),
+                  ),
+                  if (hasMinimumDuration)
+                    TextButton(
+                      onPressed: () => Navigator.of(ctx).pop('finish'),
+                      style: TextButton.styleFrom(foregroundColor: Colors.green),
+                      child: const Text('Finish'),
+                    ),
+                  TextButton(
+                    onPressed: () => Navigator.of(ctx).pop('discard'),
+                    style: TextButton.styleFrom(foregroundColor: Colors.red),
+                    child: const Text('Discard'),
+                  ),
+                ],
+              ),
+            );
+
+            if (result == 'finish' && context.mounted) {
+              // Mark workout as completed
+              player.completeEarly();
+              if (_recordingService != null) {
+                await _recordingService!.stopRecording(completed: true);
+              }
+              if (context.mounted) {
+                context.pop();
+              }
+            } else if (result == 'discard' && context.mounted) {
+              // Discard workout (mark as abandoned)
+              if (_recordingService != null) {
+                await _recordingService!.stopRecording(completed: false);
+              }
+              if (context.mounted) {
+                context.pop();
+              }
+            }
+          },
         );
       },
     );

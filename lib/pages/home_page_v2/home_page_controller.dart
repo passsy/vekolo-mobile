@@ -46,6 +46,9 @@ class HomePageController extends BeaconController {
   /// All activities from API
   late final activities = B.writable<List<Activity>>([]);
 
+  /// Local workout activities (completed sessions from disk)
+  late final localActivities = B.writable<List<Activity>>([]);
+
   /// Loading state for activities
   late final isLoadingActivities = B.writable(false);
 
@@ -54,7 +57,17 @@ class HomePageController extends BeaconController {
 
   /// Filtered activities based on current filters
   late final filteredActivities = B.derived(() {
-    final all = activities.value;
+    // Merge API activities and local activities
+    final apiActivities = activities.value;
+    final local = localActivities.value;
+
+    // Combine and sort by timestamp (latest first)
+    final all = [...apiActivities, ...local]..sort((a, b) {
+        final aTime = DateTime.parse(a.createdAt);
+        final bTime = DateTime.parse(b.createdAt);
+        return bTime.compareTo(aTime); // Descending order (latest first)
+      });
+
     final source = sourceFilter.value;
     final types = workoutTypeFilters.value;
 
@@ -140,15 +153,124 @@ class HomePageController extends BeaconController {
     activitiesError.value = null;
 
     try {
-      final timeline = sourceFilter.value == SourceFilter.everybody ? 'public' : 'mine';
-      final response = await apiClient.activities(timeline: timeline);
-      activities.value = response.activities;
+      // Load API activities and local activities in parallel
+      await Future.wait([
+        _loadApiActivities(),
+        _loadLocalActivities(),
+      ]);
     } catch (e, stackTrace) {
       activitiesError.value = 'Failed to load activities: $e';
       print('[HomePageController.loadActivities] Error loading activities: $e');
       print(stackTrace);
     } finally {
       isLoadingActivities.value = false;
+    }
+  }
+
+  /// Load activities from API
+  Future<void> _loadApiActivities() async {
+    try {
+      final timeline = sourceFilter.value == SourceFilter.everybody ? 'public' : 'mine';
+      final response = await apiClient.activities(timeline: timeline);
+      activities.value = response.activities;
+    } catch (e, stackTrace) {
+      print('[HomePageController._loadApiActivities] Error loading API activities: $e');
+      print(stackTrace);
+      rethrow;
+    }
+  }
+
+  /// Load completed workout sessions from local storage
+  Future<void> _loadLocalActivities() async {
+    try {
+      final workoutIds = await workoutSessionPersistence.listWorkoutIds();
+      final localWorkouts = <Activity>[];
+
+      for (final workoutId in workoutIds) {
+        final metadata = await workoutSessionPersistence.loadSessionMetadata(workoutId);
+
+        // Only include completed sessions
+        if (metadata == null || metadata.status != SessionStatus.completed) {
+          continue;
+        }
+
+        // Load samples to calculate metrics
+        final samples = await workoutSessionPersistence.loadAllSamples(workoutId);
+
+        // Calculate average metrics
+        double? avgPower;
+        double? avgCadence;
+        double? avgHeartRate;
+
+        if (samples.isNotEmpty) {
+          final powerSamples = samples.where((s) => s.powerActual != null).toList();
+          if (powerSamples.isNotEmpty) {
+            avgPower = powerSamples.map((s) => s.powerActual!).reduce((a, b) => a + b) / powerSamples.length;
+          }
+
+          final cadenceSamples = samples.where((s) => s.cadence != null).toList();
+          if (cadenceSamples.isNotEmpty) {
+            avgCadence = cadenceSamples.map((s) => s.cadence!).reduce((a, b) => a + b) / cadenceSamples.length;
+          }
+
+          final hrSamples = samples.where((s) => s.heartRate != null).toList();
+          if (hrSamples.isNotEmpty) {
+            avgHeartRate = hrSamples.map((s) => s.heartRate!).reduce((a, b) => a + b) / hrSamples.length;
+          }
+        }
+
+        // Determine category from workout plan (heuristic based on power zones)
+        String? category;
+        if (samples.isNotEmpty) {
+          final avgTargetPower = samples.map((s) => s.powerTarget).reduce((a, b) => a + b) / samples.length;
+          final powerFraction = avgTargetPower / metadata.ftp;
+
+          if (powerFraction < 0.65) {
+            category = 'recovery';
+          } else if (powerFraction < 0.80) {
+            category = 'endurance';
+          } else if (powerFraction < 0.90) {
+            category = 'tempo';
+          } else if (powerFraction < 1.05) {
+            category = 'threshold';
+          } else {
+            category = 'vo2max';
+          }
+        }
+
+        // Create activity from session
+        final activity = Activity.create(
+          id: 'local-$workoutId', // Prefix to differentiate from API activities
+          createdAt: metadata.startTime.toIso8601String(),
+          duration: metadata.elapsedMs,
+          averagePower: avgPower,
+          averageCadence: avgCadence,
+          averageHeartRate: avgHeartRate,
+          visibility: ActivityVisibility.private,
+          user: ActivityUser.create(
+            id: metadata.userId ?? 'local',
+            name: 'You',
+          ),
+          workout: ActivityWorkout.create(
+            id: metadata.sourceWorkoutId ?? workoutId,
+            title: metadata.workoutName,
+            slug: metadata.sourceWorkoutId ?? workoutId,
+            duration: metadata.elapsedMs,
+            plan: metadata.workoutPlan,
+            category: category != null ? WorkoutCategory(category) : null,
+            starCount: 0,
+          ),
+        );
+
+        localWorkouts.add(activity);
+      }
+
+      localActivities.value = localWorkouts;
+      print('[HomePageController._loadLocalActivities] Loaded ${localWorkouts.length} local activities');
+    } catch (e, stackTrace) {
+      print('[HomePageController._loadLocalActivities] Error loading local activities: $e');
+      print(stackTrace);
+      // Don't rethrow - local activities are optional
     }
   }
 

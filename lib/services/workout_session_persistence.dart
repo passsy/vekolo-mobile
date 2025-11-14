@@ -141,7 +141,13 @@ class WorkoutSessionPersistence {
   /// - Sets active workout ID in SharedPreferences
   ///
   /// Returns the generated workout ID (nanoid).
-  Future<String> createSession(String workoutName, WorkoutPlan plan, {String? userId, required int ftp}) async {
+  Future<String> createSession(
+    String workoutName,
+    WorkoutPlan plan, {
+    String? userId,
+    required int ftp,
+    String? sourceWorkoutId,
+  }) async {
     // Generate unique ID using nanoid
     final workoutId = nanoid();
     chirp.info('Creating session: $workoutId ($workoutName)');
@@ -158,6 +164,7 @@ class WorkoutSessionPersistence {
       startTime: clock.now(),
       status: SessionStatus.active,
       userId: userId,
+      sourceWorkoutId: sourceWorkoutId,
       ftp: ftp,
       totalSamples: 0,
       currentBlockIndex: 0,

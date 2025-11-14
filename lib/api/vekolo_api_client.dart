@@ -9,6 +9,7 @@ import 'package:vekolo/api/auth/request_login_code.dart';
 import 'package:vekolo/api/auth/request_signup_code.dart';
 import 'package:vekolo/api/auth/revoke_token.dart';
 import 'package:vekolo/api/user/update_profile.dart';
+import 'package:vekolo/api/workouts/get_workout.dart';
 
 export 'package:vekolo/api/activities/get_activities.dart';
 export 'package:vekolo/api/auth/redeem_code.dart';
@@ -17,6 +18,7 @@ export 'package:vekolo/api/auth/request_login_code.dart';
 export 'package:vekolo/api/auth/request_signup_code.dart';
 export 'package:vekolo/api/auth/revoke_token.dart';
 export 'package:vekolo/api/user/update_profile.dart';
+export 'package:vekolo/api/workouts/get_workout.dart';
 
 /// Stateless API client for Vekolo backend
 ///
@@ -139,5 +141,17 @@ class VekoloApiClient {
   /// - 'mine': Only user's activities (requires auth)
   Future<ActivitiesResponse> activities({String? timeline}) {
     return getActivities(_context, timeline: timeline);
+  }
+
+  // Workout endpoints
+
+  /// Get a workout by ID or slug
+  ///
+  /// `GET /api/workouts/:slug`
+  ///
+  /// Returns the workout details including the workout plan.
+  /// Results are cached in memory by default. Set [useCache] to false to bypass the cache.
+  Future<GetWorkoutResponse> workout({required String slug, bool useCache = true}) {
+    return getWorkout(_context, slug: slug, useCache: useCache);
   }
 }

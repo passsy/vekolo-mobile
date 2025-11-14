@@ -174,9 +174,15 @@ class ActivityWorkout with RekordMixin {
 
   /// Workout plan with structured blocks and events
   WorkoutPlan get plan {
-    final planList = rekord
-        .read('plan')
-        .asListOrThrow<Map<String, Object?>>((pick) => pick.asMapOrThrow<String, Object?>());
+    final planData = rekord.read('plan');
+
+    // Handle case where plan is already a WorkoutPlan object (from local activities)
+    if (planData.value is WorkoutPlan) {
+      return planData.value! as WorkoutPlan;
+    }
+
+    // Otherwise, parse it from a list (from API)
+    final planList = planData.asListOrThrow<Map<String, Object?>>((pick) => pick.asMapOrThrow<String, Object?>());
     // Wrap the list in an object as expected by WorkoutPlan.fromJson
     return WorkoutPlan.fromJson({'plan': planList});
   }

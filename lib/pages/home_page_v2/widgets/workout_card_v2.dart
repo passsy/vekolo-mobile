@@ -15,6 +15,7 @@ class WorkoutCardV2 extends StatelessWidget {
     required this.intervals,
     required this.backgroundColor,
     this.onTap,
+    this.isLocal = false,
   });
 
   final String authorName;
@@ -25,6 +26,7 @@ class WorkoutCardV2 extends StatelessWidget {
   final List<IntervalBar> intervals;
   final Color backgroundColor;
   final VoidCallback? onTap;
+  final bool isLocal;
 
   @override
   Widget build(BuildContext context) {
@@ -72,6 +74,37 @@ class WorkoutCardV2 extends StatelessWidget {
                         ),
                       ),
                       const Spacer(),
+                      if (isLocal) ...[
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 1),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.smartphone,
+                                size: 12,
+                                color: Colors.white.withValues(alpha: 0.9),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                'LOCAL',
+                                style: GoogleFonts.publicSans(
+                                  color: Colors.white.withValues(alpha: 0.9),
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                      ],
                       Text(
                         date,
                         style: GoogleFonts.publicSans(

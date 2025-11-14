@@ -15,6 +15,14 @@
 - Run tests: `puro flutter test`
 - Run analysis: `puro flutter analyze`
 
+## Domain objects
+Workouts are definitions what kind of values smart trainer should set over time during that workout.
+A Workout consists of multiple power blocks, ramp blocks or intervals consisting of blocks
+
+When a workout was completed it is saved as Activity
+In the app, we can see activities of other users and drive their workouts
+
+
 ## Platform Support
 
 - **Mobile**: Android & iOS (current focus)

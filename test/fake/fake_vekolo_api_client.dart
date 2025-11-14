@@ -180,6 +180,34 @@ class FakeVekoloApiClient implements VekoloApiClient {
     return ActivitiesResponse.create(activities: _createSampleActivities());
   }
 
+  // Workout endpoint overrides
+
+  Future<GetWorkoutResponse> Function({required String slug, bool useCache})? overrideWorkout;
+
+  @override
+  Future<GetWorkoutResponse> workout({required String slug, bool useCache = true}) async {
+    methodCalls.add('workout');
+    if (overrideWorkout != null) {
+      return overrideWorkout!(slug: slug, useCache: useCache);
+    }
+    // Default: return a sample workout based on slug
+    final activities = _createSampleActivities();
+    final activity = activities.firstWhere(
+      (a) => a.workout.id == slug || a.workout.slug == slug,
+      orElse: () => activities.first,
+    );
+
+    return GetWorkoutResponse(
+      id: activity.workout.id,
+      title: activity.workout.title,
+      duration: activity.workout.duration,
+      plan: activity.workout.plan,
+      summary: activity.workout.summary,
+      tss: activity.workout.tss,
+      category: activity.workout.category?.value,
+    );
+  }
+
   /// Create sample activities for testing
   static List<Activity> _createSampleActivities() {
     final user = ActivityUser.create(id: 'user1', name: 'Pascal Welsch');

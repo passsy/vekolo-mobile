@@ -167,8 +167,13 @@ class ActivitiesTab extends StatelessWidget {
                 duration: _formatDuration(activity.duration),
                 intervals: generateIntervalsFromPlan(activity.workout.plan),
                 backgroundColor: _getBackgroundColorForCategory(activity.workout.category?.value),
-                onTap: () {
-                  context.push('/activity/${activity.id}', extra: activity);
+                isLocal: activity.id.startsWith('local-'),
+                onTap: () async {
+                  final result = await context.push('/activity/${activity.id}', extra: activity);
+                  // Refresh activities if a workout was deleted
+                  if (result == true) {
+                    controller.loadActivities();
+                  }
                 },
               );
             }, childCount: activities.length),
