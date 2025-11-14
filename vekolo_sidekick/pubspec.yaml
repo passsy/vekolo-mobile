@@ -1,0 +1,21 @@
+name: vekolo_sidekick
+description: Sidekick CLI for vekolo
+version: 0.0.1
+publish_to: none
+
+environment:
+  sdk: ">=3.9.4 <4.0.0"
+
+executables:
+  main:
+
+dependencies:
+  puro_sidekick_plugin: ^1.2.1
+  sidekick_core: ^3.0.1
+
+dev_dependencies:
+  lint: ^2.0.0
+
+# generated code, do not edit this manually
+sidekick:
+  cli_version: 3.0.1
