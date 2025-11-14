@@ -2,7 +2,7 @@ name: vekolo
 description: "Workout cycling as it should be"
 publish_to: 'none' # never publish!
 
-version: 0.5.0+1
+version: 0.5.1+2
 
 environment:
   sdk: ^3.9.2
