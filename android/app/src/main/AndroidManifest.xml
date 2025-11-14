@@ -13,7 +13,7 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" android:maxSdkVersion="30" />
 
     <application
-        android:label="vekolo"
+        android:label="VEKOLO BETA"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
