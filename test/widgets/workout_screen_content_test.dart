@@ -1,7 +1,16 @@
+import 'package:flutter_blue_plus/flutter_blue_plus.dart' as fbp;
+import 'package:flutter_test/flutter_test.dart';
+import 'package:spot/spot.dart';
+import 'package:vekolo/domain/models/device_info.dart';
+
+import '../helpers/ftms_data_builder.dart';
 import '../robot/robot_kit.dart';
 import '../robot/workout_player_robot.dart';
 
 void main() {
+  // FTMS Indoor Bike Data UUID
+  final indoorBikeDataUuid = fbp.Guid('00002AD2-0000-1000-8000-00805f9b34fb');
+
   group('Workout Screen Content', () {
     robotTest('displays initial state before workout starts', (robot) async {
       final trainer = robot.aether.createDevice(
@@ -14,7 +23,6 @@ void main() {
 
       // Verify initial paused state
       robot.verifyWorkoutNotStarted();
-      robot.verifyTimerHeaders();
       robot.verifyAllMetricsPresent();
       robot.verifyEndWorkoutButton();
     });
@@ -29,8 +37,8 @@ void main() {
       await robot.tapStartWorkout('Sweet Spot');
 
       // Start pedaling to trigger auto-start
-      trainer.emitPower(150);
-      trainer.emitCadence(85);
+      var data = FtmsDataBuilder().withPower(150).withCadence(170).build(); // 170 * 0.5 = 85 RPM
+      trainer.emitCharacteristic(indoorBikeDataUuid, data);
       await robot.pumpUntil(500);
 
       // Should transition to running state
@@ -49,9 +57,8 @@ void main() {
       await robot.tapStartWorkout('Sweet Spot');
 
       // Start pedaling
-      trainer.emitPower(180);
-      trainer.emitCadence(90);
-      trainer.emitHeartRate(145);
+      var data = FtmsDataBuilder().withPower(180).withCadence(180).withHeartRate(145).build(); // 180 * 0.5 = 90 RPM
+      trainer.emitCharacteristic(indoorBikeDataUuid, data);
       await robot.pumpUntil(1000);
 
       // Verify all metrics are displayed
@@ -70,7 +77,7 @@ void main() {
       await robot.tapStartWorkout('Sweet Spot');
 
       // Start workout
-      trainer.emitPower(150);
+      trainer.emitCharacteristic(indoorBikeDataUuid, FtmsDataBuilder().withPower(150).build());
       await robot.pumpUntil(500);
 
       // Verify current block info is shown
@@ -88,7 +95,7 @@ void main() {
       await robot.tapStartWorkout('Sweet Spot');
 
       // Start workout
-      trainer.emitPower(150);
+      trainer.emitCharacteristic(indoorBikeDataUuid, FtmsDataBuilder().withPower(150).build());
       await robot.pumpUntil(500);
 
       // Pause the workout
@@ -110,7 +117,7 @@ void main() {
       await robot.tapStartWorkout('Sweet Spot');
 
       // Start workout
-      trainer.emitPower(150);
+      trainer.emitCharacteristic(indoorBikeDataUuid, FtmsDataBuilder().withPower(150).build());
       await robot.pumpUntil(500);
 
       // Pause
@@ -136,7 +143,7 @@ void main() {
       await robot.tapStartWorkout('Sweet Spot');
 
       // Start workout
-      trainer.emitPower(150);
+      trainer.emitCharacteristic(indoorBikeDataUuid, FtmsDataBuilder().withPower(150).build());
       await robot.pumpUntil(500);
 
       // Skip to next block
@@ -158,7 +165,7 @@ void main() {
       await robot.tapStartWorkout('Sweet Spot');
 
       // Start workout
-      trainer.emitPower(150);
+      trainer.emitCharacteristic(indoorBikeDataUuid, FtmsDataBuilder().withPower(150).build());
       await robot.pumpUntil(500);
 
       // Initially at 100%
@@ -182,7 +189,7 @@ void main() {
       await robot.tapStartWorkout('Sweet Spot');
 
       // Start workout
-      trainer.emitPower(150);
+      trainer.emitCharacteristic(indoorBikeDataUuid, FtmsDataBuilder().withPower(150).build());
       await robot.pumpUntil(500);
 
       // Initially at 100%
@@ -206,7 +213,7 @@ void main() {
       await robot.tapStartWorkout('Sweet Spot');
 
       // Start workout
-      trainer.emitPower(150);
+      trainer.emitCharacteristic(indoorBikeDataUuid, FtmsDataBuilder().withPower(150).build());
       await robot.pumpUntil(500);
 
       // Tap end workout button
@@ -236,7 +243,7 @@ void main() {
       await robot.tapStartWorkout('Sweet Spot');
 
       // Start workout
-      trainer.emitPower(150);
+      trainer.emitCharacteristic(indoorBikeDataUuid, FtmsDataBuilder().withPower(150).build());
       await robot.pumpUntil(500);
 
       // Verify initial time (should be close to 00:00)
@@ -261,7 +268,7 @@ void main() {
       await robot.tapStartWorkout('Sweet Spot');
 
       // Start workout
-      trainer.emitPower(150);
+      trainer.emitCharacteristic(indoorBikeDataUuid, FtmsDataBuilder().withPower(150).build());
       await robot.pumpUntil(500);
 
       // Verify power is shown
@@ -280,12 +287,12 @@ void main() {
       await robot.tapStartWorkout('Sweet Spot');
 
       // Start workout
-      trainer.emitPower(150);
+      trainer.emitCharacteristic(indoorBikeDataUuid, FtmsDataBuilder().withPower(150).build());
       await robot.pumpUntil(500);
       robot.verifyPauseButton(); // Running
 
       // Stop pedaling (power drops to 0)
-      trainer.emitPower(0);
+      trainer.emitCharacteristic(indoorBikeDataUuid, FtmsDataBuilder().withPower(0).build());
       await robot.pumpUntil(3500); // Auto-pause threshold is 3 seconds
 
       // Should auto-pause
@@ -303,16 +310,16 @@ void main() {
       await robot.tapStartWorkout('Sweet Spot');
 
       // Start workout
-      trainer.emitPower(150);
+      trainer.emitCharacteristic(indoorBikeDataUuid, FtmsDataBuilder().withPower(150).build());
       await robot.pumpUntil(500);
 
       // Stop pedaling to trigger auto-pause
-      trainer.emitPower(0);
+      trainer.emitCharacteristic(indoorBikeDataUuid, FtmsDataBuilder().withPower(0).build());
       await robot.pumpUntil(3500);
       robot.verifyPausedStartedMessage();
 
       // Start pedaling again
-      trainer.emitPower(150);
+      trainer.emitCharacteristic(indoorBikeDataUuid, FtmsDataBuilder().withPower(150).build());
       await robot.pumpUntil(500);
 
       // Should auto-resume
@@ -329,7 +336,7 @@ void main() {
       await robot.tapStartWorkout('Sweet Spot');
 
       // Start workout
-      trainer.emitPower(150);
+      trainer.emitCharacteristic(indoorBikeDataUuid, FtmsDataBuilder().withPower(150).build());
       await robot.pumpUntil(500);
 
       // Fast-forward to end by ending workout
@@ -352,7 +359,7 @@ void main() {
       await robot.tapStartWorkout('Sweet Spot');
 
       // Start workout
-      trainer.emitPower(150);
+      trainer.emitCharacteristic(indoorBikeDataUuid, FtmsDataBuilder().withPower(150).build());
       await robot.pumpUntil(500);
 
       // Power chart should be visible

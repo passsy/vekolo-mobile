@@ -1,7 +1,16 @@
+import 'package:flutter_blue_plus/flutter_blue_plus.dart' as fbp;
+import 'package:flutter_test/flutter_test.dart';
+import 'package:spot/spot.dart';
+import 'package:vekolo/domain/models/device_info.dart';
+
+import '../helpers/ftms_data_builder.dart';
 import '../robot/robot_kit.dart';
 import '../robot/workout_player_robot.dart';
 
 void main() {
+  // FTMS Indoor Bike Data UUID
+  final indoorBikeDataUuid = fbp.Guid('00002AD2-0000-1000-8000-00805f9b34fb');
+
   group('Workout Power Chart', () {
     robotTest('displays power chart when workout is running', (robot) async {
       // Create a trainer device
@@ -17,7 +26,8 @@ void main() {
       await robot.tapStartWorkout('Sweet Spot');
 
       // Start pedaling to begin workout
-      trainer.emitPower(200);
+      final data = FtmsDataBuilder().withPower(200).build();
+      trainer.emitCharacteristic(indoorBikeDataUuid, data);
       await robot.idle(100);
 
       // Verify power chart is visible
@@ -56,8 +66,8 @@ void main() {
       await robot.tapStartWorkout('Sweet Spot');
 
       // Start pedaling
-      trainer.emitPower(150);
-      trainer.emitCadence(85);
+      final data = FtmsDataBuilder().withPower(150).withCadence(170).build(); // 170 * 0.5 = 85 RPM
+      trainer.emitCharacteristic(indoorBikeDataUuid, data);
       await robot.pumpUntil(500); // Give time for data to populate
 
       // Verify power chart is visible with data
@@ -82,13 +92,15 @@ void main() {
       await robot.tapStartWorkout('Sweet Spot');
 
       // Start with low power
-      trainer.emitPower(100);
+      var data = FtmsDataBuilder().withPower(100).build();
+      trainer.emitCharacteristic(indoorBikeDataUuid, data);
       await robot.pumpUntil(500);
       robot.verifyPowerChartVisible();
 
       // Increase power gradually (simulating interval workout)
       for (var power = 150; power <= 250; power += 20) {
-        trainer.emitPower(power);
+        data = FtmsDataBuilder().withPower(power).build();
+        trainer.emitCharacteristic(indoorBikeDataUuid, data);
         await robot.pumpUntil(1000); // Wait 1s between changes
       }
 
@@ -112,19 +124,23 @@ void main() {
 
       // Emit power at different zones
       // Recovery (< 55% FTP) - assuming FTP is 200
-      trainer.emitPower(100);
+      var data = FtmsDataBuilder().withPower(100).build();
+      trainer.emitCharacteristic(indoorBikeDataUuid, data);
       await robot.pumpUntil(2000);
 
       // Endurance (55-75% FTP)
-      trainer.emitPower(130);
+      data = FtmsDataBuilder().withPower(130).build();
+      trainer.emitCharacteristic(indoorBikeDataUuid, data);
       await robot.pumpUntil(2000);
 
       // Threshold (90-105% FTP)
-      trainer.emitPower(200);
+      data = FtmsDataBuilder().withPower(200).build();
+      trainer.emitCharacteristic(indoorBikeDataUuid, data);
       await robot.pumpUntil(2000);
 
       // VO2max (105-120% FTP)
-      trainer.emitPower(220);
+      data = FtmsDataBuilder().withPower(220).build();
+      trainer.emitCharacteristic(indoorBikeDataUuid, data);
       await robot.pumpUntil(2000);
 
       // Chart should show colored bars based on zones

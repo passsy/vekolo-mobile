@@ -129,8 +129,9 @@ extension WorkoutPlayerRobot on VekoloRobot {
   /// Verify no next block is displayed.
   void verifyNoNextBlock() {
     logger.robotLog('verify no next block displayed');
-    final nextBlockFinder = spot<Card>().withChild(spotTextContaining('NEXT:'));
-    nextBlockFinder.doesNotExist();
+    // Check that no text starting with "NEXT:" exists (which indicates a next block card)
+    final nextTexts = spot<Text>().withProp((w) => w.data?.startsWith('NEXT:') ?? false);
+    nextTexts.doesNotExist();
   }
 
   // ==========================================================================
@@ -232,12 +233,18 @@ extension WorkoutPlayerRobot on VekoloRobot {
   /// Tap the play/pause button.
   Future<void> tapPlayPause() async {
     logger.robotLog('tap play/pause button');
-    final button = spot<ElevatedButton>()
-        .withChild(spotText('Resume'))
-        .or(spot<ElevatedButton>().withChild(spotText('Pause')))
-        .or(spot<ElevatedButton>().withChild(spotText('Complete')));
+    // Try to find and tap whichever button is visible (Resume, Pause, or Complete)
+    final resumeButton = spot<ElevatedButton>().withChild(spotText('Resume'));
+    final pauseButton = spot<ElevatedButton>().withChild(spotText('Pause'));
+    final completeButton = spot<ElevatedButton>().withChild(spotText('Complete'));
 
-    await act.tap(button.first);
+    if (resumeButton.existsOnce().evaluated.length > 0) {
+      await act.tap(resumeButton);
+    } else if (pauseButton.existsOnce().evaluated.length > 0) {
+      await act.tap(pauseButton);
+    } else {
+      await act.tap(completeButton);
+    }
     await idle();
   }
 
@@ -260,7 +267,7 @@ extension WorkoutPlayerRobot on VekoloRobot {
   Future<void> tapIncreaseIntensity() async {
     logger.robotLog('tap increase intensity button');
     final button = spot<IconButton>().withChild(spotIcon(Icons.add_circle_outline));
-    await act.tap(button.first);
+    await act.tap(button);
     await idle();
   }
 
@@ -268,7 +275,7 @@ extension WorkoutPlayerRobot on VekoloRobot {
   Future<void> tapDecreaseIntensity() async {
     logger.robotLog('tap decrease intensity button');
     final button = spot<IconButton>().withChild(spotIcon(Icons.remove_circle_outline));
-    await act.tap(button.first);
+    await act.tap(button);
     await idle();
   }
 
