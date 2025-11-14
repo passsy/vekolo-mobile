@@ -332,7 +332,6 @@ class WorkoutScreenContent extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 32),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Text(
             label,
@@ -460,7 +459,11 @@ class WorkoutScreenContent extends StatelessWidget {
 
     // Calculate current position relative to the zoomed window
     final currentTimeInWindow = elapsedTime - windowStart;
-    final totalWindowDuration = windowSize * 2; // ±15 minutes = 30 minute window
+    // Calculate actual total duration of visible intervals (sum of all interval durations)
+    final totalWindowDuration = intervals.fold<int>(
+      0,
+      (sum, interval) => sum + (interval.duration * 1000),
+    );
 
     return WorkoutIntervalBars(
       intervals: intervals,
@@ -544,7 +547,6 @@ class WorkoutScreenContent extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: WorkoutIntervalBars(
         intervals: intervals,
-        height: 40,
         currentTimeMs: elapsedTime,
         totalDurationMs: totalDuration,
       ),

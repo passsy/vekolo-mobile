@@ -68,7 +68,7 @@ void main() {
     });
 
     test('skips recording if interval not elapsed', () {
-      final history = PowerHistory(intervalMs: 15000);
+      final history = PowerHistory();
 
       history.record(timestamp: 0, actualWatts: 200, targetWatts: 180);
       final recorded = history.record(timestamp: 5000, actualWatts: 210, targetWatts: 190);
@@ -78,7 +78,7 @@ void main() {
     });
 
     test('records new data point after interval elapsed', () {
-      final history = PowerHistory(intervalMs: 15000);
+      final history = PowerHistory();
 
       history.record(timestamp: 0, actualWatts: 200, targetWatts: 180);
       final recorded = history.record(timestamp: 15000, actualWatts: 210, targetWatts: 190);
@@ -212,7 +212,7 @@ void main() {
     });
 
     test('records realistic 15-second workout data', () {
-      final history = PowerHistory(intervalMs: 15000);
+      final history = PowerHistory();
 
       // Simulate 5 minutes of workout (20 data points at 15s intervals)
       for (var i = 0; i < 20; i++) {

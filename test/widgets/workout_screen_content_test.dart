@@ -37,7 +37,7 @@ void main() {
       await robot.tapStartWorkout('Sweet Spot');
 
       // Start pedaling to trigger auto-start
-      var data = FtmsDataBuilder().withPower(150).withCadence(170).build(); // 170 * 0.5 = 85 RPM
+      final data = FtmsDataBuilder().withPower(150).withCadence(170).build(); // 170 * 0.5 = 85 RPM
       trainer.emitCharacteristic(indoorBikeDataUuid, data);
       await robot.pumpUntil(500);
 
@@ -57,7 +57,7 @@ void main() {
       await robot.tapStartWorkout('Sweet Spot');
 
       // Start pedaling
-      var data = FtmsDataBuilder().withPower(180).withCadence(180).withHeartRate(145).build(); // 180 * 0.5 = 90 RPM
+      final data = FtmsDataBuilder().withPower(180).withCadence(180).withHeartRate(145).build(); // 180 * 0.5 = 90 RPM
       trainer.emitCharacteristic(indoorBikeDataUuid, data);
       await robot.pumpUntil(1000);
 
