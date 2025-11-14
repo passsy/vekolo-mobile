@@ -19,12 +19,7 @@ import 'package:flutter/material.dart';
 /// )
 /// ```
 class GradientCardBackground extends StatelessWidget {
-  const GradientCardBackground({
-    super.key,
-    required this.color,
-    this.gradientStart = 0.6,
-    this.gradientEnd = 1.0,
-  });
+  const GradientCardBackground({super.key, required this.color, this.gradientStart = 0.6, this.gradientEnd = 1.0});
 
   final Color color;
 
@@ -36,18 +31,28 @@ class GradientCardBackground extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: color,
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            Colors.black.withValues(alpha: gradientStart),
-            Colors.black.withValues(alpha: gradientEnd),
-          ],
+    return Stack(
+      children: [
+        // Solid background color
+        DecoratedBox(
+          decoration: BoxDecoration(color: color),
+          child: const SizedBox.expand(),
         ),
-      ),
+        // Gradient overlay
+        DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Colors.black.withValues(alpha: gradientStart),
+                Colors.black.withValues(alpha: gradientEnd),
+              ],
+            ),
+          ),
+          child: const SizedBox.expand(),
+        ),
+      ],
     );
   }
 }
