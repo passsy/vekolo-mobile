@@ -38,7 +38,8 @@ class FakeVekoloApiClient implements VekoloApiClient {
     int? height,
     String? measurementPreference,
     bool? newsletter,
-  })? overrideRequestSignupCode;
+  })?
+  overrideRequestSignupCode;
 
   @override
   Future<CodeRequestResponse> requestSignupCode({
@@ -162,6 +163,20 @@ class FakeVekoloApiClient implements VekoloApiClient {
       weight: weight ?? 70,
     );
     return UpdateProfileResponse.create(success: true, user: user);
+  }
+
+  // Activity endpoint overrides
+
+  Future<ActivitiesResponse> Function({String? timeline})? overrideActivities;
+
+  @override
+  Future<ActivitiesResponse> activities({String? timeline}) async {
+    methodCalls.add('activities');
+    if (overrideActivities != null) {
+      return overrideActivities!(timeline: timeline);
+    }
+    // Default: return empty list
+    return ActivitiesResponse.create(activities: []);
   }
 
   // Test helper methods

@@ -60,7 +60,12 @@ source.subscribe((value) {
 - Test domain logic without hardware dependencies
 - See `test/fake/` for fake implementations
 - Use `addTearDown()` for cleanup, avoid `setUp()`/`tearDown()`
-- Always test the real implementation in /lib. Never copy/mirror production code to test files to test it!
+- **CRITICAL: ALWAYS test the real production code in /lib!**
+  - **NEVER EVER create a local implementation in test files**
+  - **NEVER copy/duplicate production code into tests**
+  - Tests must import and test the actual implementation from /lib
+  - If production code needs fixing, FIX IT FIRST, then test it
+  - Creating "reference implementations" in tests is the WORST anti-pattern possible
 
 ## Documentation
 

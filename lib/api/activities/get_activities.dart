@@ -44,9 +44,9 @@ class ActivitiesResponse with RekordMixin {
 
   /// List of activities
   List<Activity> get activities {
-    final activitiesList = rekord.read.asListOrEmpty<Map<String, Object?>>(
-      (pick) => pick.asMapOrThrow<String, Object?>(),
-    );
+    final activitiesList = rekord
+        .read('activities')
+        .asListOrEmpty<Map<String, Object?>>((pick) => pick.asMapOrThrow<String, Object?>());
     return activitiesList.map((data) => Activity.fromData(data)).toList();
   }
 
@@ -58,9 +58,6 @@ class ActivitiesResponseInit {}
 
 extension ActivitiesResponseInitExt on ActivitiesResponseInit {
   ActivitiesResponse fromResponse(Response response) {
-    // The response is a list directly, not wrapped in an object
-    final List<dynamic> data = response.data as List<dynamic>;
-    final activities = data.map((item) => item as Map<String, Object?>).toList();
-    return ActivitiesResponse.fromData({'activities': activities});
+    return ActivitiesResponse.fromData({'activities': response.data});
   }
 }
