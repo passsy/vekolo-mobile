@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:state_beacon/state_beacon.dart';
 import 'package:vekolo/app/refs.dart';
-import 'package:vekolo/pages/home_page_v2/home_page_state.dart';
+import 'package:vekolo/pages/home_page_v2/home_page_controller.dart';
 import 'package:vekolo/pages/home_page_v2/tabs/activities_tab.dart';
 import 'package:vekolo/pages/home_page_v2/tabs/create_tab.dart';
 import 'package:vekolo/pages/home_page_v2/tabs/library_tab.dart';
@@ -19,146 +19,218 @@ class HomePage2 extends StatefulWidget {
   State<HomePage2> createState() => _HomePage2State();
 }
 
-class _HomePage2State extends State<HomePage2> {
-  late final state = HomePageState();
+class _HomePage2State extends State<HomePage2> with SingleTickerProviderStateMixin {
+  HomePageController? _controller;
   final _filterButtonKey = GlobalKey();
-  OverlayEntry? _filterOverlay;
+  final _overlayPortalController = OverlayPortalController();
+  late AnimationController _modalAnimationController;
+  bool _hasLoadedActivities = false;
+  bool _isModalShowing = false;
+  Offset _filterButtonPosition = Offset.zero;
+  Size _filterButtonSize = Size.zero;
+
+  HomePageController get controller {
+    if (_controller == null) {
+      final apiClient = Refs.apiClient.of(context);
+      _controller = HomePageController(apiClient: apiClient);
+    }
+    return _controller!;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _modalAnimationController = AnimationController(duration: const Duration(milliseconds: 350), vsync: this);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Load activities once after controller is initialized
+    if (!_hasLoadedActivities) {
+      controller.loadActivities();
+      _hasLoadedActivities = true;
+    }
+  }
 
   @override
   void dispose() {
-    _filterOverlay?.remove();
-    _filterOverlay = null;
-    state.dispose();
+    _modalAnimationController.dispose();
+    _controller?.dispose();
     super.dispose();
   }
 
   void _showFilterModal() {
-    // Remove existing overlay if any
-    _filterOverlay?.remove();
-
     final RenderBox? renderBox = _filterButtonKey.currentContext?.findRenderObject() as RenderBox?;
     if (renderBox == null) return;
 
-    final position = renderBox.localToGlobal(Offset.zero);
-    final size = renderBox.size;
+    setState(() {
+      _filterButtonPosition = renderBox.localToGlobal(Offset.zero);
+      _filterButtonSize = renderBox.size;
+      _isModalShowing = true;
+    });
 
-    _filterOverlay = OverlayEntry(
-      builder: (context) {
-        final sourceFilter = state.sourceFilter.watch(context);
-        final workoutTypeFilters = state.workoutTypeFilters.watch(context);
+    // Reset animation to start
+    _modalAnimationController.reset();
+    _overlayPortalController.show();
+    _modalAnimationController.forward();
+  }
+
+  Future<void> _closeFilterModal() async {
+    await _modalAnimationController.reverse();
+    _overlayPortalController.hide();
+    setState(() {
+      _isModalShowing = false;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final selectedIndex = controller.selectedTabIndex.watch(context);
+    final authService = Refs.authService.of(context);
+    final user = authService.currentUser.watch(context);
+    final activeFilterColors = controller.activeFilterColors.watch(context);
+
+    return OverlayPortal(
+      controller: _overlayPortalController,
+      overlayChildBuilder: (context) {
+        final sourceFilter = controller.sourceFilter.watch(context);
+        final workoutTypeFilters = controller.workoutTypeFilters.watch(context);
 
         return Stack(
           children: [
-            // Backdrop to detect taps outside
+            // Animated backdrop
             Positioned.fill(
-              child: GestureDetector(
-                onTap: _closeFilterModal,
-                child: Container(color: Colors.transparent),
+              child: AnimatedBuilder(
+                animation: _modalAnimationController,
+                builder: (context, child) {
+                  return GestureDetector(
+                    onTap: _closeFilterModal,
+                    child: Container(
+                      color: Color.lerp(Colors.transparent, const Color(0x33000000), _modalAnimationController.value),
+                    ),
+                  );
+                },
               ),
             ),
-            // Filter popup
+            // Animated filter popup
             Positioned(
               left: 16,
-              top: position.dy + size.height + 8,
+              top: _filterButtonPosition.dy + _filterButtonSize.height + 8,
               right: 16,
-              child: Material(
-                color: Colors.transparent,
-                child: FilterModal(
-                  sourceFilter: sourceFilter,
-                  workoutTypeFilters: workoutTypeFilters,
-                  onSourceFilterChanged: (filter) {
-                    state.setSourceFilter(filter);
-                  },
-                  onWorkoutTypeToggled: (type) {
-                    state.toggleWorkoutType(type);
-                  },
-                  onClose: _closeFilterModal,
+              child: AnimatedBuilder(
+                animation: _modalAnimationController,
+                builder: (context, child) {
+                  final curvedValue = Curves.easeOutCubic.transform(_modalAnimationController.value);
+                  final slideOffset = Offset(0, -40 * (1 - curvedValue));
+                  return Transform.translate(
+                    offset: slideOffset,
+                    child: Opacity(
+                      opacity: Tween<double>(
+                        begin: 0.1,
+                        end: 1.0,
+                      ).evaluate(CurvedAnimation(parent: _modalAnimationController, curve: Curves.easeOutCubic)),
+                      child: child,
+                    ),
+                  );
+                },
+                child: Material(
+                  color: Colors.transparent,
+                  child: FilterModal(
+                    sourceFilter: sourceFilter,
+                    workoutTypeFilters: workoutTypeFilters,
+                    onSourceFilterChanged: (filter) {
+                      controller.setSourceFilter(filter);
+                    },
+                    onWorkoutTypeToggled: (type) {
+                      controller.toggleWorkoutType(type);
+                    },
+                    onClose: _closeFilterModal,
+                  ),
                 ),
               ),
             ),
           ],
         );
       },
-    );
-
-    Overlay.of(context).insert(_filterOverlay!);
-  }
-
-  void _closeFilterModal() {
-    _filterOverlay?.remove();
-    _filterOverlay = null;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final selectedIndex = state.selectedTabIndex.watch(context);
-    final authService = Refs.authService.of(context);
-    final user = authService.currentUser.watch(context);
-
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: Stack(
-        children: [
-          // Tab content
-          IndexedStack(
-            index: selectedIndex,
+      child: PopScope(
+        canPop: !_isModalShowing,
+        onPopInvokedWithResult: (didPop, result) {
+          if (!didPop && _isModalShowing) {
+            _closeFilterModal();
+          }
+        },
+        child: Scaffold(
+          backgroundColor: Colors.black,
+          body: Stack(
             children: [
-              ActivitiesTab(onFilterTap: _showFilterModal),
-              const LibraryTab(),
-              const CreateTab(),
+              // Tab content
+              IndexedStack(
+                index: selectedIndex,
+                children: [
+                  ActivitiesTab(controller: controller, onFilterTap: _showFilterModal),
+                  const LibraryTab(),
+                  const CreateTab(),
+                ],
+              ),
+
+              // Top bar
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                child: HomeTopBar(
+                  user: user,
+                  activeFilters: activeFilterColors,
+                  filterButtonKey: _filterButtonKey,
+                  onFilterTap: _showFilterModal,
+                  onBookmarkTap: () {
+                    // Switch to Library tab
+                    controller.selectTab(1);
+                  },
+                  onDevicesTap: () {
+                    context.push('/devices');
+                  },
+                  onProfileTap: () {
+                    if (user != null) {
+                      context.push('/profile');
+                    } else {
+                      context.push('/login');
+                    }
+                  },
+                ),
+              ),
+
+              // Liquid glass tab bar at bottom
+              Positioned(
+                left: 0,
+                bottom: 0,
+                child: LiquidGlassTabBar(
+                  selectedIndex: selectedIndex,
+                  onTabSelected: (index) => controller.selectTab(index),
+                  tabs: const [
+                    TabItem(icon: Icons.layers, label: 'Activities'),
+                    TabItem(icon: Icons.bookmark, label: 'Library'),
+                    TabItem(icon: Icons.add, label: 'Create'),
+                  ],
+                ),
+              ),
+
+              // Floating action button (lightning bolt)
+              Positioned(
+                right: 16,
+                bottom: 16,
+                child: FloatingActionButton(
+                  onPressed: () {
+                    // TODO: Quick start workout action
+                  },
+                  backgroundColor: const Color(0xFFFF6F00),
+                  child: const Icon(Icons.bolt, size: 32),
+                ),
+              ),
             ],
           ),
-
-          // Top bar
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: HomeTopBar(
-              user: user,
-              filterButtonKey: _filterButtonKey,
-              onFilterTap: _showFilterModal,
-              onBookmarkTap: () {
-                // Switch to Library tab
-                state.selectTab(1);
-              },
-              onDevicesTap: () {
-                context.push('/devices');
-              },
-              onProfileTap: () {
-                context.push('/profile');
-              },
-            ),
-          ),
-
-          // Liquid glass tab bar at bottom
-          Positioned(
-            left: 0,
-            bottom: 0,
-            child: LiquidGlassTabBar(
-              selectedIndex: selectedIndex,
-              onTabSelected: (index) => state.selectTab(index),
-              tabs: const [
-                TabItem(icon: Icons.layers, label: 'Activities'),
-                TabItem(icon: Icons.bookmark, label: 'Library'),
-                TabItem(icon: Icons.add, label: 'Create'),
-              ],
-            ),
-          ),
-
-          // Floating action button (lightning bolt)
-          Positioned(
-            right: 16,
-            bottom: 16,
-            child: FloatingActionButton(
-              onPressed: () {
-                // TODO: Quick start workout action
-              },
-              backgroundColor: const Color(0xFFFF6F00),
-              child: const Icon(Icons.bolt, size: 32),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

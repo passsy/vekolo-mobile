@@ -34,7 +34,7 @@ class HomeTopBar extends StatelessWidget {
             SizedBox(
               key: filterButtonKey,
               width: 160,
-              child: _PillButton(onTap: onFilterTap, activeFilters: activeFilters),
+              child: PillButton(onTap: onFilterTap, activeFilters: activeFilters),
             ),
 
             Spacer(),
@@ -51,17 +51,23 @@ class HomeTopBar extends StatelessWidget {
             ),
             const SizedBox(width: 12),
 
-            // Profile image
-            if (user != null)
-              GestureDetector(
-                onTap: onProfileTap,
-                child: UserAvatar(
-                  user: user!,
-                  radius: 24,
-                  backgroundColor: Colors.grey.shade900,
-                  foregroundColor: Colors.white,
-                ),
-              ),
+            // Profile image / Login button
+            GestureDetector(
+              onTap: onProfileTap,
+              child: user != null
+                  ? UserAvatar(
+                      user: user!,
+                      radius: 24,
+                      backgroundColor: Colors.grey.shade900,
+                      foregroundColor: Colors.white,
+                    )
+                  : Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.grey.shade900),
+                      child: const Icon(Icons.person_outline, color: Colors.white70, size: 24),
+                    ),
+            ),
           ],
         ),
       ),
@@ -69,11 +75,11 @@ class HomeTopBar extends StatelessWidget {
   }
 }
 
-class _PillButton extends StatelessWidget {
+class PillButton extends StatelessWidget {
   final VoidCallback? onTap;
   final List<Color> activeFilters;
 
-  const _PillButton({required this.onTap, required this.activeFilters});
+  const PillButton({required this.onTap, required this.activeFilters});
 
   @override
   Widget build(BuildContext context) {
@@ -100,7 +106,8 @@ class _PillButton extends StatelessWidget {
             const Icon(Icons.bookmark_outline, color: Color(0xFFFF6F00), size: 28),
             const SizedBox(width: 16),
             // Colored stripes
-            Expanded(
+            SizedBox(
+              width: 80,
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: colors.map((color) {

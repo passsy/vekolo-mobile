@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:vekolo/pages/home_page_v2/home_page_state.dart';
+import 'package:vekolo/pages/home_page_v2/home_page_controller.dart';
 
 /// Modal for filtering workouts by source and type
 class FilterModal extends StatelessWidget {
@@ -61,6 +61,7 @@ class FilterModal extends StatelessWidget {
             icon: Icons.water,
             isSelected: workoutTypeFilters.contains(WorkoutType.recovery),
             onTap: () => onWorkoutTypeToggled(WorkoutType.recovery),
+            workoutType: WorkoutType.recovery,
           ),
           const SizedBox(height: 16),
           _WorkoutTypeFilterButton(
@@ -68,6 +69,7 @@ class FilterModal extends StatelessWidget {
             icon: Icons.favorite,
             isSelected: workoutTypeFilters.contains(WorkoutType.endurance),
             onTap: () => onWorkoutTypeToggled(WorkoutType.endurance),
+            workoutType: WorkoutType.endurance,
           ),
           const SizedBox(height: 16),
           _WorkoutTypeFilterButton(
@@ -75,6 +77,7 @@ class FilterModal extends StatelessWidget {
             icon: Icons.fast_forward,
             isSelected: workoutTypeFilters.contains(WorkoutType.tempo),
             onTap: () => onWorkoutTypeToggled(WorkoutType.tempo),
+            workoutType: WorkoutType.tempo,
           ),
           const SizedBox(height: 16),
           _WorkoutTypeFilterButton(
@@ -82,6 +85,7 @@ class FilterModal extends StatelessWidget {
             icon: Icons.flash_on,
             isSelected: workoutTypeFilters.contains(WorkoutType.threshold),
             onTap: () => onWorkoutTypeToggled(WorkoutType.threshold),
+            workoutType: WorkoutType.threshold,
           ),
           const SizedBox(height: 16),
           _WorkoutTypeFilterButton(
@@ -89,6 +93,7 @@ class FilterModal extends StatelessWidget {
             icon: Icons.local_fire_department,
             isSelected: workoutTypeFilters.contains(WorkoutType.vo2max),
             onTap: () => onWorkoutTypeToggled(WorkoutType.vo2max),
+            workoutType: WorkoutType.vo2max,
           ),
           const SizedBox(height: 16),
           _WorkoutTypeFilterButton(
@@ -96,6 +101,7 @@ class FilterModal extends StatelessWidget {
             icon: Icons.rocket_launch,
             isSelected: workoutTypeFilters.contains(WorkoutType.ftp),
             onTap: () => onWorkoutTypeToggled(WorkoutType.ftp),
+            workoutType: WorkoutType.ftp,
           ),
         ],
       ),
@@ -148,12 +154,14 @@ class _WorkoutTypeFilterButton extends StatelessWidget {
     required this.icon,
     required this.isSelected,
     required this.onTap,
+    required this.workoutType,
   });
 
   final String label;
   final IconData icon;
   final bool isSelected;
   final VoidCallback onTap;
+  final WorkoutType workoutType;
 
   @override
   Widget build(BuildContext context) {
@@ -162,14 +170,7 @@ class _WorkoutTypeFilterButton extends StatelessWidget {
 
     if (isSelected) {
       foregroundColor = Colors.black;
-      // Different colors for selected items
-      if (label == 'THRESHOLD') {
-        backgroundColor = const Color(0xFFFF9500); // Orange
-      } else if (label == 'VO2MAX' || label == 'FTP') {
-        backgroundColor = const Color(0xFFFF006E); // Magenta/Pink
-      } else {
-        backgroundColor = const Color(0xFFFF9500); // Orange default
-      }
+      backgroundColor = workoutType.color;
     } else {
       backgroundColor = const Color(0xFF4A3F39); // Dark gray/brown
       foregroundColor = const Color(0xFFD4B896); // Tan/beige

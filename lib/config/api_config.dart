@@ -6,5 +6,5 @@ class ApiConfig {
 
   /// Get the base URL for the current environment
   /// For now, always returns dev URL. Can be extended with flavor support.
-  static String get baseUrl => stagingBaseUrl;
+  static String get baseUrl => productionBaseUrl;
 }

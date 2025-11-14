@@ -1,6 +1,33 @@
 import 'package:vekolo/domain/models/workout/workout_models.dart';
 import 'package:vekolo/models/rekord.dart';
-import 'package:vekolo/models/user.dart';
+
+/// Activity visibility level
+///
+/// Possible values:
+/// - `public`: Visible to all users
+/// - `private`: Only visible to the owner
+extension type const ActivityVisibility(String value) {
+  static const public = ActivityVisibility('public');
+  static const private = ActivityVisibility('private');
+}
+
+/// Workout category/intensity level
+///
+/// Possible values:
+/// - `recovery`: Low intensity recovery workout
+/// - `endurance`: Aerobic endurance training
+/// - `tempo`: Tempo/threshold training
+/// - `threshold`: Lactate threshold training
+/// - `vo2max`: VO2max intervals
+/// - `ftp`: Functional Threshold Power test or training
+extension type const WorkoutCategory(String value) {
+  static const recovery = WorkoutCategory('recovery');
+  static const endurance = WorkoutCategory('endurance');
+  static const tempo = WorkoutCategory('tempo');
+  static const threshold = WorkoutCategory('threshold');
+  static const vo2max = WorkoutCategory('vo2max');
+  static const ftp = WorkoutCategory('ftp');
+}
 
 /// Activity record from a completed workout
 ///
@@ -11,17 +38,17 @@ class Activity with RekordMixin {
 
   factory Activity.create({
     String? id,
-    int? averageCadence,
-    int? averageHeartRate,
-    int? averagePower,
+    double? averageCadence,
+    double? averageHeartRate,
+    double? averagePower,
     double? averageSpeed,
-    int? burnedCalories,
+    double? burnedCalories,
     String? createdAt,
-    int? distance,
+    double? distance,
     int? duration,
     double? maxSpeed,
     String? stravaActivityId,
-    String? visibility,
+    ActivityVisibility? visibility,
     ActivityUser? user,
     ActivityWorkout? workout,
   }) {
@@ -37,7 +64,7 @@ class Activity with RekordMixin {
       if (duration != null) 'duration': duration,
       if (maxSpeed != null) 'maxSpeed': maxSpeed,
       if (stravaActivityId != null) 'stravaActivityId': stravaActivityId,
-      if (visibility != null) 'visibility': visibility,
+      if (visibility != null) 'visibility': visibility.value,
       if (user != null) 'user': user,
       if (workout != null) 'workout': workout,
     });
@@ -49,17 +76,17 @@ class Activity with RekordMixin {
 
   String get id => rekord.read('id').asStringOrThrow();
 
-  int? get averageCadence => rekord.read('averageCadence').asIntOrNull();
-  int? get averageHeartRate => rekord.read('averageHeartRate').asIntOrNull();
-  int? get averagePower => rekord.read('averagePower').asIntOrNull();
+  double? get averageCadence => rekord.read('averageCadence').asDoubleOrNull();
+  double? get averageHeartRate => rekord.read('averageHeartRate').asDoubleOrNull();
+  double? get averagePower => rekord.read('averagePower').asDoubleOrNull();
   double? get averageSpeed => rekord.read('averageSpeed').asDoubleOrNull();
-  int? get burnedCalories => rekord.read('burnedCalories').asIntOrNull();
+  double? get burnedCalories => rekord.read('burnedCalories').asDoubleOrNull();
   String get createdAt => rekord.read('createdAt').asStringOrThrow();
-  int? get distance => rekord.read('distance').asIntOrNull();
+  double? get distance => rekord.read('distance').asDoubleOrNull();
   int get duration => rekord.read('duration').asIntOrThrow();
   double? get maxSpeed => rekord.read('maxSpeed').asDoubleOrNull();
   String? get stravaActivityId => rekord.read('stravaActivityId').asStringOrNull();
-  String get visibility => rekord.read('visibility').asStringOrThrow();
+  ActivityVisibility get visibility => ActivityVisibility(rekord.read('visibility').asStringOrThrow());
 
   ActivityUser get user => ActivityUser.fromData(rekord.read('user').asMapOrThrow<String, Object?>());
   ActivityWorkout get workout => ActivityWorkout.fromData(rekord.read('workout').asMapOrThrow<String, Object?>());
@@ -107,7 +134,7 @@ class ActivityWorkout with RekordMixin {
 
   factory ActivityWorkout.create({
     String? id,
-    String? category,
+    WorkoutCategory? category,
     int? duration,
     WorkoutPlan? plan,
     String? slug,
@@ -118,7 +145,7 @@ class ActivityWorkout with RekordMixin {
   }) {
     return ActivityWorkout.fromData({
       if (id != null) 'id': id,
-      if (category != null) 'category': category,
+      if (category != null) 'category': category.value,
       if (duration != null) 'duration': duration,
       if (plan != null) 'plan': plan,
       if (slug != null) 'slug': slug,
@@ -133,7 +160,10 @@ class ActivityWorkout with RekordMixin {
   final Rekord rekord;
 
   String get id => rekord.read('id').asStringOrThrow();
-  String? get category => rekord.read('category').asStringOrNull();
+  WorkoutCategory? get category {
+    final value = rekord.read('category').asStringOrNull();
+    return value != null ? WorkoutCategory(value) : null;
+  }
   int get duration => rekord.read('duration').asIntOrThrow();
   String get slug => rekord.read('slug').asStringOrThrow();
   int get starCount => rekord.read('starCount').asIntOrThrow();
@@ -143,8 +173,9 @@ class ActivityWorkout with RekordMixin {
 
   /// Workout plan with structured blocks and events
   WorkoutPlan get plan {
-    final planMap = rekord.read('plan').asMapOrThrow<String, Object?>();
-    return WorkoutPlan.fromJson(planMap);
+    final planList = rekord.read('plan').asListOrThrow<Map<String, Object?>>((pick) => pick.asMapOrThrow<String, Object?>());
+    // Wrap the list in an object as expected by WorkoutPlan.fromJson
+    return WorkoutPlan.fromJson({'plan': planList});
   }
 
   @override
