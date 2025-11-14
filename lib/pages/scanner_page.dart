@@ -79,8 +79,22 @@ class _ScannerPageState extends State<ScannerPage> {
           return;
         }
 
+        // Filter out devices that have no compatible transports
+        final transportRegistry = Refs.transportRegistry.of(context);
+        final supportedDevices = devices.where((device) {
+          final transports = transportRegistry.detectCompatibleTransports(device, deviceId: device.deviceId);
+          final hasCompatibleTransport = transports.isNotEmpty;
+
+          // Dispose transports since we only needed them for checking compatibility
+          for (final transport in transports) {
+            transport.dispose();
+          }
+
+          return hasCompatibleTransport;
+        }).toList();
+
         _devices.clear();
-        _devices.addAll(devices);
+        _devices.addAll(supportedDevices);
       });
     });
   }
