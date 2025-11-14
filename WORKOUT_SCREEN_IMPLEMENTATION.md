@@ -155,6 +155,15 @@ puro flutter test test/domain/models/power_history_test.dart test/widgets/workou
 
 **Note:** The widget tests are integration tests that launch the full app with BLE device simulation. They may take longer to run than typical unit tests, but provide comprehensive end-to-end coverage.
 
+### Continuous Integration
+
+A GitHub Actions workflow (`.github/workflows/test.yml`) automatically runs:
+- Static analysis (`flutter analyze`)
+- All tests with coverage (`flutter test --coverage`)
+- Codecov upload (optional)
+
+The CI runs on every push to main/master and on all pull requests.
+
 ## Design Features
 
 ### Power Zones
@@ -192,11 +201,15 @@ The existing smart workout controls are preserved:
 - `test/widgets/workout_power_chart_test.dart` - Chart integration tests (135 lines)
 - `test/widgets/workout_screen_content_test.dart` - Screen integration tests (370 lines)
 - `test/robot/workout_player_robot.dart` - Robot helper for workout screen (390 lines)
+- `.github/workflows/test.yml` - GitHub Actions CI workflow
 - `WORKOUT_SCREEN_IMPLEMENTATION.md` - Implementation documentation
 
 **Modified Files:**
 - `lib/services/workout_player_service.dart` - Added power history tracking
 - `lib/pages/workout_player_page.dart` - Simplified (588 lines removed!)
+
+**Removed Files:**
+- `test_workout_screen.sh` - Replaced by GitHub Actions workflow
 
 ## Code Quality
 
