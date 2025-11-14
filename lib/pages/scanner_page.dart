@@ -3,6 +3,7 @@ import 'package:chirp/chirp.dart';
 import 'package:context_plus/context_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:wiredash/wiredash.dart';
 import 'package:vekolo/app/refs.dart';
 import 'package:vekolo/ble/ble_device.dart';
 import 'package:vekolo/ble/ble_scanner.dart';
@@ -544,6 +545,18 @@ class _DeviceConnectingDialogState extends State<_DeviceConnectingDialog> {
       setState(() => _statusMessage = 'Establishing Bluetooth connection...');
       chirp.info('${isReconnect ? 'Reconnecting' : 'Connecting'} device: ${fitnessDevice.name}');
       await deviceManager.connectDevice(fitnessDevice.id).value;
+
+      // Track device connected manually
+      if (!mounted) return;
+      Wiredash.trackEvent(
+        'device_connected_manual',
+        data: {
+          'device_name': fitnessDevice.name,
+          'device_type': fitnessDevice.type.toString(),
+          'transports': fitnessDevice.transportIds,
+          'is_reconnect': isReconnect.toString(),
+        },
+      );
 
       if (!mounted) return;
 

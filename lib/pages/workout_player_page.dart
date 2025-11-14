@@ -6,6 +6,7 @@ import 'package:context_plus/context_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:state_beacon/state_beacon.dart';
+import 'package:wiredash/wiredash.dart';
 import 'package:vekolo/app/refs.dart';
 import 'package:vekolo/domain/devices/device_manager.dart';
 import 'package:vekolo/domain/models/workout/workout_models.dart';
@@ -259,6 +260,15 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
 
         // Mark as started immediately to prevent duplicate startRecording() calls
         _hasStarted = true;
+
+        // Track workout started event
+        Wiredash.trackEvent(
+          'workout_started',
+          data: {
+            'workout_id': widget.workoutId ?? 'unknown',
+            'workout_name': _workoutName ?? 'Workout',
+          },
+        );
 
         // Start recording when workout starts (fire-and-forget)
         final authService = Refs.authService.of(context);

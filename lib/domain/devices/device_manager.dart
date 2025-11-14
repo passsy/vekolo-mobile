@@ -36,6 +36,7 @@ import 'package:async/async.dart';
 import 'package:flutter/foundation.dart';
 import 'package:state_beacon/state_beacon.dart';
 import 'package:chirp/chirp.dart';
+import 'package:wiredash/wiredash.dart';
 import 'package:vekolo/ble/ble_device.dart';
 import 'package:vekolo/ble/ble_platform.dart' hide LogLevel;
 import 'package:vekolo/ble/ble_scanner.dart';
@@ -729,6 +730,16 @@ class DeviceManager {
 
     // Connect
     await connectDevice(deviceId).value;
+
+    // Track device connected via auto-connect
+    Wiredash.trackEvent(
+      'device_connected_auto',
+      data: {
+        'device_name': device.name,
+        'device_type': device.type.toString(),
+        'transports': device.transportIds,
+      },
+    );
   }
 
   /// Restores role assignments for all connected devices from saved assignments.
