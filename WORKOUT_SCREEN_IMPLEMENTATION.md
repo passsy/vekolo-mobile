@@ -81,10 +81,10 @@ Simplified workout player page:
 
 ## Tests
 
-Comprehensive test coverage for all new components:
+Comprehensive test coverage using the robot pattern:
 
-### Power History Tests (`test/domain/models/power_history_test.dart`)
-- 30+ test cases covering:
+### Power History Model Tests (`test/domain/models/power_history_test.dart`)
+- 30+ unit test cases covering:
   - Data point creation and equality
   - Recording with interval enforcement
   - Max data points limit (FIFO behavior)
@@ -93,57 +93,67 @@ Comprehensive test coverage for all new components:
   - Edge cases (zero power, high power, empty history)
   - Realistic workout scenarios
 
-### Power Chart Widget Tests (`test/widgets/workout_power_chart_test.dart`)
-- 15+ test cases covering:
-  - Empty state ("Waiting for data...")
-  - Bar rendering for data points
-  - Max visible bars limit
-  - Custom height
-  - Legend display
-  - FTP-based zone colors
-  - Fallback colors when no FTP
-  - Dynamic updates
-  - Edge cases (zero/high power)
-  - Realistic workout scenarios
+### Power Chart Integration Tests (`test/widgets/workout_power_chart_test.dart`)
+- Uses `robotTest()` with full app launch and BLE device simulation
+- 5 integration test scenarios:
+  - Power chart display with real workout data
+  - Waiting state when no data
+  - Power data visualization when pedaling
+  - Chart updates as power changes over time
+  - Power zone colors based on FTP
+  - Real-time integration with workout player
 
-### Screen Content Widget Tests (`test/widgets/workout_screen_content_test.dart`)
-- 30+ test cases covering:
-  - Timer display
-  - Power chart integration
-  - Metric cards (power, cadence, HR)
-  - Current/next block displays
-  - Power vs ramp block rendering
-  - Paused state messages
-  - Play/pause/skip controls
-  - Intensity adjustment controls
-  - Complete state display
-  - Null value handling
-  - Button callbacks
-  - Full UI state verification
+### Workout Screen Integration Tests (`test/widgets/workout_screen_content_test.dart`)
+- Uses `robotTest()` with complete user workflows
+- 20+ integration test scenarios:
+  - Initial state before workout starts
+  - Transition to running when pedaling
+  - Real-time metrics display (power, cadence, HR)
+  - Current/next block information
+  - Manual pause and resume
+  - Skip to next block
+  - Intensity adjustment (+/- 1%)
+  - End workout early
+  - Timer progression
+  - Missing metrics handling
+  - Auto-pause when power drops
+  - Auto-resume when pedaling again
+  - Workout completion screen
+  - Power chart visibility throughout workout
+
+### Robot Pattern (`test/robot/workout_player_robot.dart`)
+- `WorkoutPlayerRobot` extension for `VekoloRobot`
+- Provides clean verification methods (no direct pumping)
+- Methods for finding and verifying UI elements
+- Action methods for user interactions
+- Complete workflow verifications
+- Integration with BLE device simulation
 
 ## Running Tests
 
-Use the provided test script:
+Run all tests:
 
 ```bash
-./test_workout_screen.sh
-```
-
-Or run individual test files:
-
-```bash
-# Power history model
-puro flutter test test/domain/models/power_history_test.dart
-
-# Power chart widget
-puro flutter test test/widgets/workout_power_chart_test.dart
-
-# Screen content widget
-puro flutter test test/widgets/workout_screen_content_test.dart
-
-# All tests
 puro flutter test
 ```
+
+Run specific test files:
+
+```bash
+# Power history model (unit tests)
+puro flutter test test/domain/models/power_history_test.dart
+
+# Power chart integration tests
+puro flutter test test/widgets/workout_power_chart_test.dart
+
+# Workout screen integration tests
+puro flutter test test/widgets/workout_screen_content_test.dart
+
+# All workout-related tests
+puro flutter test test/domain/models/power_history_test.dart test/widgets/workout_power_chart_test.dart test/widgets/workout_screen_content_test.dart
+```
+
+**Note:** The widget tests are integration tests that launch the full app with BLE device simulation. They may take longer to run than typical unit tests, but provide comprehensive end-to-end coverage.
 
 ## Design Features
 
@@ -175,17 +185,18 @@ The existing smart workout controls are preserved:
 ## Files Changed
 
 **New Files:**
-- `lib/domain/models/power_history.dart` - Power tracking model
-- `lib/widgets/workout_power_chart.dart` - Chart widget
-- `lib/widgets/workout_screen_content.dart` - Screen layout
-- `test/domain/models/power_history_test.dart` - Model tests
-- `test/widgets/workout_power_chart_test.dart` - Chart tests
-- `test/widgets/workout_screen_content_test.dart` - Layout tests
-- `test_workout_screen.sh` - Test runner script
+- `lib/domain/models/power_history.dart` - Power tracking model (160 lines)
+- `lib/widgets/workout_power_chart.dart` - Chart widget (180 lines)
+- `lib/widgets/workout_screen_content.dart` - Screen layout (520 lines)
+- `test/domain/models/power_history_test.dart` - Model unit tests (200+ lines)
+- `test/widgets/workout_power_chart_test.dart` - Chart integration tests (135 lines)
+- `test/widgets/workout_screen_content_test.dart` - Screen integration tests (370 lines)
+- `test/robot/workout_player_robot.dart` - Robot helper for workout screen (390 lines)
+- `WORKOUT_SCREEN_IMPLEMENTATION.md` - Implementation documentation
 
 **Modified Files:**
-- `lib/services/workout_player_service.dart` - Added power history
-- `lib/pages/workout_player_page.dart` - Simplified UI delegation
+- `lib/services/workout_player_service.dart` - Added power history tracking
+- `lib/pages/workout_player_page.dart` - Simplified (588 lines removed!)
 
 ## Code Quality
 
