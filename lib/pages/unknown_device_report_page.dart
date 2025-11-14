@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:reactive_forms/reactive_forms.dart';
 import 'package:chirp/chirp.dart';
+import 'dart:convert';
 import 'dart:io' show Platform;
 import 'dart:async';
 import 'package:clock/clock.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:wiredash/wiredash.dart';
 import 'package:context_plus/context_plus.dart';
 import 'package:vekolo/app/refs.dart';
 import 'package:vekolo/models/user.dart';
@@ -235,6 +237,26 @@ class _UnknownDeviceReportPageState extends State<UnknownDeviceReportPage> {
                   _currentServiceIndex = current;
                 });
               }
+            },
+          );
+
+          // Build service-to-characteristics mapping
+          final serviceCharacteristics = <String, List<String>>{};
+          for (final service in services) {
+            serviceCharacteristics[service.uuid.toString()] =
+              service.characteristics.map((c) => c.uuid.toString()).toList();
+          }
+
+          // Track unknown device report with device information
+          Wiredash.trackEvent(
+            'unknown_device_reported',
+            data: {
+              'device_id': device.id,
+              'device_name': device.name.isEmpty ? 'Unknown' : device.name,
+              'rssi': device.rssi.toString(),
+              'services': services.map((s) => s.uuid.toString()).toList(),
+              'characteristics': jsonEncode(serviceCharacteristics),
+              'user_id': user?.id ?? 'anonymous',
             },
           );
 
