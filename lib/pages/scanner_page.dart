@@ -52,6 +52,34 @@ class _ScannerPageState extends State<ScannerPage> {
     });
   }
 
+  Future<void> _requestPermissions() async {
+    try {
+      final blePermissions = Refs.blePermissions.of(context);
+
+      // Check if permissions are permanently denied
+      final isPermanentlyDenied = await blePermissions.isPermanentlyDenied();
+
+      if (isPermanentlyDenied) {
+        // Open settings if permanently denied
+        chirp.info('Permissions permanently denied, opening settings');
+        await blePermissions.openSettings();
+      } else {
+        // Request permissions
+        chirp.info('Requesting BLE permissions');
+        final granted = await blePermissions.request();
+
+        if (granted) {
+          chirp.info('Permissions granted');
+          // The bluetooth state listener will auto-start scan if ready
+        } else {
+          chirp.warning('Permissions denied');
+        }
+      }
+    } catch (e, stackTrace) {
+      chirp.error('Error requesting permissions', error: e, stackTrace: stackTrace);
+    }
+  }
+
   void _setupListeners() {
     _bluetoothStateUnsubscribe = _scanner.bluetoothState.subscribe((state) {
       if (!mounted) return;
@@ -245,9 +273,7 @@ class _ScannerPageState extends State<ScannerPage> {
                           if (!canScan && bluetoothState?.needsPermission == true) ...[
                             const SizedBox(height: 24),
                             ElevatedButton.icon(
-                              onPressed: () {
-                                setState(() {});
-                              },
+                              onPressed: _requestPermissions,
                               icon: const Icon(Icons.security),
                               label: const Text('Grant Permissions'),
                               style: ElevatedButton.styleFrom(
