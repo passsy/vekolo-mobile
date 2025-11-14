@@ -9,7 +9,6 @@ import 'package:vekolo/pages/home_page_v2/tabs/create_tab.dart';
 import 'package:vekolo/pages/home_page_v2/tabs/library_tab.dart';
 import 'package:vekolo/pages/home_page_v2/widgets/filter_modal.dart';
 import 'package:vekolo/pages/home_page_v2/widgets/home_top_bar.dart';
-import 'package:vekolo/pages/home_page_v2/widgets/liquid_glass_tab_bar.dart';
 
 /// New home page with tab navigation and activities feed
 class HomePage2 extends StatefulWidget {

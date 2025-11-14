@@ -129,12 +129,8 @@ extension WorkoutPlayerRobot on VekoloRobot {
   /// Verify no next block is displayed.
   void verifyNoNextBlock() {
     logger.robotLog('verify no next block displayed');
-    // Check that no text starting with "NEXT:" exists (which indicates a next block card)
-    final nextTexts = spot<Text>().withProp(
-      (w) => w.data,
-      match: (value) => value?.startsWith('NEXT:') ?? false,
-    );
-    nextTexts.doesNotExist();
+    // Check that "NEXT BLOCK" text doesn't exist (which indicates a next block card)
+    spotText('NEXT BLOCK').doesNotExist();
   }
 
   // ==========================================================================
