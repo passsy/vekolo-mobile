@@ -31,74 +31,38 @@ class WorkoutIntervalBars extends StatelessWidget {
       return SizedBox(height: height);
     }
 
-    // Calculate cumulative durations to determine past/future
-    final cumulativeDurations = <int>[];
-    var cumulative = 0;
-    for (final interval in intervals) {
-      cumulative += interval.duration * 1000; // Convert to ms
-      cumulativeDurations.add(cumulative);
-    }
+    final progress = (currentTimeMs != null && totalDurationMs != null && totalDurationMs! > 0)
+        ? (currentTimeMs! / totalDurationMs!).clamp(0.0, 1.0)
+        : 0.0;
 
-    final currentTime = currentTimeMs ?? 0;
+    // Build the interval bars widget (will be used for both colored and greyscale)
+    final intervalsWidget = _buildIntervalBars();
 
     return Stack(
       children: [
-        SizedBox(
-          height: height,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              for (var i = 0; i < intervals.length; i++)
-                Builder(
-                  builder: (context) {
-                    final interval = intervals[i];
-                    final intervalStart = i == 0 ? 0 : cumulativeDurations[i - 1];
-                    final intervalEnd = cumulativeDurations[i];
-
-                    // Determine if this interval is in the past, current, or future
-                    final isPast = currentTime >= intervalEnd;
-                    final isCurrent = currentTime >= intervalStart && currentTime < intervalEnd;
-
-                    // Desaturate color if in the past
-                    final displayColor = isPast || (isCurrent && currentTimeMs != null)
-                        ? _desaturateColor(interval.color, currentTime, intervalStart, intervalEnd, isCurrent)
-                        : interval.color;
-
-                    return Expanded(
-                      flex: interval.duration,
-                      child: Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 0.5),
-                        child: interval.isRamp
-                            ? CustomPaint(
-                                size: Size.infinite,
-                                painter: _RampBarPainter(
-                                  startIntensity: interval.intensityStart!,
-                                  endIntensity: interval.intensityEnd!,
-                                  color: displayColor,
-                                  maxHeight: height,
-                                ),
-                              )
-                            : Container(
-                                height: height * interval.intensity,
-                                decoration: BoxDecoration(
-                                  color: displayColor,
-                                  borderRadius: BorderRadius.circular(2),
-                                ),
-                              ),
-                      ),
-                    );
-                  },
-                ),
-            ],
+        // Bottom layer: Greyscale version (past)
+        if (currentTimeMs != null && totalDurationMs != null)
+          ClipRect(
+            clipper: _LeftClipper(progress),
+            child: ColorFiltered(
+              colorFilter: _greyscaleFilter,
+              child: intervalsWidget,
+            ),
           ),
-        ),
+        // Top layer: Colored version (future)
+        if (currentTimeMs != null && totalDurationMs != null)
+          ClipRect(
+            clipper: _RightClipper(progress),
+            child: intervalsWidget,
+          )
+        else
+          intervalsWidget,
         // Progress indicator line
         if (currentTimeMs != null && totalDurationMs != null && totalDurationMs! > 0)
           Positioned.fill(
             child: CustomPaint(
               painter: _ProgressIndicatorPainter(
-                progress: currentTimeMs! / totalDurationMs!,
+                progress: progress,
                 height: height,
               ),
             ),
@@ -107,20 +71,49 @@ class WorkoutIntervalBars extends StatelessWidget {
     );
   }
 
-  /// Desaturate color for past intervals
-  Color _desaturateColor(Color color, int currentTime, int intervalStart, int intervalEnd, bool isCurrent) {
-    if (isCurrent) {
-      // For current interval, partially desaturate based on progress through interval
-      final intervalProgress = (currentTime - intervalStart) / (intervalEnd - intervalStart);
-      final desaturated = Colors.grey.shade600;
-
-      // Blend from desaturated at start to colored at end
-      return Color.lerp(desaturated, color, 1 - intervalProgress.clamp(0.0, 1.0)) ?? color;
-    } else {
-      // Fully desaturate past intervals
-      return Colors.grey.shade600;
-    }
+  Widget _buildIntervalBars() {
+    return SizedBox(
+      height: height,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          for (final interval in intervals)
+            Expanded(
+              flex: interval.duration,
+              child: Container(
+                margin: const EdgeInsets.symmetric(horizontal: 0.5),
+                child: interval.isRamp
+                    ? CustomPaint(
+                        size: Size.infinite,
+                        painter: _RampBarPainter(
+                          startIntensity: interval.intensityStart!,
+                          endIntensity: interval.intensityEnd!,
+                          color: interval.color,
+                          maxHeight: height,
+                        ),
+                      )
+                    : Container(
+                        height: height * interval.intensity,
+                        decoration: BoxDecoration(
+                          color: interval.color,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+              ),
+            ),
+        ],
+      ),
+    );
   }
+
+  /// Greyscale color filter using luminance-preserving matrix
+  static const _greyscaleFilter = ColorFilter.matrix([
+    0.2126, 0.7152, 0.0722, 0, 0, // Red channel
+    0.2126, 0.7152, 0.0722, 0, 0, // Green channel
+    0.2126, 0.7152, 0.0722, 0, 0, // Blue channel
+    0, 0, 0, 1, 0, // Alpha channel
+  ]);
 }
 
 class IntervalBar {
@@ -269,4 +262,36 @@ class _ProgressIndicatorPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_ProgressIndicatorPainter oldDelegate) => progress != oldDelegate.progress;
+}
+
+/// Clips the left portion (past) of the widget based on progress
+class _LeftClipper extends CustomClipper<Rect> {
+  const _LeftClipper(this.progress);
+
+  final double progress;
+
+  @override
+  Rect getClip(Size size) {
+    // Clip from left edge to progress position
+    return Rect.fromLTRB(0, 0, size.width * progress.clamp(0.0, 1.0), size.height);
+  }
+
+  @override
+  bool shouldReclip(_LeftClipper oldClipper) => progress != oldClipper.progress;
+}
+
+/// Clips the right portion (future) of the widget based on progress
+class _RightClipper extends CustomClipper<Rect> {
+  const _RightClipper(this.progress);
+
+  final double progress;
+
+  @override
+  Rect getClip(Size size) {
+    // Clip from progress position to right edge
+    return Rect.fromLTRB(size.width * progress.clamp(0.0, 1.0), 0, size.width, size.height);
+  }
+
+  @override
+  bool shouldReclip(_RightClipper oldClipper) => progress != oldClipper.progress;
 }

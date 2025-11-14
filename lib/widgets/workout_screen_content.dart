@@ -119,6 +119,10 @@ class WorkoutScreenContent extends StatelessWidget {
                 target: cadenceTarget,
                 nextTarget: _getNextCadence(),
               ),
+              const SizedBox(height: 40),
+
+              // Control buttons: Skip and Difficulty adjustment
+              _buildControlButtons(),
 
               const Spacer(),
 
@@ -159,16 +163,16 @@ class WorkoutScreenContent extends StatelessWidget {
     return 0;
   }
 
-  int _getNextCadence() {
-    if (nextBlock == null) return 0;
+  int? _getNextCadence() {
+    if (nextBlock == null) return null;
     if (nextBlock is PowerBlock) {
       final block = nextBlock as PowerBlock;
-      return block.cadence ?? 0;
+      return block.cadence;
     } else if (nextBlock is RampBlock) {
       final block = nextBlock as RampBlock;
-      return block.cadenceStart ?? 0;
+      return block.cadenceStart;
     }
-    return 0;
+    return null;
   }
 
   /// Calculate color for metric based on how close it is to target
@@ -246,6 +250,74 @@ class WorkoutScreenContent extends StatelessWidget {
           backgroundColor: Colors.white.withValues(alpha: 0.2),
           valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF52B788)),
         ),
+      ),
+    );
+  }
+
+  Widget _buildControlButtons() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 32),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          // Difficulty decrease button
+          IconButton(
+            onPressed: onPowerScaleDecrease,
+            icon: const Icon(Icons.remove, color: Colors.white, size: 24),
+            style: IconButton.styleFrom(
+              backgroundColor: Colors.white.withValues(alpha: 0.1),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          ),
+          const SizedBox(width: 16),
+
+          // Difficulty indicator
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              '${(powerScaleFactor * 100).toStringAsFixed(0)}%',
+              style: GoogleFonts.publicSans(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          const SizedBox(width: 16),
+
+          // Difficulty increase button
+          IconButton(
+            onPressed: onPowerScaleIncrease,
+            icon: const Icon(Icons.add, color: Colors.white, size: 24),
+            style: IconButton.styleFrom(
+              backgroundColor: Colors.white.withValues(alpha: 0.1),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          ),
+          const SizedBox(width: 32),
+
+          // Skip button
+          ElevatedButton.icon(
+            onPressed: onSkip,
+            icon: const Icon(Icons.skip_next, size: 20),
+            label: const Text('SKIP'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.white.withValues(alpha: 0.15),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              textStyle: GoogleFonts.publicSans(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1.0,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
