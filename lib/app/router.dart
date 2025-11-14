@@ -2,10 +2,12 @@ import 'package:context_plus/context_plus.dart';
 import 'package:flutter/widgets.dart';
 import 'package:go_router/go_router.dart';
 import 'package:vekolo/app/refs.dart';
+import 'package:vekolo/domain/models/workout/workout_models.dart';
+import 'package:vekolo/models/activity.dart';
+import 'package:vekolo/pages/activity_detail_page.dart';
 import 'package:vekolo/pages/auth/login_page.dart';
 import 'package:vekolo/pages/auth/signup_page.dart';
 import 'package:vekolo/pages/devices_page.dart';
-import 'package:vekolo/pages/home_page.dart';
 import 'package:vekolo/pages/home_page_v2/home_page_v2.dart';
 import 'package:vekolo/pages/profile_page.dart';
 import 'package:vekolo/pages/scanner_page.dart';
@@ -25,8 +27,14 @@ class VekoloRouter extends StatefulWidget {
 class _VekoloRouterState extends State<VekoloRouter> {
   final _router = GoRouter(
     routes: [
-      GoRoute(path: '/', builder: (context, state) => const HomePage()),
-      GoRoute(path: '/home2', builder: (context, state) => const HomePage2()),
+      GoRoute(path: '/', builder: (context, state) => const HomePage2()),
+      GoRoute(
+        path: '/activity/:id',
+        builder: (context, state) {
+          final activity = state.extra! as Activity;
+          return ActivityDetailPage(activity: activity);
+        },
+      ),
       GoRoute(path: '/login', builder: (context, state) => const LoginPage()),
       GoRoute(path: '/signup', builder: (context, state) => const SignupPage()),
       GoRoute(path: '/profile', builder: (context, state) => const ProfilePage()),
@@ -51,7 +59,21 @@ class _VekoloRouterState extends State<VekoloRouter> {
         path: '/workout-player',
         builder: (context, state) {
           final resuming = state.uri.queryParameters['resuming'] == 'true';
-          return WorkoutPlayerPage(isResuming: resuming);
+
+          // Extract workout plan and name from extra data
+          WorkoutPlan? workoutPlan;
+          String? workoutName;
+
+          if (state.extra is Map) {
+            final extra = state.extra! as Map;
+            workoutPlan = extra['plan'] as WorkoutPlan?;
+            workoutName = extra['name'] as String?;
+          } else if (state.extra is WorkoutPlan) {
+            // Legacy support for direct WorkoutPlan passing
+            workoutPlan = state.extra! as WorkoutPlan;
+          }
+
+          return WorkoutPlayerPage(isResuming: resuming, workoutPlan: workoutPlan, workoutName: workoutName);
         },
       ),
     ],

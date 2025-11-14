@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:vekolo/api/api_context.dart';
 import 'package:vekolo/api/vekolo_api_client.dart';
+import 'package:vekolo/models/activity.dart';
 import 'package:vekolo/models/user.dart';
 
 /// In-memory fake implementation of [VekoloApiClient] for testing
@@ -175,8 +176,110 @@ class FakeVekoloApiClient implements VekoloApiClient {
     if (overrideActivities != null) {
       return overrideActivities!(timeline: timeline);
     }
-    // Default: return empty list
-    return ActivitiesResponse.create(activities: []);
+    // Default: return 3 sample activities
+    return ActivitiesResponse.create(activities: _createSampleActivities());
+  }
+
+  /// Create sample activities for testing
+  static List<Activity> _createSampleActivities() {
+    final user = ActivityUser.create(id: 'user1', name: 'Pascal Welsch');
+
+    return [
+      // Activity 1: VO2max intervals
+      Activity.create(
+        id: 'activity1',
+        createdAt: DateTime.now().subtract(const Duration(days: 1)).toIso8601String(),
+        duration: 600000, // 10 minutes
+        averagePower: 180.0,
+        averageCadence: 85.0,
+        averageHeartRate: 150.0,
+        visibility: ActivityVisibility.public,
+        user: user,
+        workout: ActivityWorkout.fromData({
+          'id': 'workout1',
+          'title': 'VO2max Blaster',
+          'slug': 'vo2max-blaster',
+          'summary': '10 sets of 30/30 intervals at 142% FTP',
+          'category': 'vo2max',
+          'duration': 600000,
+          'tss': 25,
+          'starCount': 42,
+          'plan': [
+            {
+              'id': 'interval1',
+              'type': 'interval',
+              'repeat': 10,
+              'parts': [
+                {'id': 'work', 'type': 'power', 'description': 'Work', 'duration': 30000, 'power': 1.42},
+                {'id': 'recovery', 'type': 'power', 'description': 'Recovery', 'duration': 30000, 'power': 0.74},
+              ],
+            },
+          ],
+        }),
+      ),
+
+      // Activity 2: Sweet Spot (matches test expectations)
+      Activity.create(
+        id: 'activity2',
+        createdAt: DateTime.now().subtract(const Duration(days: 2)).toIso8601String(),
+        duration: 1800000, // 30 minutes
+        averagePower: 210.0,
+        averageCadence: 90.0,
+        averageHeartRate: 145.0,
+        visibility: ActivityVisibility.public,
+        user: user,
+        workout: ActivityWorkout.fromData({
+          'id': 'workout2',
+          'title': 'Sweet Spot Workout',
+          'slug': 'sweet-spot-workout',
+          'summary': '3 x 6 min at 90% FTP',
+          'category': 'threshold',
+          'duration': 1800000,
+          'tss': 55,
+          'starCount': 78,
+          'plan': [
+            {'id': 'warmup', 'type': 'power', 'description': 'Warm-up', 'duration': 300000, 'power': 0.6},
+            {
+              'id': 'main',
+              'type': 'interval',
+              'repeat': 3,
+              'parts': [
+                {'id': 'work', 'type': 'power', 'description': 'Sweet Spot', 'duration': 360000, 'power': 0.9},
+                {'id': 'recovery', 'type': 'power', 'description': 'Recovery', 'duration': 120000, 'power': 0.6},
+              ],
+            },
+            {'id': 'cooldown', 'type': 'power', 'description': 'Cool-down', 'duration': 300000, 'power': 0.5},
+          ],
+        }),
+      ),
+
+      // Activity 3: Endurance
+      Activity.create(
+        id: 'activity3',
+        createdAt: DateTime.now().subtract(const Duration(days: 3)).toIso8601String(),
+        duration: 3600000, // 60 minutes
+        averagePower: 140.0,
+        averageCadence: 80.0,
+        averageHeartRate: 130.0,
+        visibility: ActivityVisibility.public,
+        user: user,
+        workout: ActivityWorkout.fromData({
+          'id': 'workout3',
+          'title': 'Easy Endurance Ride',
+          'slug': 'easy-endurance-ride',
+          'summary': '60 minutes at 65% FTP',
+          'category': 'endurance',
+          'duration': 3600000,
+          'tss': 45,
+          'starCount': 156,
+          'plan': [
+            {'id': 'warmup', 'type': 'power', 'description': 'Warm-up', 'duration': 300000, 'power': 0.5},
+            {'id': 'main', 'type': 'power', 'description': 'Endurance', 'duration': 2700000, 'power': 0.65},
+            {'id': 'cooldown', 'type': 'power', 'description': 'Cool-down', 'duration': 600000, 'power': 0.5},
+          ],
+        }),
+      ),
+    ];
   }
 
   // Test helper methods

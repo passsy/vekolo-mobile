@@ -7,8 +7,6 @@ import '../robot/robot_kit.dart';
 
 void main() {
   robotTest('workout player shows initial state correctly', (robot) async {
-    
-
     // Setup: Create trainer device and launch app with it pre-paired
     final kickrCore = robot.aether.createDevice(
       name: 'Kickr Core',
@@ -28,8 +26,6 @@ void main() {
   });
 
   robotTest('workout starts when power data is received', (robot) async {
-    
-
     // Setup: Create trainer device
     final kickrCore = robot.aether.createDevice(
       name: 'Kickr Core',
@@ -64,8 +60,6 @@ void main() {
   });
 
   robotTest('workout continues with consistent power updates', (robot) async {
-    
-
     // Setup: Create trainer device
     final kickrCore = robot.aether.createDevice(
       name: 'Kickr Core',
@@ -102,8 +96,6 @@ void main() {
   });
 
   robotTest('workout shows power and cadence data', (robot) async {
-    
-
     // Setup: Create trainer device
     final kickrCore = robot.aether.createDevice(
       name: 'Kickr Core',
@@ -142,8 +134,6 @@ void main() {
   });
 
   robotTest('workout auto-pauses when power source stops sending data', (robot) async {
-    
-
     // Setup: Create trainer device
     final kickrCore = robot.aether.createDevice(
       name: 'Kickr Core',

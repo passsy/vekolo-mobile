@@ -24,18 +24,12 @@ class _HomePage2State extends State<HomePage2> with SingleTickerProviderStateMix
   final _filterButtonKey = GlobalKey();
   final _overlayPortalController = OverlayPortalController();
   late AnimationController _modalAnimationController;
-  bool _hasLoadedActivities = false;
+  bool _hasInitialized = false;
   bool _isModalShowing = false;
   Offset _filterButtonPosition = Offset.zero;
   Size _filterButtonSize = Size.zero;
 
-  HomePageController get controller {
-    if (_controller == null) {
-      final apiClient = Refs.apiClient.of(context);
-      _controller = HomePageController(apiClient: apiClient);
-    }
-    return _controller!;
-  }
+  HomePageController get controller => _controller!;
 
   @override
   void initState() {
@@ -46,10 +40,20 @@ class _HomePage2State extends State<HomePage2> with SingleTickerProviderStateMix
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Load activities once after controller is initialized
-    if (!_hasLoadedActivities) {
-      controller.loadActivities();
-      _hasLoadedActivities = true;
+    // Initialize controller and load activities once
+    if (!_hasInitialized) {
+      _hasInitialized = true;
+      final apiClient = Refs.apiClient.of(context);
+      final notificationService = Refs.notificationService.of(context);
+      final workoutSessionPersistence = Refs.workoutSessionPersistence.of(context);
+      _controller = HomePageController(
+        apiClient: apiClient,
+        notificationService: notificationService,
+        workoutSessionPersistence: workoutSessionPersistence,
+        context: context,
+      );
+      _controller!.loadActivities();
+      _controller!.checkForIncompleteWorkouts();
     }
   }
 
@@ -198,34 +202,6 @@ class _HomePage2State extends State<HomePage2> with SingleTickerProviderStateMix
                       context.push('/login');
                     }
                   },
-                ),
-              ),
-
-              // Liquid glass tab bar at bottom
-              Positioned(
-                left: 0,
-                bottom: 0,
-                child: LiquidGlassTabBar(
-                  selectedIndex: selectedIndex,
-                  onTabSelected: (index) => controller.selectTab(index),
-                  tabs: const [
-                    TabItem(icon: Icons.layers, label: 'Activities'),
-                    TabItem(icon: Icons.bookmark, label: 'Library'),
-                    TabItem(icon: Icons.add, label: 'Create'),
-                  ],
-                ),
-              ),
-
-              // Floating action button (lightning bolt)
-              Positioned(
-                right: 16,
-                bottom: 16,
-                child: FloatingActionButton(
-                  onPressed: () {
-                    // TODO: Quick start workout action
-                  },
-                  backgroundColor: const Color(0xFFFF6F00),
-                  child: const Icon(Icons.bolt, size: 32),
                 ),
               ),
             ],

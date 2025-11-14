@@ -255,11 +255,7 @@ class WorkoutSyncService {
       _retryCount = 0;
     } catch (e, stackTrace) {
       // Log error with full stack trace for debugging
-      chirp.error(
-        'Failed to set target power to ${command.targetWatts}W',
-        error: e,
-        stackTrace: stackTrace,
-      );
+      chirp.error('Failed to set target power to ${command.targetWatts}W', error: e, stackTrace: stackTrace);
 
       // Check if it's a "device not connected" error - don't retry those
       if (e is StateError && e.message == 'Device not connected') {
@@ -274,9 +270,7 @@ class WorkoutSyncService {
         final delay = _retryCount; // 1s, 2s, 3s for retries 1-3
         syncError.value = 'Retry $_retryCount/$_maxRetries';
 
-        chirp.info(
-          'Retrying in ${delay}s (attempt $_retryCount/$_maxRetries)',
-        );
+        chirp.info('Retrying in ${delay}s (attempt $_retryCount/$_maxRetries)');
 
         // Wait and retry
         await Future.delayed(Duration(seconds: delay));
@@ -318,9 +312,7 @@ class WorkoutSyncService {
     // Cancel any existing timer
     _refreshTimer?.cancel();
 
-    chirp.info(
-      'Starting periodic refresh every ${trainer.refreshInterval.inSeconds}s',
-    );
+    chirp.info('Starting periodic refresh every ${trainer.refreshInterval.inSeconds}s');
 
     // Create periodic timer at trainer's preferred interval
     _refreshTimer = Timer.periodic(trainer.refreshInterval, (timer) {

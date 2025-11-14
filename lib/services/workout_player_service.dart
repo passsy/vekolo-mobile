@@ -611,11 +611,11 @@ class WorkoutPlayerService {
 
       // Check if event should trigger now
       if (globalElapsedTime >= timeOffset && !_triggeredEventIds.contains(eventId)) {
-      // Trigger event
-      _triggeredEventController.add(flattenedEvent);
-      _triggeredEventIds.add(eventId);
+        // Trigger event
+        _triggeredEventController.add(flattenedEvent);
+        _triggeredEventIds.add(eventId);
 
-      chirp.info('Triggered event: $eventId at ${globalElapsedTime}ms');
+        chirp.info('Triggered event: $eventId at ${globalElapsedTime}ms');
       }
     }
   }

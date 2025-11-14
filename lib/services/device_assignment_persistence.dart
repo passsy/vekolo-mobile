@@ -213,13 +213,18 @@ class DeviceAssignmentPersistence {
         heartRateSource: heartRateSource,
       );
 
-      chirp.info('Loaded assignments', data: {
-        'smartTrainer': smartTrainer != null ? '${smartTrainer.deviceName} (${smartTrainer.deviceId})' : null,
-        'powerSource': powerSource != null ? '${powerSource.deviceName} (${powerSource.deviceId})' : null,
-        'cadenceSource': cadenceSource != null ? '${cadenceSource.deviceName} (${cadenceSource.deviceId})' : null,
-        'speedSource': speedSource != null ? '${speedSource.deviceName} (${speedSource.deviceId})' : null,
-        'heartRateSource': heartRateSource != null ? '${heartRateSource.deviceName} (${heartRateSource.deviceId})' : null,
-      });
+      chirp.info(
+        'Loaded assignments',
+        data: {
+          'smartTrainer': smartTrainer != null ? '${smartTrainer.deviceName} (${smartTrainer.deviceId})' : null,
+          'powerSource': powerSource != null ? '${powerSource.deviceName} (${powerSource.deviceId})' : null,
+          'cadenceSource': cadenceSource != null ? '${cadenceSource.deviceName} (${cadenceSource.deviceId})' : null,
+          'speedSource': speedSource != null ? '${speedSource.deviceName} (${speedSource.deviceId})' : null,
+          'heartRateSource': heartRateSource != null
+              ? '${heartRateSource.deviceName} (${heartRateSource.deviceId})'
+              : null,
+        },
+      );
 
       return result;
     } catch (e, stackTrace) {

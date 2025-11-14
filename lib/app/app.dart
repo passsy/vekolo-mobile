@@ -17,6 +17,7 @@ import 'package:vekolo/app/router.dart';
 import 'package:vekolo/services/auth_service.dart';
 import 'package:vekolo/services/device_assignment_persistence.dart';
 import 'package:vekolo/services/fresh_auth.dart';
+import 'package:vekolo/services/notification_service.dart';
 import 'package:vekolo/services/workout_session_persistence.dart';
 import 'package:vekolo/services/workout_sync_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -158,6 +159,13 @@ class _VekoloAppState extends State<VekoloApp> {
           Refs.workoutSessionPersistence.bindWhenUnbound(
             context,
             () => WorkoutSessionPersistence(prefs: SharedPreferencesAsync()),
+          );
+
+          // Initialize NotificationService
+          Refs.notificationService.bindWhenUnbound(
+            context,
+            () => NotificationService(),
+            dispose: (service) => service.dispose(),
           );
 
           // Initialize DeviceManager

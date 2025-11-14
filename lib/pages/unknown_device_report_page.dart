@@ -578,15 +578,27 @@ class _UnknownDeviceReportPageState extends State<UnknownDeviceReportPage> {
           child: SizedBox(
             width: double.infinity,
             child: _isScanning
-                ? OutlinedButton.icon(
+                ? OutlinedButton(
                     onPressed: _stopScan,
-                    icon: const Icon(Icons.stop),
-                    label: const Text('Stop Scan'),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.stop),
+                        SizedBox(width: 8),
+                        Text('Stop Scan'),
+                      ],
+                    ),
                   )
-                : OutlinedButton.icon(
+                : OutlinedButton(
                     onPressed: _startScan,
-                    icon: const Icon(Icons.refresh),
-                    label: const Text('Scan Again'),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.refresh),
+                        SizedBox(width: 8),
+                        Text('Scan Again'),
+                      ],
+                    ),
                   ),
           ),
         ),

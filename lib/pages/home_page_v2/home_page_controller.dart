@@ -1,16 +1,28 @@
 // ignore_for_file: use_setters_to_change_properties
 
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:state_beacon/state_beacon.dart';
 import 'package:vekolo/api/vekolo_api_client.dart';
 import 'package:vekolo/app/colors.dart';
+import 'package:vekolo/domain/models/workout_session.dart';
 import 'package:vekolo/models/activity.dart';
+import 'package:vekolo/services/notification_service.dart';
+import 'package:vekolo/services/workout_session_persistence.dart';
 
 /// Reactive controller for the Home Page
 class HomePageController extends BeaconController {
-  HomePageController({required this.apiClient});
+  HomePageController({
+    required this.apiClient,
+    required this.notificationService,
+    required this.workoutSessionPersistence,
+    required this.context,
+  });
 
   final VekoloApiClient apiClient;
+  final NotificationService notificationService;
+  final WorkoutSessionPersistence workoutSessionPersistence;
+  final BuildContext context;
 
   /// Currently selected tab index (0: Activities, 1: Library, 2: Create)
   late final selectedTabIndex = B.writable(0);
@@ -137,6 +149,45 @@ class HomePageController extends BeaconController {
       print(stackTrace);
     } finally {
       isLoadingActivities.value = false;
+    }
+  }
+
+  /// Checks for incomplete workouts and shows a notification if found
+  Future<void> checkForIncompleteWorkouts() async {
+    final incompleteSession = await workoutSessionPersistence.getActiveSession();
+    if (incompleteSession != null) {
+      final duration = Duration(milliseconds: incompleteSession.elapsedMs);
+      final minutes = duration.inMinutes;
+      final seconds = duration.inSeconds.remainder(60);
+      final elapsedTime = '${minutes}m ${seconds}s';
+
+      notificationService.show(
+        AppNotification.workoutResume(
+          workoutTitle: incompleteSession.workoutName,
+          elapsedTime: elapsedTime,
+          onResume: () {
+            notificationService.clearAll();
+            context.push(
+              '/workout-player?resuming=true',
+              extra: {'plan': incompleteSession.workoutPlan, 'name': incompleteSession.workoutName},
+            );
+          },
+          onDiscard: () async {
+            await workoutSessionPersistence.updateSessionStatus(incompleteSession.id, SessionStatus.abandoned);
+            notificationService.clearAll();
+          },
+          onStartFresh: () async {
+            await workoutSessionPersistence.deleteSession(incompleteSession.id);
+            notificationService.clearAll();
+            if (context.mounted) {
+              context.push(
+                '/workout-player',
+                extra: {'plan': incompleteSession.workoutPlan, 'name': incompleteSession.workoutName},
+              );
+            }
+          },
+        ),
+      );
     }
   }
 }

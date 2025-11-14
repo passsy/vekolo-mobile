@@ -1,6 +1,5 @@
 // Export the platform-specific implementation
-export 'ble_permissions_io.dart'
-    if (dart.library.html) 'ble_permissions_web.dart';
+export 'ble_permissions_io.dart' if (dart.library.html) 'ble_permissions_web.dart';
 
 /// Abstract interface for checking and requesting BLE permissions.
 ///

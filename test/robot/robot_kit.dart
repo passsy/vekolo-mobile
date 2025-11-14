@@ -74,6 +74,7 @@ void robotTest(
                 runApp(Container(key: UniqueKey()));
                 await tester.pump();
               } catch (e, _) {
+                print('robotTest ended with error. Starting stage cleanup\n$e');
                 // In case of an error, Flutter does not cleanup the widget tree.
                 // (see: TestWidgetsFlutterBinding._runTestBody)
                 // This is required, so that all widget dispose methods are called, and all subscriptions to plugins are canceled.

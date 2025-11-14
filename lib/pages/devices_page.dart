@@ -78,7 +78,8 @@ class DevicesPage extends StatelessWidget {
             dataType: device_info.DeviceDataType.power,
             onUnassignDataSource: (dataType) => _handleUnassignDataSource(context, dataType),
             onRemove: (device) => _handleRemove(context, device),
-            onShowAssignmentDialog: () => _showDeviceAssignmentDialog(context, deviceManager, device_info.DeviceDataType.power),
+            onShowAssignmentDialog: () =>
+                _showDeviceAssignmentDialog(context, deviceManager, device_info.DeviceDataType.power),
             onConnect: (device) => _handleConnect(context, device),
             onDisconnect: (device) => _handleDisconnect(context, device),
           ),
@@ -90,7 +91,8 @@ class DevicesPage extends StatelessWidget {
             dataType: device_info.DeviceDataType.cadence,
             onUnassignDataSource: (dataType) => _handleUnassignDataSource(context, dataType),
             onRemove: (device) => _handleRemove(context, device),
-            onShowAssignmentDialog: () => _showDeviceAssignmentDialog(context, deviceManager, device_info.DeviceDataType.cadence),
+            onShowAssignmentDialog: () =>
+                _showDeviceAssignmentDialog(context, deviceManager, device_info.DeviceDataType.cadence),
             onConnect: (device) => _handleConnect(context, device),
             onDisconnect: (device) => _handleDisconnect(context, device),
           ),
@@ -102,7 +104,8 @@ class DevicesPage extends StatelessWidget {
             dataType: device_info.DeviceDataType.heartRate,
             onUnassignDataSource: (dataType) => _handleUnassignDataSource(context, dataType),
             onRemove: (device) => _handleRemove(context, device),
-            onShowAssignmentDialog: () => _showDeviceAssignmentDialog(context, deviceManager, device_info.DeviceDataType.heartRate),
+            onShowAssignmentDialog: () =>
+                _showDeviceAssignmentDialog(context, deviceManager, device_info.DeviceDataType.heartRate),
             onConnect: (device) => _handleConnect(context, device),
             onDisconnect: (device) => _handleDisconnect(context, device),
           ),
@@ -114,7 +117,8 @@ class DevicesPage extends StatelessWidget {
             dataType: device_info.DeviceDataType.speed,
             onUnassignDataSource: (dataType) => _handleUnassignDataSource(context, dataType),
             onRemove: (device) => _handleRemove(context, device),
-            onShowAssignmentDialog: () => _showDeviceAssignmentDialog(context, deviceManager, device_info.DeviceDataType.speed),
+            onShowAssignmentDialog: () =>
+                _showDeviceAssignmentDialog(context, deviceManager, device_info.DeviceDataType.speed),
             onConnect: (device) => _handleConnect(context, device),
             onDisconnect: (device) => _handleDisconnect(context, device),
           ),
@@ -162,7 +166,6 @@ class DevicesPage extends StatelessWidget {
       },
     );
   }
-
 
   Widget _buildEmptyState(BuildContext context, String message) {
     return Container(
@@ -391,9 +394,9 @@ class DevicesPage extends StatelessWidget {
                           Navigator.of(dialogContext).pop();
                           try {
                             deviceManager.assignSmartTrainer(device.id);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('${device.name} assigned as smart trainer')),
-                            );
+                            ScaffoldMessenger.of(
+                              context,
+                            ).showSnackBar(SnackBar(content: Text('${device.name} assigned as smart trainer')));
                           } catch (e, stackTrace) {
                             chirp.error('Error assigning smart trainer', error: e, stackTrace: stackTrace);
                             ScaffoldMessenger.of(context).showSnackBar(
@@ -405,12 +408,7 @@ class DevicesPage extends StatelessWidget {
                     },
                   ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('Cancel'),
-            ),
-          ],
+          actions: [TextButton(onPressed: () => Navigator.of(dialogContext).pop(), child: const Text('Cancel'))],
         );
       },
     );
@@ -587,35 +585,30 @@ class DeviceCard extends StatelessWidget {
                     runSpacing: 8,
                     children: [
                       if (device.supportsErgMode && onAssignSmartTrainer != null)
-                        OutlinedButton.icon(
+                        OutlinedButton(
                           onPressed: onAssignSmartTrainer,
-                          icon: const Icon(Icons.fitness_center, size: 18),
-                          label: const Text('Assign as Smart Trainer'),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: Colors.purple[700],
                             side: BorderSide(color: Colors.purple[300]!),
                           ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: const [
+                              Icon(Icons.fitness_center, size: 18),
+                              SizedBox(width: 8),
+                              Text('Assign as Smart Trainer'),
+                            ],
+                          ),
                         ),
-                      if (device.capabilities.contains(device_info.DeviceDataType.heartRate) && onAssignHeartRate != null)
-                        OutlinedButton(
-                          onPressed: onAssignHeartRate,
-                          child: const Text('Assign to HR'),
-                        ),
+                      if (device.capabilities.contains(device_info.DeviceDataType.heartRate) &&
+                          onAssignHeartRate != null)
+                        OutlinedButton(onPressed: onAssignHeartRate, child: const Text('Assign to HR')),
                       if (device.capabilities.contains(device_info.DeviceDataType.power) && onAssignPower != null)
-                        OutlinedButton(
-                          onPressed: onAssignPower,
-                          child: const Text('Assign to Power'),
-                        ),
+                        OutlinedButton(onPressed: onAssignPower, child: const Text('Assign to Power')),
                       if (device.capabilities.contains(device_info.DeviceDataType.cadence) && onAssignCadence != null)
-                        OutlinedButton(
-                          onPressed: onAssignCadence,
-                          child: const Text('Assign to Cadence'),
-                        ),
+                        OutlinedButton(onPressed: onAssignCadence, child: const Text('Assign to Cadence')),
                       if (device.capabilities.contains(device_info.DeviceDataType.speed) && onAssignSpeed != null)
-                        OutlinedButton(
-                          onPressed: onAssignSpeed,
-                          child: const Text('Assign to Speed'),
-                        ),
+                        OutlinedButton(onPressed: onAssignSpeed, child: const Text('Assign to Speed')),
                       if (onConnect != null && !isConnected)
                         ElevatedButton(
                           onPressed: isConnecting ? null : onConnect,
@@ -623,11 +616,7 @@ class DeviceCard extends StatelessWidget {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               if (isConnecting) ...[
-                                const SizedBox(
-                                  width: 16,
-                                  height: 16,
-                                  child: CircularProgressIndicator(strokeWidth: 2),
-                                ),
+                                const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
                                 const SizedBox(width: 8),
                               ],
                               Text(isConnecting ? 'Connecting...' : 'Connect'),
@@ -643,21 +632,23 @@ class DeviceCard extends StatelessWidget {
                           ),
                           child: const Row(
                             mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.bluetooth_disabled),
-                              SizedBox(width: 8),
-                              Text('Disconnect'),
-                            ],
+                            children: [Icon(Icons.bluetooth_disabled), SizedBox(width: 8), Text('Disconnect')],
                           ),
                         ),
                       if (onRemove != null)
-                        OutlinedButton.icon(
+                        OutlinedButton(
                           onPressed: onRemove,
-                          icon: const Icon(Icons.delete_outline),
-                          label: const Text('Remove'),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: Colors.red[900],
                             side: BorderSide(color: Colors.red[300]!),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.delete_outline),
+                              SizedBox(width: 8),
+                              Text('Remove'),
+                            ],
                           ),
                         ),
                     ],
@@ -676,11 +667,7 @@ class DeviceCard extends StatelessWidget {
                           ),
                           child: const Row(
                             mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.bluetooth_disabled),
-                              SizedBox(width: 8),
-                              Text('Disconnect'),
-                            ],
+                            children: [Icon(Icons.bluetooth_disabled), SizedBox(width: 8), Text('Disconnect')],
                           ),
                         )
                       else
@@ -699,23 +686,35 @@ class DeviceCard extends StatelessWidget {
                             ],
                           ),
                         ),
-                      OutlinedButton.icon(
+                      OutlinedButton(
                         onPressed: onUnassign,
-                        icon: const Icon(Icons.link_off),
-                        label: const Text('Unassign'),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: Colors.orange[900],
                           side: BorderSide(color: Colors.orange[300]!),
                         ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.link_off),
+                            SizedBox(width: 8),
+                            Text('Unassign'),
+                          ],
+                        ),
                       ),
                       if (onRemove != null)
-                        OutlinedButton.icon(
+                        OutlinedButton(
                           onPressed: onRemove,
-                          icon: const Icon(Icons.delete_outline),
-                          label: const Text('Remove'),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: Colors.red[900],
                             side: BorderSide(color: Colors.red[300]!),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.delete_outline),
+                              SizedBox(width: 8),
+                              Text('Remove'),
+                            ],
                           ),
                         ),
                     ],
@@ -780,10 +779,16 @@ class SmartTrainerSection extends StatelessWidget {
             if (assignedDevice != null)
               _buildAssignedDeviceCard(context, assignedDevice)
             else
-              OutlinedButton.icon(
+              OutlinedButton(
                 onPressed: onShowAssignmentDialog,
-                icon: const Icon(Icons.add),
-                label: const Text('Assign Smart Trainer'),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.add),
+                    SizedBox(width: 8),
+                    Text('Assign Smart Trainer'),
+                  ],
+                ),
               ),
           ],
         );
@@ -882,10 +887,16 @@ class DataSourceSection extends StatelessWidget {
             if (assignedDevice != null)
               _buildAssignedDeviceCard(context, assignedDevice)
             else
-              OutlinedButton.icon(
+              OutlinedButton(
                 onPressed: onShowAssignmentDialog,
-                icon: const Icon(Icons.add),
-                label: const Text('Assign Device'),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.add),
+                    SizedBox(width: 8),
+                    Text('Assign Device'),
+                  ],
+                ),
               ),
           ],
         );
@@ -958,12 +969,7 @@ class DataSourceSection extends StatelessWidget {
 ///
 /// Allows the user to unassign the device to clean up their configuration.
 class UnavailableDeviceCard extends StatelessWidget {
-  const UnavailableDeviceCard({
-    required this.deviceId,
-    required this.deviceName,
-    required this.onUnassign,
-    super.key,
-  });
+  const UnavailableDeviceCard({required this.deviceId, required this.deviceName, required this.onUnassign, super.key});
 
   final String deviceId;
   final String deviceName;
@@ -983,10 +989,7 @@ class UnavailableDeviceCard extends StatelessWidget {
                 Icon(Icons.warning_amber, size: 20, color: Colors.orange[700]),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: Text(
-                    deviceName,
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
+                  child: Text(deviceName, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                 ),
               ],
             ),
@@ -996,22 +999,25 @@ class UnavailableDeviceCard extends StatelessWidget {
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.orange[900]),
             ),
             const SizedBox(height: 4),
-            Text(
-              'ID: $deviceId',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
-            ),
+            Text('ID: $deviceId', style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey[600])),
             const SizedBox(height: 12),
             Wrap(
               spacing: 8,
               runSpacing: 8,
               children: [
-                OutlinedButton.icon(
+                OutlinedButton(
                   onPressed: onUnassign,
-                  icon: const Icon(Icons.link_off),
-                  label: const Text('Unassign'),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: Colors.orange[900],
                     side: BorderSide(color: Colors.orange[300]!),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.link_off),
+                      SizedBox(width: 8),
+                      Text('Unassign'),
+                    ],
                   ),
                 ),
               ],

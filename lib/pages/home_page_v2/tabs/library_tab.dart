@@ -34,15 +34,21 @@ class LibraryTab extends StatelessWidget {
                   style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 14),
                 ),
                 const SizedBox(height: 32),
-                OutlinedButton.icon(
+                OutlinedButton(
                   onPressed: () {
                     // TODO: Navigate back to Activities tab
                   },
-                  icon: const Icon(Icons.explore, color: Color(0xFFFF6F00)),
-                  label: const Text('Explore Workouts', style: TextStyle(color: Color(0xFFFF6F00))),
                   style: OutlinedButton.styleFrom(
                     side: const BorderSide(color: Color(0xFFFF6F00)),
                     padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.explore, color: Color(0xFFFF6F00)),
+                      SizedBox(width: 8),
+                      Text('Explore Workouts', style: TextStyle(color: Color(0xFFFF6F00))),
+                    ],
                   ),
                 ),
               ],

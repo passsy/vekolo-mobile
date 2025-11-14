@@ -22,7 +22,7 @@ void main() {
     expect(kickrCore.isConnected, isFalse);
 
     // On app start, known devices should automatically reconnect
-    await robot.launchApp(loggedIn: true);
+    await robot.launchApp(loggedIn: true, pairedDevices: [kickrCore]);
     expect(robot.aether.devices, contains(kickrCore));
     expect(kickrCore.isConnected, isTrue);
 
@@ -64,10 +64,11 @@ void main() {
     // Simulate device powering back on (start advertising again)
     kickrCore.turnOn();
 
-    // Wait for device to be rediscovered and auto-reconnect
-    await robot.idle(500);
+    // Wait for device to be rediscovered and auto-reconnect (navigates to home to see notification)
+    await robot.waitUntilConnected();
 
     expect(kickrCore.isConnected, isTrue);
+    // Navigate back to devices page to verify state
     robot.verifyDeviceState('POWER SOURCE', disconnectButtonEnabled: true);
   });
 
