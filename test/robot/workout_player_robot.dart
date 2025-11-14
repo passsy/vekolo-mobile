@@ -237,16 +237,19 @@ extension WorkoutPlayerRobot on VekoloRobot {
   Future<void> tapPlayPause() async {
     logger.robotLog('tap play/pause button');
     // Try to find and tap whichever button is visible (Resume, Pause, or Complete)
-    final resumeButton = spot<ElevatedButton>().withChild(spotText('Resume'));
-    final pauseButton = spot<ElevatedButton>().withChild(spotText('Pause'));
-    final completeButton = spot<ElevatedButton>().withChild(spotText('Complete'));
-
-    if (existsAtLeastOnce(resumeButton)) {
+    try {
+      final resumeButton = spot<ElevatedButton>().withChild(spotText('Resume'));
+      resumeButton.existsAtMostOnce();
       await act.tap(resumeButton);
-    } else if (existsAtLeastOnce(pauseButton)) {
-      await act.tap(pauseButton);
-    } else {
-      await act.tap(completeButton);
+    } catch (_) {
+      try {
+        final pauseButton = spot<ElevatedButton>().withChild(spotText('Pause'));
+        pauseButton.existsAtMostOnce();
+        await act.tap(pauseButton);
+      } catch (_) {
+        final completeButton = spot<ElevatedButton>().withChild(spotText('Complete'));
+        await act.tap(completeButton);
+      }
     }
     await idle();
   }
