@@ -20,7 +20,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "cc.vekolo.beta"
+        applicationId = "cc.vekolo.dev"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
@@ -31,7 +31,7 @@ android {
         create("dev") {
             keyAlias = "key0"
             keyPassword = "phntmrockz"
-            storeFile = file("play.jks")
+            storeFile = file("dev.jks")
             storePassword = "phntmrockz"
         }
         create("play-upload") {
