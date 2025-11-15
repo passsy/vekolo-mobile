@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:puro_sidekick_plugin/puro_sidekick_plugin.dart';
 import 'package:sidekick_core/sidekick_core.dart';
+import 'package:vekolo_sidekick/src/commands/build_vekolo/bootstrap/bootstrap_command.dart';
+import 'package:vekolo_sidekick/src/commands/build_vekolo/build_commands/build_command.dart';
 import 'package:vekolo_sidekick/src/commands/clean_command.dart';
 
 Future<void> runVekolo(List<String> args) async {
@@ -16,7 +18,9 @@ Future<void> runVekolo(List<String> args) async {
     ..addCommand(DartAnalyzeCommand())
     ..addCommand(FormatCommand())
     ..addCommand(SidekickCommand())
-    ..addCommand(PuroCommand());
+    ..addCommand(PuroCommand())
+    ..addCommand(BootstrapCommand())
+    ..addCommand(BuildCommand());
 
   try {
     return await runner.run(args);

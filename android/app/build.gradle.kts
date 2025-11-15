@@ -28,17 +28,31 @@ android {
     }
 
     signingConfigs {
-        create("beta") {
+        create("dev") {
             keyAlias = "key0"
             keyPassword = "phntmrockz"
             storeFile = file("play.jks")
             storePassword = "phntmrockz"
         }
+        create("play-upload") {
+            keyAlias = System.getenv("ANDROID_PLAY_KEY_ALIAS") ?: "key0"
+            keyPassword = System.getenv("ANDROID_PLAY_KEY_PASSWORD") ?: ""
+            storeFile = file(System.getenv("ANDROID_PLAY_KEYSTORE") ?: "play.jks")
+            storePassword = System.getenv("ANDROID_PLAY_STORE_PASSWORD") ?: ""
+        }
+        create("ad-hoc") {
+            keyAlias = System.getenv("ANDROID_ADHOC_KEY_ALIAS") ?: "key0"
+            keyPassword = System.getenv("ANDROID_ADHOC_KEY_PASSWORD") ?: ""
+            storeFile = file(System.getenv("ANDROID_ADHOC_KEYSTORE") ?: "adhoc.jks")
+            storePassword = System.getenv("ANDROID_ADHOC_STORE_PASSWORD") ?: ""
+        }
     }
 
     buildTypes {
         release {
-            signingConfig = signingConfigs.getByName("beta")
+            // begin: release signingConfig
+            signingConfig = signingConfigs.getByName("dev")
+            // end: release signingConfig
         }
     }
 }

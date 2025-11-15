@@ -5,6 +5,18 @@ class ApiConfig {
   static const String productionBaseUrl = 'https://vekolo.cc';
 
   /// Get the base URL for the current environment
-  /// For now, always returns dev URL. Can be extended with flavor support.
-  static String get baseUrl => productionBaseUrl;
+  /// Uses dart-define DISTRIBUTION to determine which environment to use.
+  /// Falls back to production if not specified.
+  static String get baseUrl {
+    const distribution = String.fromEnvironment('DISTRIBUTION', defaultValue: 'prod');
+    switch (distribution) {
+      case 'dev':
+        return devBaseUrl;
+      case 'staging':
+        return stagingBaseUrl;
+      case 'prod':
+      default:
+        return productionBaseUrl;
+    }
+  }
 }
