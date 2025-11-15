@@ -357,10 +357,10 @@ packages:
     dependency: "direct main"
     description:
       name: phntmxyz_ios_publishing_sidekick_plugin
-      sha256: b0a68c2f6cfee41cc7781a01d0791742485b9ab61b449762f41515e42589c8e7
+      sha256: "5a3f62cc3852e9e670df49a9254dcf3b2db626390e498aac2e76d241d5adfac1"
       url: "https://pub.dev"
     source: hosted
-    version: "0.4.0"
+    version: "1.2.0"
   plist_parser:
     dependency: transitive
     description:

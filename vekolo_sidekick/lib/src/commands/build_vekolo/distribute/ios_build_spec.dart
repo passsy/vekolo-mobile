@@ -1,6 +1,7 @@
 import 'package:phntmxyz_ios_publishing_sidekick_plugin/phntmxyz_ios_publishing_sidekick_plugin.dart';
 import 'package:sidekick_core/sidekick_core.dart';
 import 'package:vekolo_sidekick/src/commands/build_vekolo/distribute/distribution.dart';
+import 'package:vekolo_sidekick/vekolo_sidekick.dart';
 
 /// Complete distribution specification for iOS
 class IosDistributionSpec {
@@ -78,18 +79,10 @@ final List<IosDistributionSpec> availableIosDistributionSpecs = [
       provisioningProfileSpecifier: 'Vekolo Dev',
     ),
     build: IosBuildSpecs(
-      exportMethod: ExportMethod.development,
+      exportMethod: ExportMethod.developerId,
       createNewKeychainByDefault: false,
-      provisioningProfileProvider: () {
-        final vaultFile = vault['ios_dev.mobileprovision'];
-        if (vaultFile != null) return ProvisioningProfile.file(vaultFile);
-        throw 'iOS dev provisioning profile not found in vault';
-      },
-      certificateProvider: () {
-        final vaultFile = vault['ios_dev.p12'];
-        if (vaultFile != null) return vaultFile;
-        throw 'iOS dev certificate not found in vault';
-      },
+      provisioningProfileProvider: () => vault.loadFile('ios_dev.mobileprovision.gpg').asProvisioningProfile(),
+      certificateProvider: () => vault.loadFile('ios_dev.p12.gpg'),
       certificatePasswordProvider: () => env['IOS_DEV_CERT_PASSWORD'] ?? '',
     ),
   ),
@@ -103,26 +96,14 @@ final List<IosDistributionSpec> availableIosDistributionSpecs = [
       provisioningProfileSpecifier: 'Vekolo Staging',
     ),
     build: IosBuildSpecs(
-      exportMethod: ExportMethod.appStore,
+      exportMethod: ExportMethod.appStoreConnect,
       createNewKeychainByDefault: true,
-      provisioningProfileProvider: () {
-        final vaultFile = vault['ios_staging.mobileprovision'];
-        if (vaultFile != null) return ProvisioningProfile.file(vaultFile);
-        throw 'iOS staging provisioning profile not found in vault';
-      },
-      certificateProvider: () {
-        final vaultFile = vault['ios_staging.p12'];
-        if (vaultFile != null) return vaultFile;
-        throw 'iOS staging certificate not found in vault';
-      },
+      provisioningProfileProvider: () => vault.loadFile('ios_staging.mobileprovision.gpg').asProvisioningProfile(),
+      certificateProvider: () => vault.loadFile('ios_staging.p12.gpg'),
       certificatePasswordProvider: () => env['IOS_STAGING_CERT_PASSWORD'] ?? '',
     ),
     deploy: IosDeploySpecs(
-      apiKeyFileProvider: () {
-        final vaultFile = vault['appstore_api_key.json'];
-        if (vaultFile != null) return vaultFile;
-        throw 'App Store Connect API key not found in vault';
-      },
+      apiKeyFileProvider: () => vault.loadFile('appstore_api_key.json.gpg'),
     ),
   ),
 
@@ -135,26 +116,14 @@ final List<IosDistributionSpec> availableIosDistributionSpecs = [
       provisioningProfileSpecifier: 'Vekolo',
     ),
     build: IosBuildSpecs(
-      exportMethod: ExportMethod.appStore,
+      exportMethod: ExportMethod.appStoreConnect,
       createNewKeychainByDefault: true,
-      provisioningProfileProvider: () {
-        final vaultFile = vault['ios_prod.mobileprovision'];
-        if (vaultFile != null) return ProvisioningProfile.file(vaultFile);
-        throw 'iOS prod provisioning profile not found in vault';
-      },
-      certificateProvider: () {
-        final vaultFile = vault['ios_prod.p12'];
-        if (vaultFile != null) return vaultFile;
-        throw 'iOS prod certificate not found in vault';
-      },
+      provisioningProfileProvider: () => vault.loadFile('ios_prod.mobileprovision.gpg').asProvisioningProfile(),
+      certificateProvider: () => vault.loadFile('ios_prod.p12.gpg'),
       certificatePasswordProvider: () => env['IOS_PROD_CERT_PASSWORD'] ?? '',
     ),
     deploy: IosDeploySpecs(
-      apiKeyFileProvider: () {
-        final vaultFile = vault['appstore_api_key.json'];
-        if (vaultFile != null) return vaultFile;
-        throw 'App Store Connect API key not found in vault';
-      },
+      apiKeyFileProvider: () => vault.loadFile('appstore_api_key.json.gpg'),
     ),
   ),
 ];

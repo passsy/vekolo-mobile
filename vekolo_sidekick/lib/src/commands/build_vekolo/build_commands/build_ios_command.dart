@@ -6,6 +6,7 @@ import 'package:sidekick_core/sidekick_core.dart';
 import 'package:vekolo_sidekick/src/commands/build_vekolo/bootstrap/bootstrap_command.dart';
 import 'package:vekolo_sidekick/src/commands/build_vekolo/distribute/distribution.dart';
 import 'package:vekolo_sidekick/src/commands/build_vekolo/distribute/ios_build_spec.dart';
+import 'package:vekolo_sidekick/vekolo_sidekick.dart';
 
 class BuildIosCommand extends Command {
   @override

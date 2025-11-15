@@ -1,5 +1,6 @@
 import 'package:sidekick_core/sidekick_core.dart';
 import 'package:vekolo_sidekick/src/commands/build_vekolo/distribute/distribution.dart';
+import 'package:vekolo_sidekick/vekolo_sidekick.dart';
 
 enum AndroidOutputFormat { apk, aab }
 
@@ -120,11 +121,7 @@ final List<AndroidDistributionSpec> availableAndroidDistributionSpecs = [
     ),
     deploy: AndroidDeploySpecs(
       playStoreTrack: 'internal',
-      serviceAccountFileProvider: () {
-        final vaultFile = vault['android_service_account.json'];
-        if (vaultFile != null) return vaultFile;
-        throw 'Android service account not found in vault';
-      },
+      serviceAccountFileProvider: () => vault.loadFile('android_service_account.json.gpg'),
     ),
   ),
 
@@ -143,11 +140,7 @@ final List<AndroidDistributionSpec> availableAndroidDistributionSpecs = [
     ),
     deploy: AndroidDeploySpecs(
       playStoreTrack: 'production',
-      serviceAccountFileProvider: () {
-        final vaultFile = vault['android_service_account.json'];
-        if (vaultFile != null) return vaultFile;
-        throw 'Android service account not found in vault';
-      },
+      serviceAccountFileProvider: () => vault.loadFile('android_service_account.json.gpg'),
     ),
   ),
 ];

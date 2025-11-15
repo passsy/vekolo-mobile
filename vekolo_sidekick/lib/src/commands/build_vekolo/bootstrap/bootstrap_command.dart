@@ -95,7 +95,7 @@ class BootstrapCommand extends Command {
 }
 
 /// Configures the project for a specific [distribution] for all or a specific [os].
-void bootstrap<D extends Distribution>(D distribution, {OperatingSystem? os}) {
+void bootstrap(Enum distribution, {OperatingSystem? os}) {
   final osName = os == null ? ' ' : '(${os.name}) ';
   print('Bootstrapping $osName App for distribution ${distribution.name}...');
   if ((os == null || os == OperatingSystem.ios) && distribution is IosDistribution) {
