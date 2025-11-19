@@ -420,7 +420,7 @@ class _DeviceListTile extends StatelessWidget {
                 ),
               ),
               if (!isAlreadyConnected && isScanning && rssi != null)
-                _buildSignalStrengthIcon(rssi)
+                SignalStrengthIcon(rssi: rssi)
               else if (!isAlreadyConnected && isScanning)
                 Icon(Icons.signal_cellular_off, size: 24, color: Colors.grey[400])
               else if (!isAlreadyConnected)
@@ -434,13 +434,13 @@ class _DeviceListTile extends StatelessWidget {
               runSpacing: 4,
               children: [
                 if (capabilities.contains(device_info.DeviceDataType.power))
-                  _buildCapabilityChip(context, 'Power', Icons.bolt),
+                  const DeviceCapabilityChip(label: Text('Power'), icon: Icons.bolt),
                 if (capabilities.contains(device_info.DeviceDataType.cadence))
-                  _buildCapabilityChip(context, 'Cadence', Icons.refresh),
+                  const DeviceCapabilityChip(label: Text('Cadence'), icon: Icons.refresh),
                 if (capabilities.contains(device_info.DeviceDataType.speed))
-                  _buildCapabilityChip(context, 'Speed', Icons.speed),
+                  const DeviceCapabilityChip(label: Text('Speed'), icon: Icons.speed),
                 if (capabilities.contains(device_info.DeviceDataType.heartRate))
-                  _buildCapabilityChip(context, 'HR', Icons.favorite),
+                  const DeviceCapabilityChip(label: Text('HR'), icon: Icons.favorite),
               ],
             ),
           ],
@@ -451,15 +451,29 @@ class _DeviceListTile extends StatelessWidget {
       onTap: isTapDisabled ? null : onTap,
     );
   }
+}
 
-  Widget _buildCapabilityChip(BuildContext context, String label, IconData icon) {
+/// Displays a device capability as a compact chip with an icon and label.
+///
+/// Shows what data types a device can provide (power, cadence, speed, heart rate).
+class DeviceCapabilityChip extends StatelessWidget {
+  const DeviceCapabilityChip({required this.label, required this.icon, super.key});
+
+  final Widget label;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
     return Chip(
       label: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(icon, size: 14),
           const SizedBox(width: 4),
-          Text(label, style: const TextStyle(fontSize: 11)),
+          DefaultTextStyle(
+            style: const TextStyle(fontSize: 11),
+            child: label,
+          ),
         ],
       ),
       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -467,10 +481,26 @@ class _DeviceListTile extends StatelessWidget {
       labelPadding: const EdgeInsets.symmetric(horizontal: 6),
     );
   }
+}
 
-  Widget _buildSignalStrengthIcon(int rssi) {
-    IconData icon;
-    Color color;
+/// Displays Bluetooth signal strength as a colored icon.
+///
+/// Signal strength (RSSI) ranges:
+/// - Excellent: >= -50 dBm (green)
+/// - Good: -50 to -70 dBm (light green)
+/// - Fair: -70 to -80 dBm (yellow)
+/// - Weak: -80 to -90 dBm (orange)
+/// - Very Weak: -90 to -100 dBm (red)
+/// - No Signal: < -100 dBm (dark red)
+class SignalStrengthIcon extends StatelessWidget {
+  const SignalStrengthIcon({required this.rssi, super.key});
+
+  final int rssi;
+
+  @override
+  Widget build(BuildContext context) {
+    final IconData icon;
+    final Color color;
 
     if (rssi >= -50) {
       icon = Icons.signal_cellular_4_bar;

@@ -16,11 +16,15 @@
 - Run analysis: `puro flutter analyze`
 
 ## Domain objects
-Workouts are definitions what kind of values smart trainer should set over time during that workout.
-A Workout consists of multiple power blocks, ramp blocks or intervals consisting of blocks
 
-When a workout was completed it is saved as Activity
-In the app, we can see activities of other users and drive their workouts
+- **Workout**: Definition of what power values the smart trainer should set over time. Consists of power blocks, ramp blocks, or intervals.
+- **Activity**: A completed, uploaded workout recording. Stored on the server. Users can view activities from other users and ride their workouts.
+- **WorkoutSession**: An in-progress activity being recorded locally. Has crash recovery support, can be resumed, abandoned, or completed. Becomes an Activity when uploaded.
+
+The distinction between WorkoutSession and Activity exists because:
+- Sessions are transient (can crash, be abandoned) while Activities are permanent
+- Sessions live locally with crash recovery; Activities live on the server
+- Sessions have in-progress state (currentBlockIndex, elapsedMs) that completed Activities don't need
 
 
 ## Platform Support
@@ -68,6 +72,7 @@ source.subscribe((value) {
 - Test domain logic without hardware dependencies
 - See `test/fake/` for fake implementations
 - Use `addTearDown()` for cleanup, avoid `setUp()`/`tearDown()`
+- Never update `test/robot_kit.dart`. It is a copy of a Flutter platform file, which is very unlikely to have any bugs
 - **CRITICAL: ALWAYS test the real production code in /lib!**
   - **NEVER EVER create a local implementation in test files**
   - **NEVER copy/duplicate production code into tests**

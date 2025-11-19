@@ -10,12 +10,7 @@ class IosDistributionSpec {
   final IosBuildSpecs build;
   final IosDeploySpecs? deploy;
 
-  IosDistributionSpec({
-    required this.distribution,
-    required this.bootstrap,
-    required this.build,
-    this.deploy,
-  });
+  IosDistributionSpec({required this.distribution, required this.bootstrap, required this.build, this.deploy});
 }
 
 /// Bootstrap configuration for iOS distributions
@@ -29,11 +24,7 @@ class IosBootstrapSpecs {
   /// The provisioning profile specifier name as shown in Xcode
   final String provisioningProfileSpecifier;
 
-  IosBootstrapSpecs({
-    required this.appName,
-    required this.bundleId,
-    required this.provisioningProfileSpecifier,
-  });
+  IosBootstrapSpecs({required this.appName, required this.bundleId, required this.provisioningProfileSpecifier});
 }
 
 /// Build configuration for iOS distributions
@@ -63,9 +54,7 @@ class IosDeploySpecs {
   /// App Store Connect API key for deployment
   final File Function()? apiKeyFileProvider;
 
-  IosDeploySpecs({
-    this.apiKeyFileProvider,
-  });
+  IosDeploySpecs({this.apiKeyFileProvider});
 }
 
 /// Available iOS distribution specifications
@@ -80,6 +69,7 @@ final List<IosDistributionSpec> availableIosDistributionSpecs = [
     ),
     build: IosBuildSpecs(
       exportMethod: ExportMethod.developerId,
+      // ignore: avoid_redundant_argument_values
       createNewKeychainByDefault: false,
       provisioningProfileProvider: () => vault.loadFile('ios_dev.mobileprovision.gpg').asProvisioningProfile(),
       certificateProvider: () => vault.loadFile('ios_dev.p12.gpg'),
@@ -102,19 +92,13 @@ final List<IosDistributionSpec> availableIosDistributionSpecs = [
       certificateProvider: () => vault.loadFile('ios_staging.p12.gpg'),
       certificatePasswordProvider: () => env['IOS_STAGING_CERT_PASSWORD'] ?? '',
     ),
-    deploy: IosDeploySpecs(
-      apiKeyFileProvider: () => vault.loadFile('appstore_api_key.json.gpg'),
-    ),
+    deploy: IosDeploySpecs(apiKeyFileProvider: () => vault.loadFile('appstore_api_key.json.gpg')),
   ),
 
   // Production
   IosDistributionSpec(
     distribution: IosDistribution.prod,
-    bootstrap: IosBootstrapSpecs(
-      appName: 'Vekolo',
-      bundleId: 'cc.vekolo',
-      provisioningProfileSpecifier: 'Vekolo',
-    ),
+    bootstrap: IosBootstrapSpecs(appName: 'Vekolo', bundleId: 'cc.vekolo', provisioningProfileSpecifier: 'Vekolo'),
     build: IosBuildSpecs(
       exportMethod: ExportMethod.appStoreConnect,
       createNewKeychainByDefault: true,
@@ -122,8 +106,6 @@ final List<IosDistributionSpec> availableIosDistributionSpecs = [
       certificateProvider: () => vault.loadFile('ios_prod.p12.gpg'),
       certificatePasswordProvider: () => env['IOS_PROD_CERT_PASSWORD'] ?? '',
     ),
-    deploy: IosDeploySpecs(
-      apiKeyFileProvider: () => vault.loadFile('appstore_api_key.json.gpg'),
-    ),
+    deploy: IosDeploySpecs(apiKeyFileProvider: () => vault.loadFile('appstore_api_key.json.gpg')),
   ),
 ];

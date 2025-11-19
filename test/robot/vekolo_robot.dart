@@ -16,6 +16,7 @@ import 'package:vekolo/domain/models/device_info.dart';
 import 'package:vekolo/pages/devices_page.dart';
 import 'package:vekolo/pages/scanner_page.dart';
 import 'package:vekolo/services/device_assignment_persistence.dart';
+import 'package:vekolo/widgets/workout_screen_content.dart';
 
 import '../ble/fake_ble_platform.dart';
 import '../fake/fake_auth_service.dart';
@@ -666,8 +667,17 @@ class VekoloRobot {
     await idle(500);
 
     // Wait for workout player page to fully load by waiting for a key indicator
-    await tester.verify.waitUntilExistsAtLeastOnce(spotText('CURRENT BLOCK'), timeout: const Duration(seconds: 5));
+    await tester.verify.waitUntilExistsAtLeastOnce(spot<WorkoutScreenContent>(), timeout: const Duration(seconds: 5));
     await idle(500);
+  }
+
+  /// Verifies that the workout player page is shown.
+  ///
+  /// This checks for the presence of WorkoutScreenContent, which is the main
+  /// widget displayed on the workout player page.
+  void verifyPlayerIsShown() {
+    logger.robotLog('verify workout player is shown');
+    spot<WorkoutScreenContent>().existsOnce();
   }
 
   Future<void> resumeWorkout() async {
@@ -851,10 +861,13 @@ class Aether {
   }
 }
 
-class SpotTimelineWriter implements ChirpMessageWriter {
+class SpotTimelineWriter implements ChirpAppender {
   @override
-  void write(LogRecord entry) {
-    timeline.addEvent(details: '${entry.message}', eventType: 'Robot');
+  void write(LogRecord record) {
+    final formatter = SimpleConsoleMessageFormatter(showInstance: false);
+    final builder = ConsoleMessageBuilder();
+    formatter.format(record, builder);
+    timeline.addEvent(details: builder.toString(), eventType: 'Robot');
   }
 }
 
@@ -862,6 +875,6 @@ final robotLogLevel = ChirpLogLevel('robot', 400);
 
 extension RobotLoggerExtension on ChirpLogger {
   void robotLog(String message, {Map<String, Object?>? data}) {
-    log(message, level: robotLogLevel, data: data);
+    log(message, level: robotLogLevel, data: data, skipFrames: 1);
   }
 }

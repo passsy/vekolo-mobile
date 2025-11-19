@@ -26,12 +26,7 @@ class AndroidDistributionSpec {
   final AndroidBuildSpecs build;
   final AndroidDeploySpecs? deploy;
 
-  AndroidDistributionSpec({
-    required this.distribution,
-    required this.bootstrap,
-    required this.build,
-    this.deploy,
-  });
+  AndroidDistributionSpec({required this.distribution, required this.bootstrap, required this.build, this.deploy});
 }
 
 /// Bootstrap configuration for Android distributions
@@ -42,10 +37,7 @@ class AndroidBootstrapSpecs {
   /// The Android applicationId used in Gradle
   final String applicationId;
 
-  AndroidBootstrapSpecs({
-    required this.appName,
-    required this.applicationId,
-  });
+  AndroidBootstrapSpecs({required this.appName, required this.applicationId});
 }
 
 /// Build configuration for Android distributions
@@ -82,10 +74,7 @@ class AndroidDeploySpecs {
   /// Track to upload to (e.g., 'internal', 'alpha', 'beta', 'production')
   final String? playStoreTrack;
 
-  AndroidDeploySpecs({
-    this.serviceAccountFileProvider,
-    this.playStoreTrack,
-  });
+  AndroidDeploySpecs({this.serviceAccountFileProvider, this.playStoreTrack});
 }
 
 /// Available Android distribution specifications
@@ -93,15 +82,14 @@ final List<AndroidDistributionSpec> availableAndroidDistributionSpecs = [
   // Development
   AndroidDistributionSpec(
     distribution: AndroidDistribution.dev,
-    bootstrap: AndroidBootstrapSpecs(
-      appName: 'Vekolo Dev',
-      applicationId: 'cc.vekolo.dev',
-    ),
+    bootstrap: AndroidBootstrapSpecs(appName: 'Vekolo Dev', applicationId: 'cc.vekolo.dev'),
     build: AndroidBuildSpecs(
       defaultOutputFormat: AndroidOutputFormat.apk,
       defaultSigningConfig: SigningConfig.dev,
       // Dev uses hardcoded credentials in build.gradle.kts
+      // ignore: avoid_redundant_argument_values
       storePasswordProvider: null,
+      // ignore: avoid_redundant_argument_values
       keyPasswordProvider: null,
     ),
   ),
@@ -109,10 +97,7 @@ final List<AndroidDistributionSpec> availableAndroidDistributionSpecs = [
   // Staging - uses ad-hoc signing for APK distribution
   AndroidDistributionSpec(
     distribution: AndroidDistribution.staging,
-    bootstrap: AndroidBootstrapSpecs(
-      appName: 'Vekolo Staging',
-      applicationId: 'cc.vekolo.staging',
-    ),
+    bootstrap: AndroidBootstrapSpecs(appName: 'Vekolo Staging', applicationId: 'cc.vekolo.staging'),
     build: AndroidBuildSpecs(
       defaultOutputFormat: AndroidOutputFormat.apk,
       defaultSigningConfig: SigningConfig.adHoc,
@@ -128,10 +113,7 @@ final List<AndroidDistributionSpec> availableAndroidDistributionSpecs = [
   // Production - uses play-upload signing for AAB
   AndroidDistributionSpec(
     distribution: AndroidDistribution.prod,
-    bootstrap: AndroidBootstrapSpecs(
-      appName: 'Vekolo',
-      applicationId: 'cc.vekolo',
-    ),
+    bootstrap: AndroidBootstrapSpecs(appName: 'Vekolo', applicationId: 'cc.vekolo'),
     build: AndroidBuildSpecs(
       defaultOutputFormat: AndroidOutputFormat.aab,
       defaultSigningConfig: SigningConfig.playUpload,

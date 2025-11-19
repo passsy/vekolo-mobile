@@ -36,7 +36,7 @@ class FilterModal extends StatelessWidget {
             children: [
               Expanded(
                 child: _SourceFilterButton(
-                  label: 'Everybody',
+                  label: const Text('Everybody'),
                   icon: Icons.public,
                   isSelected: sourceFilter == SourceFilter.everybody,
                   onTap: () => onSourceFilterChanged(SourceFilter.everybody),
@@ -45,7 +45,7 @@ class FilterModal extends StatelessWidget {
               const SizedBox(width: 16),
               Expanded(
                 child: _SourceFilterButton(
-                  label: 'Bookmarked',
+                  label: const Text('Bookmarked'),
                   icon: Icons.bookmark,
                   isSelected: sourceFilter == SourceFilter.bookmarked,
                   onTap: () => onSourceFilterChanged(SourceFilter.bookmarked),
@@ -57,7 +57,7 @@ class FilterModal extends StatelessWidget {
 
           // Workout Type Filters
           _WorkoutTypeFilterButton(
-            label: 'RECOVERY',
+            label: const Text('RECOVERY'),
             icon: Icons.water,
             isSelected: workoutTypeFilters.contains(WorkoutType.recovery),
             onTap: () => onWorkoutTypeToggled(WorkoutType.recovery),
@@ -65,7 +65,7 @@ class FilterModal extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           _WorkoutTypeFilterButton(
-            label: 'ENDURANCE',
+            label: const Text('ENDURANCE'),
             icon: Icons.favorite,
             isSelected: workoutTypeFilters.contains(WorkoutType.endurance),
             onTap: () => onWorkoutTypeToggled(WorkoutType.endurance),
@@ -73,7 +73,7 @@ class FilterModal extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           _WorkoutTypeFilterButton(
-            label: 'TEMPO',
+            label: const Text('TEMPO'),
             icon: Icons.fast_forward,
             isSelected: workoutTypeFilters.contains(WorkoutType.tempo),
             onTap: () => onWorkoutTypeToggled(WorkoutType.tempo),
@@ -81,7 +81,7 @@ class FilterModal extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           _WorkoutTypeFilterButton(
-            label: 'THRESHOLD',
+            label: const Text('THRESHOLD'),
             icon: Icons.flash_on,
             isSelected: workoutTypeFilters.contains(WorkoutType.threshold),
             onTap: () => onWorkoutTypeToggled(WorkoutType.threshold),
@@ -89,7 +89,7 @@ class FilterModal extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           _WorkoutTypeFilterButton(
-            label: 'VO2MAX',
+            label: const Text('VO2MAX'),
             icon: Icons.local_fire_department,
             isSelected: workoutTypeFilters.contains(WorkoutType.vo2max),
             onTap: () => onWorkoutTypeToggled(WorkoutType.vo2max),
@@ -97,7 +97,7 @@ class FilterModal extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           _WorkoutTypeFilterButton(
-            label: 'FTP',
+            label: const Text('FTP'),
             icon: Icons.rocket_launch,
             isSelected: workoutTypeFilters.contains(WorkoutType.ftp),
             onTap: () => onWorkoutTypeToggled(WorkoutType.ftp),
@@ -112,7 +112,7 @@ class FilterModal extends StatelessWidget {
 class _SourceFilterButton extends StatelessWidget {
   const _SourceFilterButton({required this.label, required this.icon, required this.isSelected, required this.onTap});
 
-  final String label;
+  final Widget label;
   final IconData icon;
   final bool isSelected;
   final VoidCallback onTap;
@@ -132,13 +132,13 @@ class _SourceFilterButton extends StatelessWidget {
             children: [
               Icon(icon, color: isSelected ? Colors.black : const Color(0xFFD4B896), size: 20),
               const SizedBox(width: 12),
-              Text(
-                label,
+              DefaultTextStyle(
                 style: TextStyle(
                   color: isSelected ? Colors.black : const Color(0xFFD4B896),
                   fontSize: 18,
                   fontWeight: FontWeight.w600,
                 ),
+                child: label,
               ),
             ],
           ),
@@ -157,7 +157,7 @@ class _WorkoutTypeFilterButton extends StatelessWidget {
     required this.workoutType,
   });
 
-  final String label;
+  final Widget label;
   final IconData icon;
   final bool isSelected;
   final VoidCallback onTap;
@@ -188,9 +188,9 @@ class _WorkoutTypeFilterButton extends StatelessWidget {
             children: [
               Icon(icon, color: foregroundColor, size: 28),
               const SizedBox(width: 16),
-              Text(
-                label,
+              DefaultTextStyle(
                 style: TextStyle(color: foregroundColor, fontSize: 18, fontWeight: FontWeight.w600, letterSpacing: 0.5),
+                child: label,
               ),
             ],
           ),

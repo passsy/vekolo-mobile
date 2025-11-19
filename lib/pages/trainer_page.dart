@@ -315,27 +315,27 @@ class _TrainerPageState extends State<TrainerPage> {
                     ),
                   ),
                   const SizedBox(height: 24),
-                  _buildDataCard(
+                  TrainerDataCard(
                     icon: Icons.bolt,
-                    label: 'Power',
-                    value: _currentPower?.toString() ?? '--',
-                    unit: 'W',
+                    label: const Text('Power'),
+                    value: Text(_currentPower?.toString() ?? '--'),
+                    unit: const Text('W'),
                     color: Colors.orange,
                   ),
                   const SizedBox(height: 16),
-                  _buildDataCard(
+                  TrainerDataCard(
                     icon: Icons.speed,
-                    label: 'Cadence',
-                    value: _currentCadence?.toString() ?? '--',
-                    unit: 'RPM',
+                    label: const Text('Cadence'),
+                    value: Text(_currentCadence?.toString() ?? '--'),
+                    unit: const Text('RPM'),
                     color: Colors.green,
                   ),
                   const SizedBox(height: 16),
-                  _buildDataCard(
+                  TrainerDataCard(
                     icon: Icons.directions_bike,
-                    label: 'Speed',
-                    value: _currentSpeed?.toStringAsFixed(1) ?? '--',
-                    unit: 'km/h',
+                    label: const Text('Speed'),
+                    value: Text(_currentSpeed?.toStringAsFixed(1) ?? '--'),
+                    unit: const Text('km/h'),
                     color: Colors.blue,
                   ),
                   const SizedBox(height: 24),
@@ -361,14 +361,39 @@ class _TrainerPageState extends State<TrainerPage> {
             ),
     );
   }
+}
 
-  Widget _buildDataCard({
-    required IconData icon,
-    required String label,
-    required String value,
-    required String unit,
-    required Color color,
-  }) {
+/// Displays a fitness metric in a styled card with an icon, label, value, and unit.
+///
+/// Used to show real-time trainer data such as power, cadence, and speed
+/// in a visually consistent format with color-coded styling.
+class TrainerDataCard extends StatelessWidget {
+  /// The icon to display on the left side of the card
+  final IconData icon;
+
+  /// The label describing the metric (e.g., 'Power', 'Cadence')
+  final Widget label;
+
+  /// The current value to display (e.g., '150', '--' if unavailable)
+  final Widget value;
+
+  /// The unit of measurement (e.g., 'W', 'RPM', 'km/h')
+  final Widget unit;
+
+  /// The accent color used for the icon, value, border, and background tint
+  final Color color;
+
+  const TrainerDataCard({
+    super.key,
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.unit,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -384,19 +409,25 @@ class _TrainerPageState extends State<TrainerPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label, style: TextStyle(fontSize: 16, color: Colors.grey[600])),
+                DefaultTextStyle(
+                  style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+                  child: label,
+                ),
                 const SizedBox(height: 4),
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    Text(
-                      value,
+                    DefaultTextStyle(
                       style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: color),
+                      child: value,
                     ),
                     const SizedBox(width: 8),
                     Padding(
                       padding: const EdgeInsets.only(bottom: 6),
-                      child: Text(unit, style: TextStyle(fontSize: 16, color: Colors.grey[600])),
+                      child: DefaultTextStyle(
+                        style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+                        child: unit,
+                      ),
                     ),
                   ],
                 ),

@@ -125,62 +125,17 @@ class DevicesPage extends StatelessWidget {
           const SizedBox(height: 24),
           const Divider(),
           const SizedBox(height: 24),
-          _buildAllDevicesSection(context, deviceManager),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAllDevicesSection(BuildContext context, DeviceManager deviceManager) {
-    return Builder(
-      builder: (context) {
-        final allDevices = deviceManager.devicesBeacon.watch(context);
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('ALL DEVICES', style: Theme.of(context).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 12),
-            if (allDevices.isEmpty)
-              _buildEmptyState(context, 'No devices found')
-            else
-              ...allDevices.map(
-                (device) => Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: DeviceCard(
-                    device: device,
-                    showAssignButtons: true,
-                    onConnect: () => _handleConnect(context, device),
-                    onDisconnect: () => _handleDisconnect(context, device),
-                    onRemove: () => _handleRemove(context, device),
-                    onAssignSmartTrainer: () => _handleAssignSmartTrainer(context, device),
-                    onAssignPower: () => _handleAssignPower(context, device),
-                    onAssignCadence: () => _handleAssignCadence(context, device),
-                    onAssignSpeed: () => _handleAssignSpeed(context, device),
-                    onAssignHeartRate: () => _handleAssignHeartRate(context, device),
-                  ),
-                ),
-              ),
-          ],
-        );
-      },
-    );
-  }
-
-  Widget _buildEmptyState(BuildContext context, String message) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(32),
-      decoration: BoxDecoration(
-        color: Colors.grey[100],
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey[300]!),
-      ),
-      child: Column(
-        children: [
-          Icon(Icons.bluetooth_disabled, size: 48, color: Colors.grey[400]),
-          const SizedBox(height: 12),
-          Text(message, style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Colors.grey[600])),
+          AllDevicesSection(
+            deviceManager: deviceManager,
+            onConnect: (device) => _handleConnect(context, device),
+            onDisconnect: (device) => _handleDisconnect(context, device),
+            onRemove: (device) => _handleRemove(context, device),
+            onAssignSmartTrainer: (device) => _handleAssignSmartTrainer(context, device),
+            onAssignPower: (device) => _handleAssignPower(context, device),
+            onAssignCadence: (device) => _handleAssignCadence(context, device),
+            onAssignSpeed: (device) => _handleAssignSpeed(context, device),
+            onAssignHeartRate: (device) => _handleAssignHeartRate(context, device),
+          ),
         ],
       ),
     );
@@ -777,7 +732,13 @@ class SmartTrainerSection extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             if (assignedDevice != null)
-              _buildAssignedDeviceCard(context, assignedDevice)
+              AssignedSmartTrainerCard(
+                assignedDevice: assignedDevice,
+                onUnassign: onUnassign,
+                onRemove: onRemove,
+                onConnect: onConnect,
+                onDisconnect: onDisconnect,
+              )
             else
               OutlinedButton(
                 onPressed: onShowAssignmentDialog,
@@ -793,28 +754,6 @@ class SmartTrainerSection extends StatelessWidget {
           ],
         );
       },
-    );
-  }
-
-  Widget _buildAssignedDeviceCard(BuildContext context, AssignedDevice assignedDevice) {
-    final connectedDevice = assignedDevice.connectedDevice;
-
-    if (connectedDevice != null) {
-      // Device is available and connected/connectable
-      return DeviceCard(
-        device: connectedDevice,
-        onUnassign: onUnassign,
-        onRemove: () => onRemove(connectedDevice),
-        onConnect: () => onConnect(connectedDevice),
-        onDisconnect: () => onDisconnect(connectedDevice),
-      );
-    }
-
-    // Device is assigned but not available (not discovered)
-    return UnavailableDeviceCard(
-      deviceId: assignedDevice.deviceId,
-      deviceName: assignedDevice.deviceName,
-      onUnassign: onUnassign,
     );
   }
 }
@@ -885,7 +824,14 @@ class DataSourceSection extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             if (assignedDevice != null)
-              _buildAssignedDeviceCard(context, assignedDevice)
+              AssignedDataSourceCard(
+                assignedDevice: assignedDevice,
+                dataType: dataType,
+                onUnassignDataSource: onUnassignDataSource,
+                onRemove: onRemove,
+                onConnect: onConnect,
+                onDisconnect: onDisconnect,
+              )
             else
               OutlinedButton(
                 onPressed: onShowAssignmentDialog,
@@ -901,28 +847,6 @@ class DataSourceSection extends StatelessWidget {
           ],
         );
       },
-    );
-  }
-
-  Widget _buildAssignedDeviceCard(BuildContext context, AssignedDevice assignedDevice) {
-    final connectedDevice = assignedDevice.connectedDevice;
-
-    if (connectedDevice != null) {
-      // Device is available and connected/connectable
-      return DeviceCard(
-        device: connectedDevice,
-        onUnassign: () => onUnassignDataSource(dataType),
-        onRemove: () => onRemove(connectedDevice),
-        onConnect: () => onConnect(connectedDevice),
-        onDisconnect: () => onDisconnect(connectedDevice),
-      );
-    }
-
-    // Device is assigned but not available (not discovered)
-    return UnavailableDeviceCard(
-      deviceId: assignedDevice.deviceId,
-      deviceName: assignedDevice.deviceName,
-      onUnassign: () => onUnassignDataSource(dataType),
     );
   }
 
@@ -953,6 +877,104 @@ class DataSourceSection extends StatelessWidget {
         final hrData = deviceManager.heartRateStream.watch(context);
         return hrData != null ? '${hrData.bpm} BPM' : '-- BPM';
     }
+  }
+}
+
+// ============================================================================
+// AssignedSmartTrainerCard Widget
+// ============================================================================
+
+/// Card displaying an assigned smart trainer device.
+///
+/// Shows either a connected/connectable device with control buttons,
+/// or an unavailable device state if the device is not currently discoverable.
+class AssignedSmartTrainerCard extends StatelessWidget {
+  const AssignedSmartTrainerCard({
+    required this.assignedDevice,
+    required this.onUnassign,
+    required this.onRemove,
+    required this.onConnect,
+    required this.onDisconnect,
+    super.key,
+  });
+
+  final AssignedDevice assignedDevice;
+  final VoidCallback onUnassign;
+  final void Function(FitnessDevice) onRemove;
+  final void Function(FitnessDevice) onConnect;
+  final void Function(FitnessDevice) onDisconnect;
+
+  @override
+  Widget build(BuildContext context) {
+    final connectedDevice = assignedDevice.connectedDevice;
+
+    if (connectedDevice != null) {
+      // Device is available and connected/connectable
+      return DeviceCard(
+        device: connectedDevice,
+        onUnassign: onUnassign,
+        onRemove: () => onRemove(connectedDevice),
+        onConnect: () => onConnect(connectedDevice),
+        onDisconnect: () => onDisconnect(connectedDevice),
+      );
+    }
+
+    // Device is assigned but not available (not discovered)
+    return UnavailableDeviceCard(
+      deviceId: assignedDevice.deviceId,
+      deviceName: assignedDevice.deviceName,
+      onUnassign: onUnassign,
+    );
+  }
+}
+
+// ============================================================================
+// AssignedDataSourceCard Widget
+// ============================================================================
+
+/// Card displaying an assigned data source device.
+///
+/// Shows either a connected/connectable device with control buttons,
+/// or an unavailable device state if the device is not currently discoverable.
+class AssignedDataSourceCard extends StatelessWidget {
+  const AssignedDataSourceCard({
+    required this.assignedDevice,
+    required this.dataType,
+    required this.onUnassignDataSource,
+    required this.onRemove,
+    required this.onConnect,
+    required this.onDisconnect,
+    super.key,
+  });
+
+  final AssignedDevice assignedDevice;
+  final device_info.DeviceDataType dataType;
+  final void Function(device_info.DeviceDataType) onUnassignDataSource;
+  final void Function(FitnessDevice) onRemove;
+  final void Function(FitnessDevice) onConnect;
+  final void Function(FitnessDevice) onDisconnect;
+
+  @override
+  Widget build(BuildContext context) {
+    final connectedDevice = assignedDevice.connectedDevice;
+
+    if (connectedDevice != null) {
+      // Device is available and connected/connectable
+      return DeviceCard(
+        device: connectedDevice,
+        onUnassign: () => onUnassignDataSource(dataType),
+        onRemove: () => onRemove(connectedDevice),
+        onConnect: () => onConnect(connectedDevice),
+        onDisconnect: () => onDisconnect(connectedDevice),
+      );
+    }
+
+    // Device is assigned but not available (not discovered)
+    return UnavailableDeviceCard(
+      deviceId: assignedDevice.deviceId,
+      deviceName: assignedDevice.deviceName,
+      onUnassign: () => onUnassignDataSource(dataType),
+    );
   }
 }
 
@@ -1024,6 +1046,114 @@ class UnavailableDeviceCard extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ============================================================================
+// AllDevicesSection Widget
+// ============================================================================
+
+/// Displays all connected and available devices with assignment options.
+///
+/// Shows a list of all discovered devices regardless of their current assignment
+/// status. Each device shows assignment buttons for all roles it can fulfill based
+/// on its capabilities.
+class AllDevicesSection extends StatelessWidget {
+  const AllDevicesSection({
+    required this.deviceManager,
+    required this.onConnect,
+    required this.onDisconnect,
+    required this.onRemove,
+    required this.onAssignSmartTrainer,
+    required this.onAssignPower,
+    required this.onAssignCadence,
+    required this.onAssignSpeed,
+    required this.onAssignHeartRate,
+    super.key,
+  });
+
+  final DeviceManager deviceManager;
+  final void Function(FitnessDevice) onConnect;
+  final void Function(FitnessDevice) onDisconnect;
+  final void Function(FitnessDevice) onRemove;
+  final void Function(FitnessDevice) onAssignSmartTrainer;
+  final void Function(FitnessDevice) onAssignPower;
+  final void Function(FitnessDevice) onAssignCadence;
+  final void Function(FitnessDevice) onAssignSpeed;
+  final void Function(FitnessDevice) onAssignHeartRate;
+
+  @override
+  Widget build(BuildContext context) {
+    return Builder(
+      builder: (context) {
+        final allDevices = deviceManager.devicesBeacon.watch(context);
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('ALL DEVICES', style: Theme.of(context).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 12),
+            if (allDevices.isEmpty)
+              const EmptyDevicesState(message: Text('No devices found'))
+            else
+              ...allDevices.map(
+                (device) => Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: DeviceCard(
+                    device: device,
+                    showAssignButtons: true,
+                    onConnect: () => onConnect(device),
+                    onDisconnect: () => onDisconnect(device),
+                    onRemove: () => onRemove(device),
+                    onAssignSmartTrainer: () => onAssignSmartTrainer(device),
+                    onAssignPower: () => onAssignPower(device),
+                    onAssignCadence: () => onAssignCadence(device),
+                    onAssignSpeed: () => onAssignSpeed(device),
+                    onAssignHeartRate: () => onAssignHeartRate(device),
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+// ============================================================================
+// EmptyDevicesState Widget
+// ============================================================================
+
+/// Empty state widget shown when no devices are available.
+///
+/// Displays a centered icon and message to inform users that there are no
+/// devices to show. Used in device lists when the list is empty.
+class EmptyDevicesState extends StatelessWidget {
+  const EmptyDevicesState({required this.message, super.key});
+
+  final Widget message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(32),
+      decoration: BoxDecoration(
+        color: Colors.grey[100],
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey[300]!),
+      ),
+      child: Column(
+        children: [
+          Icon(Icons.bluetooth_disabled, size: 48, color: Colors.grey[400]),
+          const SizedBox(height: 12),
+          DefaultTextStyle(
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Colors.grey[600]) ?? const TextStyle(),
+            child: message,
+          ),
+        ],
       ),
     );
   }

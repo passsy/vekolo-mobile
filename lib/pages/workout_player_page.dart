@@ -35,13 +35,8 @@ import 'package:vekolo/widgets/workout_screen_content.dart';
 /// 1. With a [workoutId] - loads the workout from the API (for starting new workouts)
 /// 2. With a [workoutPlan] and [workoutName] - uses provided data (for resuming workouts)
 class WorkoutPlayerPage extends StatefulWidget {
-  const WorkoutPlayerPage({
-    super.key,
-    this.isResuming = false,
-    this.workoutId,
-    this.workoutPlan,
-    this.workoutName,
-  }) : assert(workoutId != null || workoutPlan != null, 'Either workoutId or workoutPlan must be provided');
+  const WorkoutPlayerPage({super.key, this.isResuming = false, this.workoutId, this.workoutPlan, this.workoutName})
+    : assert(workoutId != null || workoutPlan != null, 'Either workoutId or workoutPlan must be provided');
 
   final bool isResuming;
   final String? workoutId;
@@ -258,16 +253,10 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
         chirp.info('Auto-starting workout - power detected: ${currentPower}W');
         playerService.start();
 
-        // Mark as started immediately to prevent duplicate startRecording() calls
-        _hasStarted = true;
-
         // Track workout started event
         Wiredash.trackEvent(
           'workout_started',
-          data: {
-            'workout_id': widget.workoutId ?? 'unknown',
-            'workout_name': _workoutName ?? 'Workout',
-          },
+          data: {'workout_id': widget.workoutId ?? 'unknown', 'workout_name': _workoutName ?? 'Workout'},
         );
 
         // Start recording when workout starts (fire-and-forget)
@@ -288,6 +277,7 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
 
         if (!mounted) return;
         setState(() {
+          _hasStarted = true; // Mark as started and trigger rebuild
           _lowPowerStartTime = null; // Reset low power timer
         });
 
@@ -441,6 +431,12 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
 
     return Builder(
       builder: (builderContext) {
+        // Bind the services to context so child widgets can access them
+        Refs.workoutPlayerService.bindValue(builderContext, _playerService!);
+        if (_recordingService != null) {
+          Refs.workoutRecordingService.bindValue(builderContext, _recordingService!);
+        }
+
         return PopScope(
           canPop: false,
           onPopInvokedWithResult: (didPop, result) async {
@@ -453,29 +449,64 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
           },
           child: Scaffold(
             body: SafeArea(
-              child: _buildWorkoutPlayer(),
+              child: _WorkoutPlayerBuilder(
+                hasStarted: _hasStarted,
+                workoutName: _workoutName,
+                workoutId: widget.workoutId,
+                onHasStartedChanged: (value) => setState(() => _hasStarted = value),
+                onManualPauseChanged: (value) => setState(() => _isManualPause = value),
+              ),
             ),
           ),
         );
       },
     );
   }
+}
 
-  Widget _buildWorkoutPlayer() {
-    final player = _playerService!;
+/// Builder widget that connects WorkoutPlayerService to WorkoutScreenContent.
+///
+/// Watches all necessary beacons from the player service and device manager,
+/// then renders the WorkoutScreenContent with all the required data and callbacks.
+///
+/// This separation makes the workout player logic more testable and follows
+/// the pattern of extracting complex builders into separate widgets.
+///
+/// Services are read from context rather than passed as parameters since this
+/// is not a leaf widget - it coordinates multiple services and widgets.
+class _WorkoutPlayerBuilder extends StatelessWidget {
+  const _WorkoutPlayerBuilder({
+    required this.hasStarted,
+    required this.workoutName,
+    required this.workoutId,
+    required this.onHasStartedChanged,
+    required this.onManualPauseChanged,
+  });
+
+  final bool hasStarted;
+  final String? workoutName;
+  final String? workoutId;
+  final ValueChanged<bool> onHasStartedChanged;
+  final ValueChanged<bool> onManualPauseChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    // Read services from context - this is a non-leaf widget that coordinates services
+    final playerService = Refs.workoutPlayerService.of(context);
+    final recordingService = Refs.workoutRecordingService.maybeOf(context);
 
     return Builder(
       builder: (context) {
-        final isPaused = player.isPaused.watch(context);
-        final isComplete = player.isComplete.watch(context);
-        final currentBlock = player.currentBlock$.watch(context);
-        final nextBlock = player.nextBlock$.watch(context);
-        final powerTarget = player.powerTarget$.watch(context);
-        final cadenceTarget = player.cadenceTarget$.watch(context);
-        final elapsedTime = player.elapsedTime$.watch(context);
-        final remainingTime = player.remainingTime$.watch(context);
-        final currentBlockRemainingTime = player.currentBlockRemainingTime$.watch(context);
-        final powerScaleFactor = player.powerScaleFactor.watch(context);
+        final isPaused = playerService.isPaused.watch(context);
+        final isComplete = playerService.isComplete.watch(context);
+        final currentBlock = playerService.currentBlock$.watch(context);
+        final nextBlock = playerService.nextBlock$.watch(context);
+        final powerTarget = playerService.powerTarget$.watch(context);
+        final cadenceTarget = playerService.cadenceTarget$.watch(context);
+        final elapsedTime = playerService.elapsedTime$.watch(context);
+        final remainingTime = playerService.remainingTime$.watch(context);
+        final currentBlockRemainingTime = playerService.currentBlockRemainingTime$.watch(context);
+        final powerScaleFactor = playerService.powerScaleFactor.watch(context);
 
         // Watch real-time metrics from DeviceManager
         final deviceManager = Refs.deviceManager.of(context);
@@ -490,8 +521,8 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
         final ftp = user?.ftp ?? ProfileDefaults.ftp;
 
         return WorkoutScreenContent(
-          powerHistory: player.powerHistory,
-          workoutPlan: player.workoutPlan,
+          powerHistory: playerService.powerHistory,
+          workoutPlan: playerService.workoutPlan,
           currentBlock: currentBlock,
           nextBlock: nextBlock,
           elapsedTime: elapsedTime,
@@ -505,38 +536,36 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
           currentSpeed: currentSpeed?.kmh,
           isPaused: isPaused,
           isComplete: isComplete,
-          hasStarted: _hasStarted,
+          hasStarted: hasStarted,
           ftp: ftp,
           powerScaleFactor: powerScaleFactor,
           onPlayPause: () async {
             if (isPaused) {
-              player.start();
-              if (!_hasStarted) {
+              playerService.start();
+              if (!hasStarted) {
                 // First time starting the workout via play button
                 final authService = Refs.authService.of(context);
                 final user = authService.currentUser.value;
                 final ftp = user?.ftp ?? ProfileDefaults.ftp;
-                if (_recordingService != null) {
-                  await _recordingService!.startRecording(
-                    _workoutName ?? 'Workout',
+                if (recordingService != null) {
+                  await recordingService.startRecording(
+                    workoutName ?? 'Workout',
                     userId: user?.id,
                     ftp: ftp,
-                    sourceWorkoutId: widget.workoutId,
+                    sourceWorkoutId: workoutId,
                   );
                 }
-                setState(() {
-                  _hasStarted = true;
-                  _isManualPause = false;
-                });
+                onHasStartedChanged(true);
+                onManualPauseChanged(false);
               } else {
-                setState(() => _isManualPause = false); // Clear manual pause flag when resuming
+                onManualPauseChanged(false); // Clear manual pause flag when resuming
               }
             } else {
-              player.pause();
-              setState(() => _isManualPause = true); // Set manual pause flag
+              playerService.pause();
+              onManualPauseChanged(true); // Set manual pause flag
             }
           },
-          onSkip: () => player.skip(),
+          onSkip: () => playerService.skip(),
           onEndWorkout: () async {
             if (!context.mounted) return;
             final confirm = await showDialog<bool>(
@@ -555,11 +584,11 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
               ),
             );
             if (confirm == true) {
-              player.completeEarly();
+              playerService.completeEarly();
             }
           },
-          onPowerScaleIncrease: () => player.setPowerScaleFactor(powerScaleFactor + 0.01),
-          onPowerScaleDecrease: () => player.setPowerScaleFactor(powerScaleFactor - 0.01),
+          onPowerScaleIncrease: () => playerService.setPowerScaleFactor(powerScaleFactor + 0.01),
+          onPowerScaleDecrease: () => playerService.setPowerScaleFactor(powerScaleFactor - 0.01),
           onDevicesPressed: () => context.push('/devices'),
           onClose: () async {
             if (!context.mounted) return;
@@ -578,10 +607,7 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
                       : 'Workout duration is too short to save. Discard this workout?',
                 ),
                 actions: [
-                  TextButton(
-                    onPressed: () => Navigator.of(ctx).pop('cancel'),
-                    child: const Text('Cancel'),
-                  ),
+                  TextButton(onPressed: () => Navigator.of(ctx).pop('cancel'), child: const Text('Cancel')),
                   if (hasMinimumDuration)
                     TextButton(
                       onPressed: () => Navigator.of(ctx).pop('finish'),
@@ -599,17 +625,17 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
 
             if (result == 'finish' && context.mounted) {
               // Mark workout as completed
-              player.completeEarly();
-              if (_recordingService != null) {
-                await _recordingService!.stopRecording(completed: true);
+              playerService.completeEarly();
+              if (recordingService != null) {
+                await recordingService.stopRecording(completed: true);
               }
               if (context.mounted) {
                 context.pop();
               }
             } else if (result == 'discard' && context.mounted) {
               // Discard workout (mark as abandoned)
-              if (_recordingService != null) {
-                await _recordingService!.stopRecording(completed: false);
+              if (recordingService != null) {
+                await recordingService.stopRecording(completed: false);
               }
               if (context.mounted) {
                 context.pop();

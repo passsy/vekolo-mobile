@@ -478,32 +478,63 @@ class _UnknownDeviceReportPageState extends State<UnknownDeviceReportPage> {
     }
   }
 
-  /// Builds RSSI indicator widget with icon and color
-  Widget _buildRssiIndicator(int rssi) {
-    // Convert RSSI to signal strength level and color using switch expression
-    final (IconData icon, Color color, String strength) = switch (rssi) {
-      >= -50 => (Icons.signal_cellular_4_bar, Colors.green, 'Excellent'),
-      >= -60 => (Icons.signal_cellular_alt, Colors.lightGreen, 'Good'),
-      >= -70 => (Icons.signal_cellular_alt_2_bar, Colors.orange, 'Fair'),
-      >= -80 => (Icons.signal_cellular_alt_1_bar, Colors.deepOrange, 'Weak'),
-      _ => (Icons.signal_cellular_0_bar, Colors.red, 'Poor'),
-    };
 
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 16, color: color),
-        const SizedBox(width: 4),
-        Text(
-          strength,
-          style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.w500),
-        ),
-      ],
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Report Unknown Device'),
+        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+      ),
+      body: switch (_pageState) {
+        UnknownDevicePageState.scanning => const _ScanningStateView(),
+        UnknownDevicePageState.deviceList => _DeviceListStateView(
+            devices: _devices,
+            isScanning: _isScanning,
+            onDeviceSelected: _onDeviceSelected,
+            onStartScan: _startScan,
+            onStopScan: _stopScan,
+          ),
+        UnknownDevicePageState.connecting => _ConnectingStateView(
+            selectedDevice: _selectedDevice,
+            currentServiceIndex: _currentServiceIndex,
+            totalServices: _totalServices,
+          ),
+        UnknownDevicePageState.review => _ReviewStateView(
+            form: _form,
+            selectedDevice: _selectedDevice,
+            collectedData: _collectedData,
+            onSubmit: _submitReport,
+            onBack: _backToDeviceList,
+          ),
+        UnknownDevicePageState.error => _ErrorStateView(
+            errorMessage: _errorMessage,
+            onRetry: _retryConnection,
+            onBack: _backToDeviceList,
+          ),
+        UnknownDevicePageState.success => _SuccessStateView(
+            onReportAnother: () {
+              setState(() {
+                _selectedDevice = null;
+                _errorMessage = '';
+                _collectedData = '';
+                _form.control('notes').value = '';
+              });
+              _startScan();
+            },
+            onClose: () => Navigator.of(context).pop(),
+          ),
+      },
     );
   }
+}
 
-  /// Builds the scanning state UI
-  Widget _buildScanningState() {
+/// Displays scanning state with loading indicator.
+class _ScanningStateView extends StatelessWidget {
+  const _ScanningStateView();
+
+  @override
+  Widget build(BuildContext context) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -525,9 +556,26 @@ class _UnknownDeviceReportPageState extends State<UnknownDeviceReportPage> {
       ),
     );
   }
+}
 
-  /// Builds the device list state UI
-  Widget _buildDeviceListState() {
+/// Displays list of discovered BLE devices.
+class _DeviceListStateView extends StatelessWidget {
+  const _DeviceListStateView({
+    required this.devices,
+    required this.isScanning,
+    required this.onDeviceSelected,
+    required this.onStartScan,
+    required this.onStopScan,
+  });
+
+  final List<_SimpleDevice> devices;
+  final bool isScanning;
+  final void Function(_SimpleDevice) onDeviceSelected;
+  final VoidCallback onStartScan;
+  final VoidCallback onStopScan;
+
+  @override
+  Widget build(BuildContext context) {
     return Column(
       children: [
         Padding(
@@ -538,14 +586,14 @@ class _UnknownDeviceReportPageState extends State<UnknownDeviceReportPage> {
               const Text('Select a device to report', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
               const SizedBox(height: 8),
               Text(
-                'Found ${_devices.length} device(s) nearby',
+                'Found ${devices.length} device(s) nearby',
                 style: TextStyle(fontSize: 14, color: Colors.grey[600]),
               ),
             ],
           ),
         ),
         Expanded(
-          child: _devices.isEmpty
+          child: devices.isEmpty
               ? Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -555,7 +603,7 @@ class _UnknownDeviceReportPageState extends State<UnknownDeviceReportPage> {
                       Text('No devices found', style: TextStyle(fontSize: 16, color: Colors.grey[600])),
                       const SizedBox(height: 24),
                       ElevatedButton.icon(
-                        onPressed: _startScan,
+                        onPressed: onStartScan,
                         icon: const Icon(Icons.refresh),
                         label: const Text('Scan Again'),
                       ),
@@ -563,9 +611,9 @@ class _UnknownDeviceReportPageState extends State<UnknownDeviceReportPage> {
                   ),
                 )
               : ListView.builder(
-                  itemCount: _devices.length,
+                  itemCount: devices.length,
                   itemBuilder: (context, index) {
-                    final device = _devices[index];
+                    final device = devices[index];
                     final displayName = device.name.isEmpty ? 'Unknown Device' : device.name;
 
                     return Card(
@@ -581,7 +629,7 @@ class _UnknownDeviceReportPageState extends State<UnknownDeviceReportPage> {
                             const SizedBox(height: 4),
                             Row(
                               children: [
-                                _buildRssiIndicator(device.rssi),
+                                _RssiIndicator(rssi: device.rssi),
                                 const SizedBox(width: 8),
                                 Text('${device.rssi} dBm', style: const TextStyle(fontSize: 12)),
                               ],
@@ -589,7 +637,7 @@ class _UnknownDeviceReportPageState extends State<UnknownDeviceReportPage> {
                           ],
                         ),
                         trailing: const Icon(Icons.chevron_right),
-                        onTap: () => _onDeviceSelected(device),
+                        onTap: () => onDeviceSelected(device),
                       ),
                     );
                   },
@@ -599,9 +647,9 @@ class _UnknownDeviceReportPageState extends State<UnknownDeviceReportPage> {
           padding: const EdgeInsets.all(16.0),
           child: SizedBox(
             width: double.infinity,
-            child: _isScanning
+            child: isScanning
                 ? OutlinedButton(
-                    onPressed: _stopScan,
+                    onPressed: onStopScan,
                     child: const Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -612,7 +660,7 @@ class _UnknownDeviceReportPageState extends State<UnknownDeviceReportPage> {
                     ),
                   )
                 : OutlinedButton(
-                    onPressed: _startScan,
+                    onPressed: onStartScan,
                     child: const Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -627,9 +675,52 @@ class _UnknownDeviceReportPageState extends State<UnknownDeviceReportPage> {
       ],
     );
   }
+}
 
-  /// Builds the connecting state UI
-  Widget _buildConnectingState() {
+/// Displays RSSI signal strength indicator.
+class _RssiIndicator extends StatelessWidget {
+  const _RssiIndicator({required this.rssi});
+
+  final int rssi;
+
+  @override
+  Widget build(BuildContext context) {
+    final (IconData icon, Color color, String strength) = switch (rssi) {
+      >= -50 => (Icons.signal_cellular_4_bar, Colors.green, 'Excellent'),
+      >= -60 => (Icons.signal_cellular_alt, Colors.lightGreen, 'Good'),
+      >= -70 => (Icons.signal_cellular_alt_2_bar, Colors.orange, 'Fair'),
+      >= -80 => (Icons.signal_cellular_alt_1_bar, Colors.deepOrange, 'Weak'),
+      _ => (Icons.signal_cellular_0_bar, Colors.red, 'Poor'),
+    };
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 16, color: color),
+        const SizedBox(width: 4),
+        Text(
+          strength,
+          style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.w500),
+        ),
+      ],
+    );
+  }
+}
+
+/// Displays connecting state with progress indicator.
+class _ConnectingStateView extends StatelessWidget {
+  const _ConnectingStateView({
+    required this.selectedDevice,
+    required this.currentServiceIndex,
+    required this.totalServices,
+  });
+
+  final _SimpleDevice? selectedDevice;
+  final int currentServiceIndex;
+  final int totalServices;
+
+  @override
+  Widget build(BuildContext context) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 32.0),
@@ -644,26 +735,26 @@ class _UnknownDeviceReportPageState extends State<UnknownDeviceReportPage> {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 16),
-            if (_selectedDevice != null) ...[
+            if (selectedDevice != null) ...[
               Text(
-                _selectedDevice!.name.isEmpty ? 'Unknown Device' : _selectedDevice!.name,
+                selectedDevice!.name.isEmpty ? 'Unknown Device' : selectedDevice!.name,
                 style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
               ),
               Text(
-                _selectedDevice!.id,
+                selectedDevice!.id,
                 style: TextStyle(fontSize: 12, color: Colors.grey[600], fontFamily: 'monospace'),
               ),
             ],
-            if (_totalServices > 0) ...[
+            if (totalServices > 0) ...[
               const SizedBox(height: 24),
               LinearProgressIndicator(
-                value: _currentServiceIndex / _totalServices,
+                value: currentServiceIndex / totalServices,
                 backgroundColor: Colors.grey[300],
                 valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.primary),
               ),
               const SizedBox(height: 8),
               Text(
-                'Reading service $_currentServiceIndex of $_totalServices',
+                'Reading service $currentServiceIndex of $totalServices',
                 style: TextStyle(fontSize: 12, color: Colors.grey[600]),
               ),
             ],
@@ -672,14 +763,31 @@ class _UnknownDeviceReportPageState extends State<UnknownDeviceReportPage> {
       ),
     );
   }
+}
 
-  /// Builds the review state UI
-  Widget _buildReviewState() {
+/// Displays review state with collected data and form.
+class _ReviewStateView extends StatelessWidget {
+  const _ReviewStateView({
+    required this.form,
+    required this.selectedDevice,
+    required this.collectedData,
+    required this.onSubmit,
+    required this.onBack,
+  });
+
+  final FormGroup form;
+  final _SimpleDevice? selectedDevice;
+  final String collectedData;
+  final VoidCallback onSubmit;
+  final VoidCallback onBack;
+
+  @override
+  Widget build(BuildContext context) {
     return SingleChildScrollView(
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: ReactiveForm(
-          formGroup: _form,
+          formGroup: form,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -688,7 +796,7 @@ class _UnknownDeviceReportPageState extends State<UnknownDeviceReportPage> {
               const Text('Device information collected', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
               Text(
-                'Successfully collected data from ${_selectedDevice?.name.isEmpty ?? true ? "Unknown Device" : _selectedDevice!.name}',
+                'Successfully collected data from ${selectedDevice?.name.isEmpty ?? true ? "Unknown Device" : selectedDevice!.name}',
                 style: TextStyle(fontSize: 14, color: Colors.grey[600]),
               ),
               const SizedBox(height: 24),
@@ -704,7 +812,7 @@ class _UnknownDeviceReportPageState extends State<UnknownDeviceReportPage> {
                   border: Border.all(color: Colors.grey[300]!),
                 ),
                 child: SingleChildScrollView(
-                  child: SelectableText(_collectedData, style: const TextStyle(fontSize: 12, fontFamily: 'monospace')),
+                  child: SelectableText(collectedData, style: const TextStyle(fontSize: 12, fontFamily: 'monospace')),
                 ),
               ),
               const SizedBox(height: 24),
@@ -726,7 +834,7 @@ class _UnknownDeviceReportPageState extends State<UnknownDeviceReportPage> {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
-                  onPressed: _submitReport,
+                  onPressed: onSubmit,
                   icon: const Icon(Icons.send),
                   label: const Text('Submit Report'),
                   style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16)),
@@ -735,7 +843,7 @@ class _UnknownDeviceReportPageState extends State<UnknownDeviceReportPage> {
               const SizedBox(height: 8),
               SizedBox(
                 width: double.infinity,
-                child: OutlinedButton(onPressed: _backToDeviceList, child: const Text('Back to Device List')),
+                child: OutlinedButton(onPressed: onBack, child: const Text('Back to Device List')),
               ),
             ],
           ),
@@ -743,9 +851,22 @@ class _UnknownDeviceReportPageState extends State<UnknownDeviceReportPage> {
       ),
     );
   }
+}
 
-  /// Builds the error state UI
-  Widget _buildErrorState() {
+/// Displays error state with error message and retry option.
+class _ErrorStateView extends StatelessWidget {
+  const _ErrorStateView({
+    required this.errorMessage,
+    required this.onRetry,
+    required this.onBack,
+  });
+
+  final String errorMessage;
+  final VoidCallback onRetry;
+  final VoidCallback onBack;
+
+  @override
+  Widget build(BuildContext context) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24.0),
@@ -756,12 +877,12 @@ class _UnknownDeviceReportPageState extends State<UnknownDeviceReportPage> {
             const SizedBox(height: 24),
             const Text('Connection Failed', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
             const SizedBox(height: 16),
-            Text(_errorMessage, style: const TextStyle(fontSize: 16), textAlign: TextAlign.center),
+            Text(errorMessage, style: const TextStyle(fontSize: 16), textAlign: TextAlign.center),
             const SizedBox(height: 32),
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                onPressed: _retryConnection,
+                onPressed: onRetry,
                 icon: const Icon(Icons.refresh),
                 label: const Text('Try Again'),
                 style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16)),
@@ -770,16 +891,27 @@ class _UnknownDeviceReportPageState extends State<UnknownDeviceReportPage> {
             const SizedBox(height: 8),
             SizedBox(
               width: double.infinity,
-              child: OutlinedButton(onPressed: _backToDeviceList, child: const Text('Back to Device List')),
+              child: OutlinedButton(onPressed: onBack, child: const Text('Back to Device List')),
             ),
           ],
         ),
       ),
     );
   }
+}
 
-  /// Builds the success state UI
-  Widget _buildSuccessState() {
+/// Displays success state after report submission.
+class _SuccessStateView extends StatelessWidget {
+  const _SuccessStateView({
+    required this.onReportAnother,
+    required this.onClose,
+  });
+
+  final VoidCallback onReportAnother;
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24.0),
@@ -799,16 +931,7 @@ class _UnknownDeviceReportPageState extends State<UnknownDeviceReportPage> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                onPressed: () {
-                  // Reset to initial state
-                  setState(() {
-                    _selectedDevice = null;
-                    _errorMessage = '';
-                    _collectedData = '';
-                    _form.control('notes').value = '';
-                  });
-                  _startScan();
-                },
+                onPressed: onReportAnother,
                 icon: const Icon(Icons.add),
                 label: const Text('Report Another Device'),
                 style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16)),
@@ -817,29 +940,11 @@ class _UnknownDeviceReportPageState extends State<UnknownDeviceReportPage> {
             const SizedBox(height: 8),
             SizedBox(
               width: double.infinity,
-              child: OutlinedButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Close')),
+              child: OutlinedButton(onPressed: onClose, child: const Text('Close')),
             ),
           ],
         ),
       ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Report Unknown Device'),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-      ),
-      body: switch (_pageState) {
-        UnknownDevicePageState.scanning => _buildScanningState(),
-        UnknownDevicePageState.deviceList => _buildDeviceListState(),
-        UnknownDevicePageState.connecting => _buildConnectingState(),
-        UnknownDevicePageState.review => _buildReviewState(),
-        UnknownDevicePageState.error => _buildErrorState(),
-        UnknownDevicePageState.success => _buildSuccessState(),
-      },
     );
   }
 }

@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:phntmxyz_ios_publishing_sidekick_plugin/phntmxyz_ios_publishing_sidekick_plugin.dart';
 import 'package:pubspec_manager/pubspec_manager.dart';
 import 'package:sidekick_core/sidekick_core.dart';
@@ -19,16 +17,8 @@ class BuildIosCommand extends Command {
       availableIosDistributionSpecs.map((spec) => spec.distribution).toList();
 
   BuildIosCommand() {
-    argParser.addFlag(
-      'new-keychain',
-      help: 'Creates a new keychain for this build, useful on CI',
-      defaultsTo: null,
-    );
-    argParser.addFlag(
-      'clean',
-      help: 'Run flutter clean before building',
-      defaultsTo: true,
-    );
+    argParser.addFlag('new-keychain', help: 'Creates a new keychain for this build, useful on CI', defaultsTo: null);
+    argParser.addFlag('clean', help: 'Run flutter clean before building', defaultsTo: true);
     argParser.addOption(
       'distribution',
       allowed: _allowedDistributions.map((it) => it.name),
@@ -84,19 +74,16 @@ class BuildIosCommand extends Command {
     print('Entry point: $mainDartFile');
 
     // Load iOS dependencies and build dart source
-    await flutter(
-      [
-        'build',
-        'ios',
-        '--target=$mainDartFile',
-        '--config-only',
-        '--build-number=$buildNumber',
-        '--no-codesign',
-        '--dart-define=DISTRIBUTION=${distribution.name}',
-        '--dart-define=BUILDNUMBER=$buildNumber',
-      ],
-      workingDirectory: mainProject!.root,
-    );
+    await flutter([
+      'build',
+      'ios',
+      '--target=$mainDartFile',
+      '--config-only',
+      '--build-number=$buildNumber',
+      '--no-codesign',
+      '--dart-define=DISTRIBUTION=${distribution.name}',
+      '--dart-define=BUILDNUMBER=$buildNumber',
+    ], workingDirectory: mainProject!.root);
 
     bool? newKeychain = argResults!['new-keychain'] as bool?;
     newKeychain ??= env['CI'] == 'true' || spec.build.createNewKeychainByDefault;

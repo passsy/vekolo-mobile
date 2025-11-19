@@ -59,25 +59,22 @@ class ActivityDetailPage extends StatelessWidget {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
-                    _buildStatColumn(
-                      context,
+                    WorkoutStatColumn(
                       icon: Icons.timer,
-                      label: 'Duration',
-                      value: _formatDuration(workout.duration),
+                      label: const Text('Duration'),
+                      value: Text(_formatDuration(workout.duration)),
                     ),
                     if (workout.tss != null)
-                      _buildStatColumn(
-                        context,
+                      WorkoutStatColumn(
                         icon: Icons.fitness_center,
-                        label: 'TSS',
-                        value: workout.tss.toString(),
+                        label: const Text('TSS'),
+                        value: Text(workout.tss.toString()),
                       ),
                     if (workout.category != null)
-                      _buildStatColumn(
-                        context,
+                      WorkoutStatColumn(
                         icon: Icons.category,
-                        label: 'Category',
-                        value: _formatCategory(workout.category!),
+                        label: const Text('Category'),
+                        value: Text(_formatCategory(workout.category!)),
                       ),
                   ],
                 ),
@@ -91,7 +88,7 @@ class ActivityDetailPage extends StatelessWidget {
               style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
-            ...plan.plan.map((block) => _buildBlockPreview(context, block)),
+            ...plan.plan.map((block) => _buildBlockPreview(block, _formatDuration)),
             const SizedBox(height: 32),
 
             // Ride Now button
@@ -114,109 +111,7 @@ class ActivityDetailPage extends StatelessWidget {
     );
   }
 
-  Widget _buildStatColumn(
-    BuildContext context, {
-    required IconData icon,
-    required String label,
-    required String value,
-  }) {
-    return Column(
-      children: [
-        Icon(icon, color: Theme.of(context).colorScheme.primary),
-        const SizedBox(height: 4),
-        Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
-        const SizedBox(height: 4),
-        Text(value, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-      ],
-    );
-  }
 
-  Widget _buildBlockPreview(BuildContext context, dynamic block) {
-    if (block is PowerBlock) {
-      return Card(
-        margin: const EdgeInsets.only(bottom: 8),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Row(
-            children: [
-              Icon(Icons.bolt, color: Colors.orange, size: 20),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(block.description ?? 'Power Block', style: const TextStyle(fontWeight: FontWeight.bold)),
-                    Text(
-                      '${_formatDuration(block.duration)} at ${(block.power * 100).toStringAsFixed(0)}% FTP',
-                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    } else if (block is RampBlock) {
-      return Card(
-        margin: const EdgeInsets.only(bottom: 8),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Row(
-            children: [
-              Icon(Icons.trending_up, color: Colors.blue, size: 20),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(block.description ?? 'Ramp Block', style: const TextStyle(fontWeight: FontWeight.bold)),
-                    Text(
-                      '${_formatDuration(block.duration)} from ${(block.powerStart * 100).toStringAsFixed(0)}% to ${(block.powerEnd * 100).toStringAsFixed(0)}% FTP',
-                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    } else if (block is WorkoutInterval) {
-      return Card(
-        margin: const EdgeInsets.only(bottom: 8),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(Icons.repeat, color: Colors.purple, size: 20),
-                  const SizedBox(width: 12),
-                  Text('Interval Set (${block.repeat}x)', style: const TextStyle(fontWeight: FontWeight.bold)),
-                ],
-              ),
-              const SizedBox(height: 8),
-              ...block.parts.map((part) {
-                if (part is PowerBlock) {
-                  return Padding(
-                    padding: const EdgeInsets.only(left: 32, top: 4),
-                    child: Text(
-                      '${part.description ?? 'Block'}: ${_formatDuration(part.duration)} at ${(part.power * 100).toStringAsFixed(0)}% FTP',
-                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                    ),
-                  );
-                }
-                return const SizedBox.shrink();
-              }),
-            ],
-          ),
-        ),
-      );
-    }
-    return const SizedBox.shrink();
-  }
 
   String _formatDuration(int milliseconds) {
     final totalSeconds = milliseconds ~/ 1000;
@@ -246,6 +141,17 @@ class ActivityDetailPage extends StatelessWidget {
       default:
         return category.value;
     }
+  }
+
+  Widget _buildBlockPreview(dynamic block, String Function(int) formatDuration) {
+    if (block is PowerBlock) {
+      return PowerBlockPreview(block: block, formatDuration: formatDuration);
+    } else if (block is RampBlock) {
+      return RampBlockPreview(block: block, formatDuration: formatDuration);
+    } else if (block is WorkoutInterval) {
+      return IntervalBlockPreview(block: block, formatDuration: formatDuration);
+    }
+    return const SizedBox.shrink();
   }
 
   Future<void> _showDeleteConfirmation(BuildContext context) async {
@@ -297,5 +203,177 @@ class ActivityDetailPage extends StatelessWidget {
         );
       }
     }
+  }
+}
+
+/// Displays a single workout statistic with an icon, label, and value.
+///
+/// Used to show workout metrics like duration, TSS, and category in a
+/// consistent vertical layout.
+class WorkoutStatColumn extends StatelessWidget {
+  const WorkoutStatColumn({
+    super.key,
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  final IconData icon;
+  final Widget label;
+  final Widget value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Icon(icon, color: Theme.of(context).colorScheme.primary),
+        const SizedBox(height: 4),
+        DefaultTextStyle(
+          style: const TextStyle(fontSize: 12, color: Colors.grey),
+          child: label,
+        ),
+        const SizedBox(height: 4),
+        DefaultTextStyle(
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          child: value,
+        ),
+      ],
+    );
+  }
+}
+
+/// Displays a preview of a power block showing constant power target.
+class PowerBlockPreview extends StatelessWidget {
+  const PowerBlockPreview({
+    super.key,
+    required this.block,
+    required this.formatDuration,
+  });
+
+  final PowerBlock block;
+  final String Function(int milliseconds) formatDuration;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          children: [
+            const Icon(Icons.bolt, color: Colors.orange, size: 20),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    block.description ?? 'Power Block',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  Text(
+                    '${formatDuration(block.duration)} at ${(block.power * 100).toStringAsFixed(0)}% FTP',
+                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Displays a preview of a ramp block showing power transition from start to end.
+class RampBlockPreview extends StatelessWidget {
+  const RampBlockPreview({
+    super.key,
+    required this.block,
+    required this.formatDuration,
+  });
+
+  final RampBlock block;
+  final String Function(int milliseconds) formatDuration;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          children: [
+            const Icon(Icons.trending_up, color: Colors.blue, size: 20),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    block.description ?? 'Ramp Block',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  Text(
+                    '${formatDuration(block.duration)} from ${(block.powerStart * 100).toStringAsFixed(0)}% to ${(block.powerEnd * 100).toStringAsFixed(0)}% FTP',
+                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Displays a preview of an interval block showing repeated interval structure with nested parts.
+class IntervalBlockPreview extends StatelessWidget {
+  const IntervalBlockPreview({
+    super.key,
+    required this.block,
+    required this.formatDuration,
+  });
+
+  final WorkoutInterval block;
+  final String Function(int milliseconds) formatDuration;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.repeat, color: Colors.purple, size: 20),
+                const SizedBox(width: 12),
+                Text(
+                  'Interval Set (${block.repeat}x)',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            ...block.parts.map((part) {
+              if (part is PowerBlock) {
+                return Padding(
+                  padding: const EdgeInsets.only(left: 32, top: 4),
+                  child: Text(
+                    '${part.description ?? 'Block'}: ${formatDuration(part.duration)} at ${(part.power * 100).toStringAsFixed(0)}% FTP',
+                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                  ),
+                );
+              }
+              return const SizedBox.shrink();
+            }),
+          ],
+        ),
+      ),
+    );
   }
 }

@@ -22,12 +22,10 @@ void setIosAppName(String appName) {
       // Update existing CFBundleDisplayName
       final lines = content.split('\n');
       final updatedLines = <String>[];
-      bool foundKey = false;
 
       for (int i = 0; i < lines.length; i++) {
         updatedLines.add(lines[i]);
         if (lines[i].contains('<key>CFBundleDisplayName</key>')) {
-          foundKey = true;
           // Replace the next line (the value)
           if (i + 1 < lines.length) {
             i++;

@@ -29,7 +29,7 @@ void main() {
     await robot.tapStartWorkout("Sweet Spot Workout");
 
     // Verify workout player page loaded
-    spotText('CURRENT BLOCK').existsAtLeastOnce();
+    robot.verifyPlayerIsShown();
     spotText('Start pedaling to begin workout').existsAtLeastOnce();
 
     // Indoor Bike Data UUID: 00002AD2-0000-1000-8000-00805f9b34fb
@@ -73,7 +73,7 @@ void main() {
     await robot.pumpUntil(2000);
 
     // Verify workout player restored
-    spotText('CURRENT BLOCK').existsAtLeastOnce();
+    robot.verifyPlayerIsShown();
     expect(kickrCore.isConnected, isTrue);
     expect(hrMonitor.isConnected, isTrue);
 
@@ -93,7 +93,7 @@ void main() {
 
     // Verify the workout is still running (basic smoke test)
     // If the timer was working, the workout should still be active
-    spotText('CURRENT BLOCK').existsAtLeastOnce();
+    robot.verifyPlayerIsShown();
   });
 
   robotTest('workout session crash recovery - resume option', (robot) async {
@@ -107,7 +107,7 @@ void main() {
 
     await robot.tapStartWorkout('Sweet Spot Workout');
 
-    spotText('CURRENT BLOCK').existsAtLeastOnce();
+    robot.verifyPlayerIsShown();
     spotText('Start pedaling to begin workout').existsAtLeastOnce();
 
     // Emit power data to start workout
@@ -151,7 +151,7 @@ void main() {
     await robot.pumpUntil(2000);
 
     // Verify workout player restored
-    spotText('CURRENT BLOCK').existsAtLeastOnce();
+    robot.verifyPlayerIsShown();
 
     // Continue workout by emitting power
     kickrCore.emitCharacteristic(indoorBikeDataUuid, powerData);
@@ -197,7 +197,6 @@ void main() {
 
     // Should be back at home page, not in workout player
     spotText('Sweet Spot Workout').existsAtLeastOnce();
-    spotText('CURRENT BLOCK').doesNotExist();
 
     // Verify can start a new workout
     await robot.tapStartWorkout('Sweet Spot Workout');
@@ -247,7 +246,7 @@ void main() {
 
     // Should start a new workout from beginning
     spotText('Start pedaling to begin workout').existsAtLeastOnce();
-    spotText('CURRENT BLOCK').existsAtLeastOnce();
+    robot.verifyPlayerIsShown();
 
     // Emit power to verify workout works
     kickrCore.emitCharacteristic(indoorBikeDataUuid, powerData);
@@ -295,6 +294,6 @@ void main() {
     // and integration tests (device_manager_staleness_test.dart).
 
     // Verify app is still running and showing workout player
-    spotText('CURRENT BLOCK').existsAtLeastOnce();
+    robot.verifyPlayerIsShown();
   });
 }

@@ -149,49 +149,123 @@ class WorkoutScreenContent extends StatelessWidget {
                       child: Column(
                         children: [
                           SizedBox(height: spacing.section),
+
+                          // Status messages
+                          if (!hasStarted || isPaused) ...[
+                            Padding(
+                              padding: EdgeInsets.symmetric(horizontal: spacing.horizontal * 2),
+                              child: Container(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: spacing.medium,
+                                  vertical: spacing.medium,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  !hasStarted
+                                      ? 'Start pedaling to begin workout'
+                                      : 'Paused - Start pedaling to resume',
+                                  style: GoogleFonts.publicSans(
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                            ),
+                            SizedBox(height: spacing.section),
+                          ],
+
                           // KPI row at top
-                          _buildKPIRow(spacing),
+                          WorkoutKpiRow(
+                            currentPower: currentPower,
+                            currentCadence: currentCadence,
+                            currentHeartRate: currentHeartRate,
+                            currentSpeed: currentSpeed,
+                            kpiValueFontSize: spacing.kpiValue,
+                            horizontalPadding: spacing.horizontal,
+                            verticalPadding: spacing.small,
+                            smallSpacing: spacing.small / 2,
+                            onTap: onDevicesPressed,
+                          ),
                           SizedBox(height: spacing.section),
 
                           // Progress bar
-                          _buildProgressBar(spacing),
+                          WorkoutProgressBar(
+                            elapsedTime: elapsedTime,
+                            remainingTime: remainingTime,
+                            horizontalPadding: spacing.horizontal * 3,
+                          ),
                           SizedBox(height: spacing.large),
 
                           // TIME metric - only show remaining time in current interval
-                          _buildSimpleMetricRow('TIME', currentBlockRemainingTime, Colors.white, spacing: spacing),
+                          WorkoutMetricRow(
+                            label: const Text('TIME'),
+                            current: Text(_formatValue(currentBlockRemainingTime)),
+                            valueColor: Colors.white,
+                            metricLabelFontSize: spacing.metricLabel,
+                            metricValueFontSize: spacing.metricValue,
+                            horizontalPadding: spacing.horizontal * 2,
+                            smallSpacing: spacing.small / 2,
+                            mediumSpacing: spacing.medium,
+                          ),
                           SizedBox(height: spacing.section),
 
                           // Large interval visualization
                           Padding(
                             padding: EdgeInsets.symmetric(horizontal: spacing.horizontal),
-                            child: _buildIntervalVisualization(spacing),
+                            child: WorkoutIntervalVisualization(
+                              intervals: _generateZoomedIntervals(),
+                              elapsedTime: elapsedTime,
+                              height: spacing.intervalHeight,
+                            ),
                           ),
                           SizedBox(height: spacing.section),
 
                           // WATT metric with current target and next target
-                          _buildSimpleMetricRow(
-                            'WATT',
-                            currentPower ?? 0,
-                            _getMetricColor(currentPower ?? 0, powerTarget, threshold: 10),
-                            target: powerTarget,
-                            nextTarget: _getNextPower(),
-                            spacing: spacing,
+                          WorkoutMetricRow(
+                            label: const Text('WATT'),
+                            current: Text(_formatValue(currentPower ?? 0)),
+                            valueColor: _getMetricColor(currentPower ?? 0, powerTarget, threshold: 10),
+                            target: Text(_formatValue(powerTarget)),
+                            nextTarget: _getNextPower() > 0 ? Text(_formatValue(_getNextPower())) : null,
+                            metricLabelFontSize: spacing.metricLabel,
+                            metricValueFontSize: spacing.metricValue,
+                            horizontalPadding: spacing.horizontal * 2,
+                            smallSpacing: spacing.small / 2,
+                            mediumSpacing: spacing.medium,
                           ),
                           SizedBox(height: spacing.medium),
 
                           // RPM metric with current target and next target
-                          _buildSimpleMetricRow(
-                            'RPM',
-                            currentCadence ?? 0,
-                            _getMetricColor(currentCadence ?? 0, cadenceTarget, threshold: 5),
-                            target: cadenceTarget,
-                            nextTarget: _getNextCadence(),
-                            spacing: spacing,
+                          WorkoutMetricRow(
+                            label: const Text('RPM'),
+                            current: Text(_formatValue(currentCadence ?? 0)),
+                            valueColor: _getMetricColor(currentCadence ?? 0, cadenceTarget, threshold: 5),
+                            target: cadenceTarget != null ? Text(_formatValue(cadenceTarget!)) : null,
+                            nextTarget: _getNextCadence() != null ? Text(_formatValue(_getNextCadence()!)) : null,
+                            metricLabelFontSize: spacing.metricLabel,
+                            metricValueFontSize: spacing.metricValue,
+                            horizontalPadding: spacing.horizontal * 2,
+                            smallSpacing: spacing.small / 2,
+                            mediumSpacing: spacing.medium,
                           ),
                           SizedBox(height: spacing.large),
 
                           // Control buttons: Skip and Difficulty adjustment
-                          _buildControlButtons(spacing),
+                          WorkoutControlButtons(
+                            powerScaleFactor: powerScaleFactor,
+                            onPowerScaleDecrease: onPowerScaleDecrease,
+                            onPowerScaleIncrease: onPowerScaleIncrease,
+                            onSkip: onSkip,
+                            horizontalPadding: spacing.horizontal * 2,
+                            mediumSpacing: spacing.medium,
+                            largeSpacing: spacing.large,
+                            smallSpacing: spacing.small,
+                          ),
                           SizedBox(height: spacing.medium),
                         ],
                       ),
@@ -199,9 +273,16 @@ class WorkoutScreenContent extends StatelessWidget {
                   ),
 
                   // Fixed bottom timeline and timestamps
-                  _buildBottomTimeline(),
+                  WorkoutBottomTimeline(
+                    intervals: _generateIntervalsFromWorkout(),
+                    elapsedTime: elapsedTime,
+                    remainingTime: remainingTime,
+                  ),
                   SizedBox(height: spacing.small),
-                  _buildTimestamps(),
+                  WorkoutTimestamps(
+                    elapsedTime: elapsedTime,
+                    remainingTime: remainingTime,
+                  ),
                   SizedBox(height: spacing.medium),
                 ],
               ),
@@ -274,203 +355,9 @@ class WorkoutScreenContent extends StatelessWidget {
     }
   }
 
-  Widget _buildKPIRow(_ResponsiveSpacing spacing) {
-    return InkWell(
-      onTap: onDevicesPressed,
-      child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: spacing.horizontal, vertical: spacing.small),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            _buildKPI('WATT', (currentPower ?? 0).toString(), spacing),
-            _buildKPI('RPM', (currentCadence ?? 0).toString(), spacing),
-            _buildKPI('HR', (currentHeartRate ?? 0).toString(), spacing),
-            _buildKPI('SPEED', currentSpeed != null ? currentSpeed!.toStringAsFixed(1) : '0', spacing),
-          ],
-        ),
-      ),
-    );
-  }
 
-  Widget _buildKPI(String label, String value, _ResponsiveSpacing spacing) {
-    return Column(
-      children: [
-        Text(
-          label,
-          style: GoogleFonts.publicSans(
-            color: Colors.white.withValues(alpha: 0.6),
-            fontSize: 10,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        SizedBox(height: spacing.small / 2),
-        Text(
-          value,
-          style: GoogleFonts.sairaExtraCondensed(
-            color: Colors.white,
-            fontSize: spacing.kpiValue,
-            fontWeight: FontWeight.w400,
-          ),
-        ),
-      ],
-    );
-  }
 
-  Widget _buildProgressBar(_ResponsiveSpacing spacing) {
-    final progress = remainingTime > 0 ? elapsedTime / (elapsedTime + remainingTime) : 1.0;
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: spacing.horizontal * 3),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(4),
-        child: LinearProgressIndicator(
-          value: progress,
-          minHeight: 6,
-          backgroundColor: Colors.white.withValues(alpha: 0.2),
-          valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF52B788)),
-        ),
-      ),
-    );
-  }
 
-  Widget _buildControlButtons(_ResponsiveSpacing spacing) {
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: spacing.horizontal * 2),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          // Difficulty decrease button
-          IconButton(
-            onPressed: onPowerScaleDecrease,
-            icon: const Icon(Icons.remove, color: Colors.white, size: 24),
-            style: IconButton.styleFrom(
-              backgroundColor: Colors.white.withValues(alpha: 0.1),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-          ),
-          SizedBox(width: spacing.medium),
-
-          // Difficulty indicator
-          Container(
-            padding: EdgeInsets.symmetric(horizontal: spacing.medium, vertical: spacing.small),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text(
-              '${(powerScaleFactor * 100).toStringAsFixed(0)}%',
-              style: GoogleFonts.publicSans(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600),
-            ),
-          ),
-          SizedBox(width: spacing.medium),
-
-          // Difficulty increase button
-          IconButton(
-            onPressed: onPowerScaleIncrease,
-            icon: const Icon(Icons.add, color: Colors.white, size: 24),
-            style: IconButton.styleFrom(
-              backgroundColor: Colors.white.withValues(alpha: 0.1),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-          ),
-          SizedBox(width: spacing.large),
-
-          // Skip button
-          ElevatedButton.icon(
-            onPressed: onSkip,
-            icon: const Icon(Icons.skip_next, size: 20),
-            label: const Text('SKIP'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.white.withValues(alpha: 0.15),
-              foregroundColor: Colors.white,
-              padding: EdgeInsets.symmetric(horizontal: spacing.large, vertical: spacing.medium),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              textStyle: GoogleFonts.publicSans(fontSize: 14, fontWeight: FontWeight.w700, letterSpacing: 1.0),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSimpleMetricRow(
-    String label,
-    int current,
-    Color valueColor, {
-    int? target,
-    int? nextTarget,
-    required _ResponsiveSpacing spacing,
-  }) {
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: spacing.horizontal * 2),
-      child: Column(
-        children: [
-          Text(
-            label,
-            style: GoogleFonts.publicSans(
-              color: Colors.white.withValues(alpha: 0.6),
-              fontSize: spacing.metricLabel,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          SizedBox(height: spacing.small / 2),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
-            children: [
-              // Current value (highlighted)
-              Text(
-                _formatValue(current),
-                style: GoogleFonts.sairaExtraCondensed(
-                  color: valueColor,
-                  fontSize: spacing.metricValue,
-                  fontWeight: FontWeight.w400,
-                  height: 1.0,
-                ),
-              ),
-              if (target != null) ...[
-                SizedBox(width: spacing.medium),
-                // Target value of current block (dim)
-                Text(
-                  _formatValue(target),
-                  style: GoogleFonts.sairaExtraCondensed(
-                    color: Colors.white.withValues(alpha: 0.3),
-                    fontSize: spacing.metricValue,
-                    fontWeight: FontWeight.w400,
-                    height: 1.0,
-                  ),
-                ),
-              ],
-              if (nextTarget != null) ...[
-                SizedBox(width: spacing.medium),
-                // Target value of next block (dim)
-                Text(
-                  _formatValue(nextTarget),
-                  style: GoogleFonts.sairaExtraCondensed(
-                    color: Colors.white.withValues(alpha: 0.3),
-                    fontSize: spacing.metricValue,
-                    fontWeight: FontWeight.w400,
-                    height: 1.0,
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  String _formatValue(int value) {
-    // Convert milliseconds to seconds for time values (values >= 1000)
-    if (value >= 1000) {
-      final totalSeconds = (value / 1000).floor();
-      final minutes = totalSeconds ~/ 60;
-      final seconds = totalSeconds % 60;
-      return '$minutes:${seconds.toString().padLeft(2, '0')}';
-    }
-    return value.toString();
-  }
 
   /// Converts workout plan blocks into interval bars for visualization
   List<IntervalBar> _generateIntervalsFromWorkout() {
@@ -523,23 +410,6 @@ class WorkoutScreenContent extends StatelessWidget {
     return const Color(0xFFE91E63); // Anaerobic - pink
   }
 
-  Widget _buildIntervalVisualization(_ResponsiveSpacing spacing) {
-    final intervals = _generateZoomedIntervals();
-    const windowSize = 15 * 60 * 1000; // 15 minutes in milliseconds
-    final windowStart = (elapsedTime - windowSize).clamp(0, double.infinity).toInt();
-
-    // Calculate current position relative to the zoomed window
-    final currentTimeInWindow = elapsedTime - windowStart;
-    // Calculate actual total duration of visible intervals (sum of all interval durations)
-    final totalWindowDuration = intervals.fold<int>(0, (sum, interval) => sum + (interval.duration * 1000));
-
-    return WorkoutIntervalBars(
-      intervals: intervals,
-      height: spacing.intervalHeight,
-      currentTimeMs: currentTimeInWindow,
-      totalDurationMs: totalWindowDuration,
-    );
-  }
 
   /// Generate a zoomed view of intervals (±15 minutes around current position)
   List<IntervalBar> _generateZoomedIntervals() {
@@ -603,8 +473,273 @@ class WorkoutScreenContent extends StatelessWidget {
     return zoomedIntervals;
   }
 
-  Widget _buildBottomTimeline() {
-    final intervals = _generateIntervalsFromWorkout();
+}
+
+/// Displays a row of KPI metrics (power, cadence, heart rate, speed).
+class WorkoutKpiRow extends StatelessWidget {
+  const WorkoutKpiRow({
+    required this.currentPower,
+    required this.currentCadence,
+    required this.currentHeartRate,
+    required this.currentSpeed,
+    required this.kpiValueFontSize,
+    required this.horizontalPadding,
+    required this.verticalPadding,
+    required this.smallSpacing,
+    required this.onTap,
+    super.key,
+  });
+
+  final int? currentPower;
+  final int? currentCadence;
+  final int? currentHeartRate;
+  final double? currentSpeed;
+  final double kpiValueFontSize;
+  final double horizontalPadding;
+  final double verticalPadding;
+  final double smallSpacing;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: verticalPadding),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            _KpiMetric(label: const Text('WATT'), value: Text((currentPower ?? 0).toString()), fontSize: kpiValueFontSize, spacing: smallSpacing),
+            _KpiMetric(label: const Text('RPM'), value: Text((currentCadence ?? 0).toString()), fontSize: kpiValueFontSize, spacing: smallSpacing),
+            _KpiMetric(label: const Text('HR'), value: Text((currentHeartRate ?? 0).toString()), fontSize: kpiValueFontSize, spacing: smallSpacing),
+            _KpiMetric(label: const Text('SPEED'), value: Text(currentSpeed != null ? currentSpeed!.toStringAsFixed(1) : '0'), fontSize: kpiValueFontSize, spacing: smallSpacing),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Single KPI metric display with label and value.
+class _KpiMetric extends StatelessWidget {
+  const _KpiMetric({
+    required this.label,
+    required this.value,
+    required this.fontSize,
+    required this.spacing,
+  });
+
+  final Widget label;
+  final Widget value;
+  final double fontSize;
+  final double spacing;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        DefaultTextStyle(
+          style: GoogleFonts.publicSans(
+            color: Colors.white.withValues(alpha: 0.6),
+            fontSize: 10,
+            fontWeight: FontWeight.w600,
+          ),
+          child: label,
+        ),
+        SizedBox(height: spacing),
+        DefaultTextStyle(
+          style: GoogleFonts.sairaExtraCondensed(
+            color: Colors.white,
+            fontSize: fontSize,
+            fontWeight: FontWeight.w400,
+          ),
+          child: value,
+        ),
+      ],
+    );
+  }
+}
+
+/// Displays a metric row with current value, target, and next target.
+class WorkoutMetricRow extends StatelessWidget {
+  const WorkoutMetricRow({
+    required this.label,
+    required this.current,
+    required this.valueColor,
+    required this.metricLabelFontSize,
+    required this.metricValueFontSize,
+    required this.horizontalPadding,
+    required this.smallSpacing,
+    required this.mediumSpacing,
+    this.target,
+    this.nextTarget,
+    super.key,
+  });
+
+  final Widget label;
+  final Widget current;
+  final Color valueColor;
+  final Widget? target;
+  final Widget? nextTarget;
+  final double metricLabelFontSize;
+  final double metricValueFontSize;
+  final double horizontalPadding;
+  final double smallSpacing;
+  final double mediumSpacing;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+      child: Column(
+        children: [
+          DefaultTextStyle(
+            style: GoogleFonts.publicSans(
+              color: Colors.white.withValues(alpha: 0.6),
+              fontSize: metricLabelFontSize,
+              fontWeight: FontWeight.w600,
+            ),
+            child: label,
+          ),
+          SizedBox(height: smallSpacing),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: [
+              // Current value (highlighted)
+              DefaultTextStyle(
+                style: GoogleFonts.sairaExtraCondensed(
+                  color: valueColor,
+                  fontSize: metricValueFontSize,
+                  fontWeight: FontWeight.w400,
+                  height: 1.0,
+                ),
+                child: current,
+              ),
+              if (target != null) ...[
+                SizedBox(width: mediumSpacing),
+                // Target value of current block (dim)
+                DefaultTextStyle(
+                  style: GoogleFonts.sairaExtraCondensed(
+                    color: Colors.white.withValues(alpha: 0.3),
+                    fontSize: metricValueFontSize,
+                    fontWeight: FontWeight.w400,
+                    height: 1.0,
+                  ),
+                  child: target!,
+                ),
+              ],
+              if (nextTarget != null) ...[
+                SizedBox(width: mediumSpacing),
+                // Target value of next block (dim)
+                DefaultTextStyle(
+                  style: GoogleFonts.sairaExtraCondensed(
+                    color: Colors.white.withValues(alpha: 0.3),
+                    fontSize: metricValueFontSize,
+                    fontWeight: FontWeight.w400,
+                    height: 1.0,
+                  ),
+                  child: nextTarget!,
+                ),
+              ],
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+String _formatValue(int value) {
+  // Convert milliseconds to seconds for time values (values >= 1000)
+  if (value >= 1000) {
+    final totalSeconds = (value / 1000).floor();
+    final minutes = totalSeconds ~/ 60;
+    final seconds = totalSeconds % 60;
+    return '$minutes:${seconds.toString().padLeft(2, '0')}';
+  }
+  return value.toString();
+}
+
+/// Displays workout progress bar.
+class WorkoutProgressBar extends StatelessWidget {
+  const WorkoutProgressBar({
+    required this.elapsedTime,
+    required this.remainingTime,
+    required this.horizontalPadding,
+    super.key,
+  });
+
+  final int elapsedTime;
+  final int remainingTime;
+  final double horizontalPadding;
+
+  @override
+  Widget build(BuildContext context) {
+    final progress = remainingTime > 0 ? elapsedTime / (elapsedTime + remainingTime) : 1.0;
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(4),
+        child: LinearProgressIndicator(
+          value: progress,
+          minHeight: 6,
+          backgroundColor: Colors.white.withValues(alpha: 0.2),
+          valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF52B788)),
+        ),
+      ),
+    );
+  }
+}
+
+/// Displays zoomed interval visualization around current position.
+class WorkoutIntervalVisualization extends StatelessWidget {
+  const WorkoutIntervalVisualization({
+    required this.intervals,
+    required this.elapsedTime,
+    required this.height,
+    super.key,
+  });
+
+  final List<IntervalBar> intervals;
+  final int elapsedTime;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    const windowSize = 15 * 60 * 1000; // 15 minutes in milliseconds
+    final windowStart = (elapsedTime - windowSize).clamp(0, double.infinity).toInt();
+
+    // Calculate current position relative to the zoomed window
+    final currentTimeInWindow = elapsedTime - windowStart;
+    // Calculate actual total duration of visible intervals (sum of all interval durations)
+    final totalWindowDuration = intervals.fold<int>(0, (sum, interval) => sum + (interval.duration * 1000));
+
+    return WorkoutIntervalBars(
+      intervals: intervals,
+      height: height,
+      currentTimeMs: currentTimeInWindow,
+      totalDurationMs: totalWindowDuration,
+    );
+  }
+}
+
+/// Displays bottom timeline showing full workout progress.
+class WorkoutBottomTimeline extends StatelessWidget {
+  const WorkoutBottomTimeline({
+    required this.intervals,
+    required this.elapsedTime,
+    required this.remainingTime,
+    super.key,
+  });
+
+  final List<IntervalBar> intervals;
+  final int elapsedTime;
+  final int remainingTime;
+
+  @override
+  Widget build(BuildContext context) {
     final totalDuration = elapsedTime + remainingTime;
 
     return Padding(
@@ -612,8 +747,21 @@ class WorkoutScreenContent extends StatelessWidget {
       child: WorkoutIntervalBars(intervals: intervals, currentTimeMs: elapsedTime, totalDurationMs: totalDuration),
     );
   }
+}
 
-  Widget _buildTimestamps() {
+/// Displays elapsed and remaining time timestamps.
+class WorkoutTimestamps extends StatelessWidget {
+  const WorkoutTimestamps({
+    required this.elapsedTime,
+    required this.remainingTime,
+    super.key,
+  });
+
+  final int elapsedTime;
+  final int remainingTime;
+
+  @override
+  Widget build(BuildContext context) {
     final elapsedSeconds = (elapsedTime / 1000).floor();
     final elapsedMinutes = elapsedSeconds ~/ 60;
     final elapsedSecondsOnly = elapsedSeconds % 60;
@@ -637,6 +785,91 @@ class WorkoutScreenContent extends StatelessWidget {
               color: Colors.white.withValues(alpha: 0.3),
               fontSize: 16,
               fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Control buttons for workout playback: difficulty adjustment and skip.
+class WorkoutControlButtons extends StatelessWidget {
+  const WorkoutControlButtons({
+    required this.powerScaleFactor,
+    required this.onPowerScaleDecrease,
+    required this.onPowerScaleIncrease,
+    required this.onSkip,
+    required this.horizontalPadding,
+    required this.mediumSpacing,
+    required this.largeSpacing,
+    required this.smallSpacing,
+    super.key,
+  });
+
+  final double powerScaleFactor;
+  final VoidCallback onPowerScaleDecrease;
+  final VoidCallback onPowerScaleIncrease;
+  final VoidCallback onSkip;
+  final double horizontalPadding;
+  final double mediumSpacing;
+  final double largeSpacing;
+  final double smallSpacing;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+      child: Wrap(
+        alignment: WrapAlignment.center,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        spacing: mediumSpacing,
+        runSpacing: smallSpacing,
+        children: [
+          // Difficulty decrease button
+          IconButton(
+            onPressed: onPowerScaleDecrease,
+            icon: const Icon(Icons.remove, color: Colors.white, size: 24),
+            style: IconButton.styleFrom(
+              backgroundColor: Colors.white.withValues(alpha: 0.1),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          ),
+
+          // Difficulty indicator
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: mediumSpacing, vertical: smallSpacing),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              '${(powerScaleFactor * 100).toStringAsFixed(0)}%',
+              style: GoogleFonts.publicSans(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600),
+            ),
+          ),
+
+          // Difficulty increase button
+          IconButton(
+            onPressed: onPowerScaleIncrease,
+            icon: const Icon(Icons.add, color: Colors.white, size: 24),
+            style: IconButton.styleFrom(
+              backgroundColor: Colors.white.withValues(alpha: 0.1),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          ),
+
+          // Skip button
+          ElevatedButton.icon(
+            onPressed: onSkip,
+            icon: const Icon(Icons.skip_next, size: 20),
+            label: const Text('SKIP'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.white.withValues(alpha: 0.15),
+              foregroundColor: Colors.white,
+              padding: EdgeInsets.symmetric(horizontal: largeSpacing, vertical: mediumSpacing),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              textStyle: GoogleFonts.publicSans(fontSize: 14, fontWeight: FontWeight.w700, letterSpacing: 1.0),
             ),
           ),
         ],

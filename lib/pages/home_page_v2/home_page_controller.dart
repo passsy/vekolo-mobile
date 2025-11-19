@@ -1,5 +1,6 @@
 // ignore_for_file: use_setters_to_change_properties
 
+import 'package:chirp/chirp.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:state_beacon/state_beacon.dart';
@@ -62,7 +63,8 @@ class HomePageController extends BeaconController {
     final local = localActivities.value;
 
     // Combine and sort by timestamp (latest first)
-    final all = [...apiActivities, ...local]..sort((a, b) {
+    final all = [...apiActivities, ...local]
+      ..sort((a, b) {
         final aTime = DateTime.parse(a.createdAt);
         final bTime = DateTime.parse(b.createdAt);
         return bTime.compareTo(aTime); // Descending order (latest first)
@@ -154,10 +156,7 @@ class HomePageController extends BeaconController {
 
     try {
       // Load API activities and local activities in parallel
-      await Future.wait([
-        _loadApiActivities(),
-        _loadLocalActivities(),
-      ]);
+      await Future.wait([_loadApiActivities(), _loadLocalActivities()]);
     } catch (e, stackTrace) {
       activitiesError.value = 'Failed to load activities: $e';
       print('[HomePageController.loadActivities] Error loading activities: $e');
@@ -247,10 +246,7 @@ class HomePageController extends BeaconController {
           averageCadence: avgCadence,
           averageHeartRate: avgHeartRate,
           visibility: ActivityVisibility.private,
-          user: ActivityUser.create(
-            id: metadata.userId ?? 'local',
-            name: 'You',
-          ),
+          user: ActivityUser.create(id: metadata.userId ?? 'local', name: 'You'),
           workout: ActivityWorkout.create(
             id: metadata.sourceWorkoutId ?? workoutId,
             title: metadata.workoutName,
@@ -266,10 +262,9 @@ class HomePageController extends BeaconController {
       }
 
       localActivities.value = localWorkouts;
-      print('[HomePageController._loadLocalActivities] Loaded ${localWorkouts.length} local activities');
+      chirp.debug('Loaded ${localWorkouts.length} local activities');
     } catch (e, stackTrace) {
-      print('[HomePageController._loadLocalActivities] Error loading local activities: $e');
-      print(stackTrace);
+      chirp.warning('Error loading local activities', error: e, stackTrace: stackTrace);
       // Don't rethrow - local activities are optional
     }
   }

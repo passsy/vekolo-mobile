@@ -36,7 +36,10 @@ class WorkoutIntervalBars extends StatelessWidget {
         : 0.0;
 
     // Build the interval bars widget (will be used for both colored and greyscale)
-    final intervalsWidget = _buildIntervalBars();
+    final intervalsWidget = _IntervalBarsRow(
+      intervals: intervals,
+      height: height,
+    );
 
     return Stack(
       children: [
@@ -71,7 +74,33 @@ class WorkoutIntervalBars extends StatelessWidget {
     );
   }
 
-  Widget _buildIntervalBars() {
+  /// Greyscale color filter using luminance-preserving matrix
+  static const _greyscaleFilter = ColorFilter.matrix([
+    0.2126, 0.7152, 0.0722, 0, 0, // Red channel
+    0.2126, 0.7152, 0.0722, 0, 0, // Green channel
+    0.2126, 0.7152, 0.0722, 0, 0, // Blue channel
+    0, 0, 0, 1, 0, // Alpha channel
+  ]);
+}
+
+/// Renders a row of interval bars with varying heights and colors
+///
+/// Each interval is displayed as a vertical bar with height proportional to
+/// its intensity. Intervals can be either flat (constant intensity) or ramps
+/// (changing intensity from start to end).
+///
+/// The width of each bar is proportional to its duration relative to other bars.
+class _IntervalBarsRow extends StatelessWidget {
+  const _IntervalBarsRow({
+    required this.intervals,
+    required this.height,
+  });
+
+  final List<IntervalBar> intervals;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
     return SizedBox(
       height: height,
       child: Row(
@@ -106,14 +135,6 @@ class WorkoutIntervalBars extends StatelessWidget {
       ),
     );
   }
-
-  /// Greyscale color filter using luminance-preserving matrix
-  static const _greyscaleFilter = ColorFilter.matrix([
-    0.2126, 0.7152, 0.0722, 0, 0, // Red channel
-    0.2126, 0.7152, 0.0722, 0, 0, // Green channel
-    0.2126, 0.7152, 0.0722, 0, 0, // Blue channel
-    0, 0, 0, 1, 0, // Alpha channel
-  ]);
 }
 
 class IntervalBar {

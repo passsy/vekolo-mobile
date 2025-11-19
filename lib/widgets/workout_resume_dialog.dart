@@ -46,13 +46,13 @@ class WorkoutResumeDialog extends StatelessWidget {
         children: [
           const Text('We found an incomplete workout session from earlier.', style: TextStyle(fontSize: 16)),
           const SizedBox(height: 16),
-          _buildInfoRow(
+          WorkoutInfoRow(
             icon: Icons.timer,
-            label: 'Elapsed time',
-            value: '$minutes:${seconds.toString().padLeft(2, '0')}',
+            label: const Text('Elapsed time'),
+            value: Text('$minutes:${seconds.toString().padLeft(2, '0')}'),
           ),
           const SizedBox(height: 8),
-          _buildInfoRow(icon: Icons.calendar_today, label: 'Started', value: _formatTimestamp(session.startTime)),
+          WorkoutInfoRow(icon: Icons.calendar_today, label: const Text('Started'), value: Text(_formatTimestamp(session.startTime))),
           const SizedBox(height: 16),
           const Text(
             'Would you like to resume where you left off?',
@@ -76,16 +76,6 @@ class WorkoutResumeDialog extends StatelessWidget {
     );
   }
 
-  Widget _buildInfoRow({required IconData icon, required String label, required String value}) {
-    return Row(
-      children: [
-        Icon(icon, size: 16, color: Colors.grey[600]),
-        const SizedBox(width: 8),
-        Text('$label: ', style: TextStyle(fontSize: 14, color: Colors.grey[700])),
-        Text(value, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-      ],
-    );
-  }
 
   String _formatTimestamp(DateTime timestamp) {
     final now = DateTime.now();
@@ -100,5 +90,46 @@ class WorkoutResumeDialog extends StatelessWidget {
     } else {
       return '${difference.inDays}d ago';
     }
+  }
+}
+
+/// Displays a single row of information with an icon, label, and value.
+///
+/// Used in dialogs to show metadata like elapsed time or timestamps in a
+/// consistent format with an icon prefix.
+class WorkoutInfoRow extends StatelessWidget {
+  const WorkoutInfoRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+    super.key,
+  });
+
+  /// Icon to display at the start of the row.
+  final IconData icon;
+
+  /// Label widget describing what the value represents.
+  final Widget label;
+
+  /// The actual value widget to display.
+  final Widget value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, size: 16, color: Colors.grey[600]),
+        const SizedBox(width: 8),
+        DefaultTextStyle(
+          style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+          child: label,
+        ),
+        const Text(': '),
+        DefaultTextStyle(
+          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+          child: value,
+        ),
+      ],
+    );
   }
 }

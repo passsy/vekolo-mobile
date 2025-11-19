@@ -2,6 +2,7 @@ import 'package:chirp/chirp.dart';
 
 import 'package:context_plus/context_plus.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:wiredash/wiredash.dart';
 import 'package:vekolo/api/pretty_log_interceptor.dart';
 import 'package:vekolo/api/vekolo_api_client.dart';
@@ -44,6 +45,19 @@ class _VekoloAppState extends State<VekoloApp> {
   Future<void> _initialize(BuildContext context) async {
     _initializationStartTime ??= DateTime.now();
     if (!mounted) return;
+
+    // Configure system UI for dark mode with edge-to-edge
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    SystemChrome.setSystemUIOverlayStyle(
+      const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.light,
+        statusBarBrightness: Brightness.dark,
+        systemNavigationBarColor: Colors.transparent,
+        systemNavigationBarIconBrightness: Brightness.light,
+        systemNavigationBarContrastEnforced: false,
+      ),
+    );
     try {
       // Initialize SharedPreferences first (required by other services)
       if (!mounted) return;
@@ -210,21 +224,19 @@ class _VekoloAppState extends State<VekoloApp> {
             return Wiredash(
               projectId: 'vekolo-6hc06gd',
               secret: 'gMdvLXLa3Xd8B6uXlpIr2uCmcUsflaOe',
-              theme: WiredashThemeData.fromColor(
-                primaryColor: VekoloColors.laser,
-                brightness: Brightness.dark,
-              ).copyWith(
-                primaryContainerColor: VekoloColors.calm,
-                secondaryContainerColor: VekoloColors.beige,
-                primaryBackgroundColor: VekoloColors.offBlack,
-                secondaryBackgroundColor: Colors.black,
-                textOnPrimaryContainerColor: VekoloColors.offWhite,
-                textOnSecondaryContainerColor: VekoloColors.offBlack,
-                firstPenColor: VekoloColors.firelineOrange,
-                secondPenColor: VekoloColors.limitBreakPink,
-                thirdPenColor: VekoloColors.vitalSurgeGreen,
-                fourthPenColor: VekoloColors.oxygenRushLightBlue,
-              ),
+              theme: WiredashThemeData.fromColor(primaryColor: VekoloColors.laser, brightness: Brightness.dark)
+                  .copyWith(
+                    primaryContainerColor: VekoloColors.calm,
+                    secondaryContainerColor: VekoloColors.beige,
+                    primaryBackgroundColor: VekoloColors.offBlack,
+                    secondaryBackgroundColor: Colors.black,
+                    textOnPrimaryContainerColor: VekoloColors.offWhite,
+                    textOnSecondaryContainerColor: VekoloColors.offBlack,
+                    firstPenColor: VekoloColors.firelineOrange,
+                    secondPenColor: VekoloColors.limitBreakPink,
+                    thirdPenColor: VekoloColors.vitalSurgeGreen,
+                    fourthPenColor: VekoloColors.oxygenRushLightBlue,
+                  ),
               child: MaterialApp(
                 debugShowCheckedModeBanner: false,
                 title: 'Vekolo',
@@ -249,10 +261,7 @@ class _VekoloAppState extends State<VekoloApp> {
           return Wiredash(
             projectId: 'vekolo-6hc06gd',
             secret: 'gMdvLXLa3Xd8B6uXlpIr2uCmcUsflaOe',
-            theme: WiredashThemeData.fromColor(
-              primaryColor: VekoloColors.laser,
-              brightness: Brightness.dark,
-            ).copyWith(
+            theme: WiredashThemeData.fromColor(primaryColor: VekoloColors.laser, brightness: Brightness.dark).copyWith(
               primaryContainerColor: VekoloColors.calm,
               secondaryContainerColor: VekoloColors.beige,
               primaryBackgroundColor: VekoloColors.offBlack,

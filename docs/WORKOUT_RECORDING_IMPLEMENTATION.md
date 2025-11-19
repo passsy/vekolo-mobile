@@ -4,6 +4,17 @@
 
 Implement persistent workout session recording with 1Hz metric sampling, stale data detection, and crash recovery. Local-first storage with future cloud sync capability.
 
+## Domain Terminology
+
+- **Workout**: Definition of power targets over time (power blocks, ramp blocks, intervals). This is the "recipe" that defines what the smart trainer should do.
+- **Activity**: A completed, uploaded workout recording. Stored on the server. Permanent and immutable.
+- **WorkoutSession**: An in-progress activity being recorded locally. Has crash recovery support, can be resumed, abandoned, or completed. Becomes an Activity when uploaded.
+
+The distinction between WorkoutSession and Activity exists because:
+- Sessions are transient (can crash, be abandoned) while Activities are permanent
+- Sessions live locally with crash recovery; Activities live on the server
+- Sessions have in-progress state (`currentBlockIndex`, `elapsedMs`, `status`) that completed Activities don't need
+
 ## Requirements
 
 ### Functional Requirements

@@ -57,8 +57,7 @@ class WorkoutCard extends StatelessWidget {
             // Workout blocks
             ...blocks.expand(
               (block) => [
-                _buildWorkoutBlock(
-                  context,
+                WorkoutBlockItem(
                   icon: block.icon,
                   title: block.title,
                   subtitle: block.subtitle,
@@ -88,13 +87,28 @@ class WorkoutCard extends StatelessWidget {
     );
   }
 
-  Widget _buildWorkoutBlock(
-    BuildContext context, {
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required Color color,
-  }) {
+}
+
+/// Displays a single workout block with an icon, title, and subtitle.
+///
+/// Used within [WorkoutCard] to show individual workout segments like
+/// warm-up, intervals, or cool-down periods.
+class WorkoutBlockItem extends StatelessWidget {
+  const WorkoutBlockItem({
+    super.key,
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.color,
+  });
+
+  final IconData icon;
+  final Widget title;
+  final Widget subtitle;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
     return Row(
       children: [
         Container(
@@ -107,8 +121,14 @@ class WorkoutCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(title, style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
-              Text(subtitle, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey[600])),
+              DefaultTextStyle(
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold) ?? const TextStyle(fontWeight: FontWeight.bold),
+                child: title,
+              ),
+              DefaultTextStyle(
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey[600]) ?? TextStyle(color: Colors.grey[600]),
+                child: subtitle,
+              ),
             ],
           ),
         ),
@@ -122,7 +142,7 @@ class WorkoutBlockInfo {
   const WorkoutBlockInfo({required this.icon, required this.title, required this.subtitle, required this.color});
 
   final IconData icon;
-  final String title;
-  final String subtitle;
+  final Widget title;
+  final Widget subtitle;
   final Color color;
 }

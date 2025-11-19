@@ -89,7 +89,7 @@ class WorkoutPowerChart extends StatelessWidget {
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 1),
-                child: _buildPowerBar(
+                child: PowerBar(
                   point: point,
                   maxPower: chartMaxPower,
                   ftp: ftp,
@@ -100,13 +100,41 @@ class WorkoutPowerChart extends StatelessWidget {
       ),
     );
   }
+}
 
-  /// Builds a single power bar showing actual vs target.
-  Widget _buildPowerBar({
-    required PowerDataPoint point,
-    required int maxPower,
-    required int? ftp,
-  }) {
+/// A single power bar visualization showing actual vs target power.
+///
+/// Displays two overlapping vertical bars:
+/// - A background bar showing target power in grey
+/// - A foreground bar showing actual power in a color based on power zone
+///
+/// The bar heights are scaled relative to [maxPower], and colors are
+/// determined based on FTP zones if [ftp] is provided.
+class PowerBar extends StatelessWidget {
+  /// Creates a power bar widget.
+  const PowerBar({
+    super.key,
+    required this.point,
+    required this.maxPower,
+    required this.ftp,
+  });
+
+  /// The power data point to visualize.
+  final PowerDataPoint point;
+
+  /// Maximum power value for scaling the bar height.
+  ///
+  /// Bar heights are calculated as a fraction of this value.
+  final int maxPower;
+
+  /// Functional Threshold Power for zone-based coloring.
+  ///
+  /// If provided, actual power color is determined by FTP zones.
+  /// If null, uses absolute power thresholds.
+  final int? ftp;
+
+  @override
+  Widget build(BuildContext context) {
     final targetHeight = (point.targetWatts / maxPower).clamp(0.0, 1.0);
     final actualHeight = (point.actualWatts / maxPower).clamp(0.0, 1.0);
 
@@ -140,36 +168,36 @@ class WorkoutPowerChart extends StatelessWidget {
       ],
     );
   }
+}
 
-  /// Gets the color for a power value based on training zones.
-  ///
-  /// Zones (based on FTP):
-  /// - Recovery: < 55% FTP (blue)
-  /// - Endurance: 55-75% FTP (green)
-  /// - Tempo: 75-90% FTP (yellow-green)
-  /// - Threshold: 90-105% FTP (orange)
-  /// - VO2max: 105-120% FTP (red-orange)
-  /// - Anaerobic: > 120% FTP (red/pink)
-  ///
-  /// If FTP is not provided, uses absolute power values.
-  Color _getPowerZoneColor(int watts, int? ftp) {
-    if (ftp == null || ftp == 0) {
-      // Fallback to absolute power colors
-      if (watts < 100) return const Color(0xFF00BCD4); // Cyan
-      if (watts < 150) return const Color(0xFF4CAF50); // Green
-      if (watts < 200) return const Color(0xFF8BC34A); // Light green
-      if (watts < 250) return const Color(0xFFFFA726); // Orange
-      if (watts < 300) return const Color(0xFFFF6F00); // Deep orange
-      return const Color(0xFFE91E63); // Pink
-    }
-
-    final percent = watts / ftp;
-
-    if (percent < 0.55) return const Color(0xFF00BCD4); // Recovery - Cyan
-    if (percent < 0.75) return const Color(0xFF4CAF50); // Endurance - Green
-    if (percent < 0.90) return const Color(0xFF8BC34A); // Tempo - Light green
-    if (percent < 1.05) return const Color(0xFFFFA726); // Threshold - Orange
-    if (percent < 1.20) return const Color(0xFFFF6F00); // VO2max - Deep orange
-    return const Color(0xFFE91E63); // Anaerobic - Pink
+/// Gets the color for a power value based on training zones.
+///
+/// Zones (based on FTP):
+/// - Recovery: < 55% FTP (blue)
+/// - Endurance: 55-75% FTP (green)
+/// - Tempo: 75-90% FTP (yellow-green)
+/// - Threshold: 90-105% FTP (orange)
+/// - VO2max: 105-120% FTP (red-orange)
+/// - Anaerobic: > 120% FTP (red/pink)
+///
+/// If FTP is not provided, uses absolute power values.
+Color _getPowerZoneColor(int watts, int? ftp) {
+  if (ftp == null || ftp == 0) {
+    // Fallback to absolute power colors
+    if (watts < 100) return const Color(0xFF00BCD4); // Cyan
+    if (watts < 150) return const Color(0xFF4CAF50); // Green
+    if (watts < 200) return const Color(0xFF8BC34A); // Light green
+    if (watts < 250) return const Color(0xFFFFA726); // Orange
+    if (watts < 300) return const Color(0xFFFF6F00); // Deep orange
+    return const Color(0xFFE91E63); // Pink
   }
+
+  final percent = watts / ftp;
+
+  if (percent < 0.55) return const Color(0xFF00BCD4); // Recovery - Cyan
+  if (percent < 0.75) return const Color(0xFF4CAF50); // Endurance - Green
+  if (percent < 0.90) return const Color(0xFF8BC34A); // Tempo - Light green
+  if (percent < 1.05) return const Color(0xFFFFA726); // Threshold - Orange
+  if (percent < 1.20) return const Color(0xFFFF6F00); // VO2max - Deep orange
+  return const Color(0xFFE91E63); // Anaerobic - Pink
 }

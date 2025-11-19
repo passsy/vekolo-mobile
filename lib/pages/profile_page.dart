@@ -224,17 +224,17 @@ class _ProfilePageState extends State<ProfilePage> {
                 formGroup: form,
                 child: Column(
                   children: [
-                    _buildStatCard(
+                    ProfileStatCard(
                       icon: Icons.bolt,
-                      label: 'FTP (watts)',
+                      label: const Text('FTP (watts)'),
                       formControlName: 'ftp',
                       color: Colors.orange,
                       readOnly: !_isEditing,
                     ),
                     const SizedBox(height: 16),
-                    _buildStatCard(
+                    ProfileStatCard(
                       icon: Icons.monitor_weight,
-                      label: 'Weight (kg)',
+                      label: const Text('Weight (kg)'),
                       formControlName: 'weight',
                       color: Colors.blue,
                       readOnly: !_isEditing,
@@ -290,13 +290,30 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  Widget _buildStatCard({
-    required IconData icon,
-    required String label,
-    required String formControlName,
-    required Color color,
-    required bool readOnly,
-  }) {
+}
+
+/// A card displaying a user profile statistic (FTP or weight).
+///
+/// Shows either a read-only value or an editable text field based on [readOnly].
+/// Must be used within a [ReactiveForm] widget.
+class ProfileStatCard extends StatelessWidget {
+  const ProfileStatCard({
+    required this.icon,
+    required this.label,
+    required this.formControlName,
+    required this.color,
+    required this.readOnly,
+    super.key,
+  });
+
+  final IconData icon;
+  final Widget label;
+  final String formControlName;
+  final Color color;
+  final bool readOnly;
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -312,7 +329,10 @@ class _ProfilePageState extends State<ProfilePage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label, style: TextStyle(fontSize: 16, color: Colors.grey[600])),
+                DefaultTextStyle(
+                  style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+                  child: label,
+                ),
                 const SizedBox(height: 8),
                 if (readOnly)
                   ReactiveValueListenableBuilder<int>(
