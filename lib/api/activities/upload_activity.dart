@@ -1,12 +1,12 @@
 import 'package:dio/dio.dart';
 import 'package:vekolo/api/api_context.dart';
+import 'package:vekolo/domain/models/device_info.dart';
 import 'package:vekolo/domain/models/workout_session.dart';
-import 'package:vekolo/models/activity.dart';
 import 'package:vekolo/models/rekord.dart';
 
 /// Upload a completed workout session as an activity
 ///
-/// `POST /api/activities`
+/// `POST /api/activities/upload`
 ///
 /// Converts a local WorkoutSession to an Activity on the server.
 /// The server calculates all metrics (averages, totals) from the samples.
@@ -14,39 +14,16 @@ Future<UploadActivityResponse> postUploadActivity(
   ApiContext context, {
   required WorkoutSessionMetadata metadata,
   required List<WorkoutSample> samples,
-  ActivityVisibility visibility = ActivityVisibility.public,
+  required List<UploadDevice> devices,
 }) async {
   final response = await context.authDio.post(
     '/api/activities/upload',
     data: {
-      'idempotencyKey': metadata.workoutId, // min 21 chars nanoid
-      'workoutId': metadata.sourceWorkoutId, // exact workoutId
-      // 'workout': { // not needed, can be linked on the server
-      //   'title': metadata.workoutName,
-      //   'plan': metadata.workoutPlan.toJson()['plan'],
-      //   'events': metadata.workoutPlan.toJson()['events'],
-      // },
-      // 'endTime': metadata.endTime!.toIso8601String(), // unnecessary
-      // 'ftp': metadata.ftp, // server knows this already, relevant for zone colors
-      // 'visibility': visibility.value, // server side from profile settings
-
-      'startTime': metadata.startTime.toIso8601String(), // ISO 8601
-
-      // dataPoints structure
-      // - time: ms since start of workout, but always multiple of 1000 non-null
-      // - cadence: cadence in RPM >0 nullable
-      // - power: power in watts >0 nullable
-      // - heartRate: heart rate in bpm >0 nullable
-      // - speed: speed in km/h >0 nullable
-      // - distance: meters - from trainer (can be better calculated than once every second. Trainer gives better/faster data)
-      'dataPoints': samples.map((sample) => sample.toJson()).toList(),
-      'devices': [
-        {
-          "type": "hrm|cadence|power|speed|control",
-          "name": "Polar 1342",
-          "manufacturer": "manufacturerId",
-        },
-      ]
+      'idempotencyKey': metadata.workoutId,
+      'workoutId': metadata.sourceWorkoutId,
+      'startTime': metadata.startTime.toIso8601String(),
+      'dataPoints': samples.map(_sampleToDataPoint).toList(),
+      'devices': devices.map((d) => d.toJson()).toList(),
     },
     options: Options(contentType: Headers.jsonContentType),
   );
@@ -63,15 +40,91 @@ Future<UploadActivityResponse> postUploadActivity(
   return UploadActivityResponse.init.fromResponse(response);
 }
 
+/// Converts a [WorkoutSample] to the server's dataPoint format.
+Map<String, dynamic> _sampleToDataPoint(WorkoutSample sample) {
+  return {
+    'time': sample.elapsedMs,
+    'cadence': sample.cadence,
+    'power': sample.powerActual,
+    'heartRate': sample.heartRate,
+    'speed': sample.speed,
+    'distance': null, // Distance not tracked per-sample yet
+  };
+}
+
+// ============================================================================
+// Request types
+// ============================================================================
+
+/// Device type as expected by the server API.
+///
+/// Maps to server enum: 'hrm', 'cadence', 'power', 'speed', 'control'
+enum UploadDeviceType {
+  /// Heart rate monitor
+  hrm('hrm'),
+
+  /// Cadence sensor
+  cadence('cadence'),
+
+  /// Power meter
+  power('power'),
+
+  /// Speed sensor
+  speed('speed'),
+
+  /// Smart trainer (controllable)
+  control('control');
+
+  const UploadDeviceType(this.value);
+  final String value;
+}
+
+/// Device info for upload API.
+class UploadDevice {
+  const UploadDevice({
+    required this.name,
+    required this.type,
+    required this.manufacturer,
+  });
+
+  /// Creates from [DeviceInfo].
+  factory UploadDevice.fromDeviceInfo(DeviceInfo info) {
+    return UploadDevice(
+      name: info.name,
+      type: _mapDeviceType(info.type),
+      manufacturer: 'unknown', // BLE doesn't expose manufacturer reliably
+    );
+  }
+
+  final String name;
+  final UploadDeviceType type;
+  final String manufacturer;
+
+  Map<String, dynamic> toJson() => {
+        'name': name,
+        'type': type.value,
+        'manufacturer': manufacturer,
+      };
+}
+
+UploadDeviceType _mapDeviceType(DeviceType type) {
+  return switch (type) {
+    DeviceType.trainer => UploadDeviceType.control,
+    DeviceType.powerMeter => UploadDeviceType.power,
+    DeviceType.cadenceSensor => UploadDeviceType.cadence,
+    DeviceType.heartRateMonitor => UploadDeviceType.hrm,
+  };
+}
+
+// ============================================================================
+// Response types
+// ============================================================================
+
 /// Response from uploading an activity
 class UploadActivityResponse with RekordMixin {
   UploadActivityResponse.fromData(Map<String, Object?> data) : rekord = Rekord(data);
 
-  factory UploadActivityResponse.create({
-    String? id,
-    String? createdAt,
-    String? url,
-  }) {
+  factory UploadActivityResponse.create({String? id, String? createdAt, String? url}) {
     return UploadActivityResponse.fromData({
       if (id != null) 'id': id,
       if (createdAt != null) 'createdAt': createdAt,

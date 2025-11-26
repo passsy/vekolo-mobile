@@ -1,6 +1,8 @@
+import 'package:chirp/chirp.dart';
 import 'package:context_plus/context_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:vekolo/api/vekolo_api_client.dart';
 import 'package:vekolo/app/refs.dart';
 import 'package:vekolo/domain/models/workout/workout_models.dart';
 import 'package:vekolo/models/activity.dart';
@@ -27,11 +29,14 @@ class ActivityDetailPage extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Workout Details'),
         actions: [
-          if (_isLocalWorkout)
+          if (_isLocalWorkout) ...[
             IconButton(
-              icon: const Icon(Icons.delete),
-              onPressed: () => _showDeleteConfirmation(context),
+              icon: const Icon(Icons.cloud_upload),
+              tooltip: 'Upload Activity',
+              onPressed: () => _uploadActivity(context),
             ),
+            IconButton(icon: const Icon(Icons.delete), onPressed: () => _showDeleteConfirmation(context)),
+          ],
         ],
       ),
       body: SingleChildScrollView(
@@ -111,8 +116,6 @@ class ActivityDetailPage extends StatelessWidget {
     );
   }
 
-
-
   String _formatDuration(int milliseconds) {
     final totalSeconds = milliseconds ~/ 1000;
     final minutes = totalSeconds ~/ 60;
@@ -161,10 +164,7 @@ class ActivityDetailPage extends StatelessWidget {
         title: const Text('Delete Workout?'),
         content: const Text('Are you sure you want to delete this workout? This action cannot be undone.'),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Cancel'),
-          ),
+          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Cancel')),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),
             style: TextButton.styleFrom(foregroundColor: Colors.red),
@@ -186,21 +186,76 @@ class ActivityDetailPage extends StatelessWidget {
 
       if (context.mounted) {
         // Show success message
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Workout deleted successfully')),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Workout deleted successfully')));
 
         // Navigate back and trigger a refresh by returning true
         context.pop(true);
       }
     } catch (e, stackTrace) {
-      print('[ActivityDetailPage._deleteWorkout] Error deleting workout: $e');
-      print(stackTrace);
+      chirp.error('Error deleting workout', error: e, stackTrace: stackTrace);
 
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to delete workout: $e')),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to delete workout: $e')));
+      }
+    }
+  }
+
+  Future<void> _uploadActivity(BuildContext context) async {
+    final persistence = Refs.workoutSessionPersistence.of(context);
+    final apiClient = Refs.apiClient.of(context);
+    final authService = Refs.authService.of(context);
+
+    // Check if user is logged in
+    final user = authService.currentUser.value;
+    if (user == null) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please log in to upload activities')));
+      }
+      return;
+    }
+
+    // Show loading indicator
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Uploading activity...')));
+    }
+
+    try {
+      // Load metadata and samples
+      final metadata = await persistence.loadSessionMetadata(_localWorkoutId);
+      if (metadata == null) {
+        throw Exception('Session metadata not found');
+      }
+
+      final samples = await persistence.loadAllSamples(_localWorkoutId);
+      if (samples.isEmpty) {
+        throw Exception('No samples found for this workout');
+      }
+
+      // Upload activity (devices list is empty for now - could be stored in metadata later)
+      final response = await apiClient.uploadActivity(
+        metadata: metadata,
+        samples: samples,
+        devices: <UploadDevice>[], // TODO: Store devices in session metadata
+      );
+
+      chirp.info('Activity uploaded: ${response.id}');
+
+      // Delete local session after successful upload
+      // await persistence.deleteSession(_localWorkoutId);
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Activity uploaded successfully!')));
+
+        // Navigate back and trigger a refresh
+        context.pop(true);
+      }
+    } catch (e, stackTrace) {
+      chirp.error('Error uploading activity', error: e, stackTrace: stackTrace);
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to upload: $e')));
       }
     }
   }
@@ -211,12 +266,7 @@ class ActivityDetailPage extends StatelessWidget {
 /// Used to show workout metrics like duration, TSS, and category in a
 /// consistent vertical layout.
 class WorkoutStatColumn extends StatelessWidget {
-  const WorkoutStatColumn({
-    super.key,
-    required this.icon,
-    required this.label,
-    required this.value,
-  });
+  const WorkoutStatColumn({super.key, required this.icon, required this.label, required this.value});
 
   final IconData icon;
   final Widget label;
@@ -244,11 +294,7 @@ class WorkoutStatColumn extends StatelessWidget {
 
 /// Displays a preview of a power block showing constant power target.
 class PowerBlockPreview extends StatelessWidget {
-  const PowerBlockPreview({
-    super.key,
-    required this.block,
-    required this.formatDuration,
-  });
+  const PowerBlockPreview({super.key, required this.block, required this.formatDuration});
 
   final PowerBlock block;
   final String Function(int milliseconds) formatDuration;
@@ -267,10 +313,7 @@ class PowerBlockPreview extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    block.description ?? 'Power Block',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
+                  Text(block.description ?? 'Power Block', style: const TextStyle(fontWeight: FontWeight.bold)),
                   Text(
                     '${formatDuration(block.duration)} at ${(block.power * 100).toStringAsFixed(0)}% FTP',
                     style: TextStyle(fontSize: 12, color: Colors.grey[600]),
@@ -287,11 +330,7 @@ class PowerBlockPreview extends StatelessWidget {
 
 /// Displays a preview of a ramp block showing power transition from start to end.
 class RampBlockPreview extends StatelessWidget {
-  const RampBlockPreview({
-    super.key,
-    required this.block,
-    required this.formatDuration,
-  });
+  const RampBlockPreview({super.key, required this.block, required this.formatDuration});
 
   final RampBlock block;
   final String Function(int milliseconds) formatDuration;
@@ -310,10 +349,7 @@ class RampBlockPreview extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    block.description ?? 'Ramp Block',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
+                  Text(block.description ?? 'Ramp Block', style: const TextStyle(fontWeight: FontWeight.bold)),
                   Text(
                     '${formatDuration(block.duration)} from ${(block.powerStart * 100).toStringAsFixed(0)}% to ${(block.powerEnd * 100).toStringAsFixed(0)}% FTP',
                     style: TextStyle(fontSize: 12, color: Colors.grey[600]),
@@ -330,11 +366,7 @@ class RampBlockPreview extends StatelessWidget {
 
 /// Displays a preview of an interval block showing repeated interval structure with nested parts.
 class IntervalBlockPreview extends StatelessWidget {
-  const IntervalBlockPreview({
-    super.key,
-    required this.block,
-    required this.formatDuration,
-  });
+  const IntervalBlockPreview({super.key, required this.block, required this.formatDuration});
 
   final WorkoutInterval block;
   final String Function(int milliseconds) formatDuration;
@@ -352,10 +384,7 @@ class IntervalBlockPreview extends StatelessWidget {
               children: [
                 const Icon(Icons.repeat, color: Colors.purple, size: 20),
                 const SizedBox(width: 12),
-                Text(
-                  'Interval Set (${block.repeat}x)',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
+                Text('Interval Set (${block.repeat}x)', style: const TextStyle(fontWeight: FontWeight.bold)),
               ],
             ),
             const SizedBox(height: 8),

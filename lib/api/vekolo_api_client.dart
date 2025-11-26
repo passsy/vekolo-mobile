@@ -5,7 +5,6 @@ import 'package:vekolo/api/activities/get_activities.dart';
 import 'package:vekolo/api/activities/upload_activity.dart';
 import 'package:vekolo/api/api_context.dart';
 import 'package:vekolo/domain/models/workout_session.dart';
-import 'package:vekolo/models/activity.dart';
 import 'package:vekolo/api/auth/redeem_code.dart';
 import 'package:vekolo/api/auth/refresh_token.dart';
 import 'package:vekolo/api/auth/request_login_code.dart';
@@ -149,21 +148,16 @@ class VekoloApiClient {
 
   /// Upload a completed workout session as an activity
   ///
-  /// `POST /api/activities`
+  /// `POST /api/activities/upload`
   ///
   /// Converts a local WorkoutSession to an Activity on the server.
   /// The server calculates all metrics (averages, totals) from the samples.
   Future<UploadActivityResponse> uploadActivity({
     required WorkoutSessionMetadata metadata,
     required List<WorkoutSample> samples,
-    ActivityVisibility visibility = ActivityVisibility.public,
+    required List<UploadDevice> devices,
   }) {
-    return postUploadActivity(
-      _context,
-      metadata: metadata,
-      samples: samples,
-      visibility: visibility,
-    );
+    return postUploadActivity(_context, metadata: metadata, samples: samples, devices: devices);
   }
 
   // Workout endpoints

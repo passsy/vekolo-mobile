@@ -16,7 +16,7 @@ class ApiConfig {
         return stagingBaseUrl;
       case 'prod':
       default:
-        return productionBaseUrl;
+        return devBaseUrl;
     }
   }
 }

@@ -184,21 +184,21 @@ class FakeVekoloApiClient implements VekoloApiClient {
   Future<UploadActivityResponse> Function({
     required WorkoutSessionMetadata metadata,
     required List<WorkoutSample> samples,
-    ActivityVisibility visibility,
+    required List<UploadDevice> devices,
   })? overrideUploadActivity;
 
   @override
   Future<UploadActivityResponse> uploadActivity({
     required WorkoutSessionMetadata metadata,
     required List<WorkoutSample> samples,
-    ActivityVisibility visibility = ActivityVisibility.public,
+    required List<UploadDevice> devices,
   }) async {
     methodCalls.add('uploadActivity');
     if (overrideUploadActivity != null) {
       return overrideUploadActivity!(
         metadata: metadata,
         samples: samples,
-        visibility: visibility,
+        devices: devices,
       );
     }
     // Default: return success with fake activity ID
