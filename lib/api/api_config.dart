@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 /// API configuration for different environments
 class ApiConfig {
   static const String devBaseUrl = 'https://vekolo-development.up.railway.app';
@@ -16,7 +18,11 @@ class ApiConfig {
         return stagingBaseUrl;
       case 'prod':
       default:
-        return devBaseUrl;
+        if (kDebugMode) {
+          return stagingBaseUrl;
+        } else {
+          return productionBaseUrl;
+        }
     }
   }
 }

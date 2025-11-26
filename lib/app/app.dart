@@ -14,7 +14,7 @@ import 'package:vekolo/ble/ble_scanner.dart';
 import 'package:vekolo/ble/ftms_ble_transport.dart';
 import 'package:vekolo/ble/heart_rate_ble_transport.dart';
 import 'package:vekolo/ble/transport_registry.dart';
-import 'package:vekolo/config/api_config.dart';
+import 'package:vekolo/api/api_config.dart';
 import 'package:vekolo/domain/devices/device_manager.dart';
 import 'package:vekolo/app/router.dart';
 import 'package:vekolo/services/auth_service.dart';
