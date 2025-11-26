@@ -80,8 +80,10 @@ class _VekoloAppState extends State<VekoloApp> {
       await authService.initialize();
       try {
         await authService.refreshAccessToken();
+      } on UserSignedOutException {
+        chirp.info('User not signed in');
       } catch (e, stack) {
-        chirp.error('No valid refresh token found during initialization', error: e, stackTrace: stack);
+        chirp.error('Refreshing the access token failed, will retry with next request', error: e, stackTrace: stack);
       }
 
       // Ensure splash screen is shown for at least the animation duration

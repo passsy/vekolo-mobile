@@ -8,6 +8,7 @@ import 'package:state_beacon/state_beacon.dart';
 import 'package:vekolo/api/vekolo_api_client.dart';
 import 'package:vekolo/models/user.dart';
 import 'package:vekolo/services/fresh_auth.dart';
+import 'package:synchronized/synchronized.dart';
 
 /// Token storage implementation using FlutterSecureStorage
 class SecureTokenStorage extends TokenStorage<VekoloToken> {
@@ -62,64 +63,85 @@ class AuthService {
 
   final ReadableBeacon<AuthenticationStatus> authenticationStatus;
 
+  final _authLock = Lock(reentrant: true);
+
   /// Loads the user state which was persisted to storage
   Future<void> initialize() async {
-    final user = await getUser();
-    currentUser.value = user;
+    await _authLock.synchronized(() async {
+      final user = await getUser();
+      currentUser.value = user;
+    });
   }
 
   /// Refresh the access token using the stored refresh token
   ///
   /// This also refreshes the current user data, which are part of the access token (JWT)
   Future<void> refreshAccessToken() async {
-    final refreshToken = await getRefreshToken();
-    if (refreshToken == null) {
-      throw Exception('No refresh token available');
-    }
-    final response = await apiClient().refreshToken(refreshToken: refreshToken);
-    await saveTokens(accessToken: response.accessToken, refreshToken: refreshToken);
+    await _authLock.synchronized(() async {
+      final refreshToken = await getRefreshToken();
+      if (refreshToken == null) {
+        throw UserSignedOutException();
+      }
+      try {
+        final response = await apiClient().refreshToken(refreshToken: refreshToken);
+        await saveTokens(accessToken: response.accessToken, refreshToken: refreshToken);
+      } on RevokeTokenException catch (e, stack) {
+        chirp.warning('Refresh token revoked', error: e, stackTrace: stack);
+        await clearAuth();
+      }
+    });
   }
 
   /// Save authentication tokens and user data
   Future<void> saveTokens({required AccessToken accessToken, required RefreshToken refreshToken}) async {
-    final user = User.init.fromAccessToken(accessToken);
-    currentUser.value = user;
+    await _authLock.synchronized(() async {
+      final user = User.init.fromAccessToken(accessToken);
+      currentUser.value = user;
 
-    // Save to fresh's token storage
-    await fresh.setToken(VekoloToken(accessToken: accessToken, refreshToken: refreshToken));
+      // Save to fresh's token storage
+      await fresh.setToken(VekoloToken(accessToken: accessToken, refreshToken: refreshToken));
+    });
   }
 
   /// Get the stored access token
   Future<AccessToken?> getAccessToken() async {
-    final token = await fresh.token;
-    if (token == null) return null;
-    return AccessToken(token.accessToken);
+    return await _authLock.synchronized(() async {
+      final token = await fresh.token;
+      if (token == null) return null;
+      return AccessToken(token.accessToken);
+    });
   }
 
   /// Get the stored refresh token
   Future<RefreshToken?> getRefreshToken() async {
-    final token = await fresh.token;
-    if (token == null) return null;
-    return RefreshToken(token.refreshToken ?? '');
+    return await _authLock.synchronized(() async {
+      final token = await fresh.token;
+      if (token == null) return null;
+      return RefreshToken(token.refreshToken ?? '');
+    });
   }
 
   /// Get the stored user data
   Future<User?> getUser() async {
-    final accessToken = await getAccessToken();
-    if (accessToken == null) return null;
+    return await _authLock.synchronized(() async {
+      final accessToken = await getAccessToken();
+      if (accessToken == null) return null;
 
-    try {
-      return User.init.fromAccessToken(accessToken);
-    } catch (e, stackTrace) {
-      chirp.error('Failed to parse user data', error: e, stackTrace: stackTrace);
-      return null;
-    }
+      try {
+        return User.init.fromAccessToken(accessToken);
+      } catch (e, stackTrace) {
+        chirp.error('Failed to parse user data', error: e, stackTrace: stackTrace);
+        return null;
+      }
+    });
   }
 
   /// Clear all stored authentication data (logout)
   Future<void> clearAuth() async {
-    await fresh.setToken(null);
-    currentUser.value = null;
+    await _authLock.synchronized(() async {
+      await fresh.setToken(null);
+      currentUser.value = null;
+    });
   }
 
   /// Update the current user data
@@ -132,3 +154,6 @@ class AuthService {
     currentUser.dispose();
   }
 }
+
+/// Thrown when refreshing tokens fails because the user isn't signed in in the first place
+class UserSignedOutException implements Exception {}
