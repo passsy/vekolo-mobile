@@ -271,7 +271,7 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
             _workoutName ?? 'Workout',
             userId: user?.id,
             ftp: ftp,
-            sourceWorkoutId: widget.workoutId,
+            sourceWorkoutId: widget.workoutId!,
           );
         }
 
@@ -552,7 +552,7 @@ class _WorkoutPlayerBuilder extends StatelessWidget {
                     workoutName ?? 'Workout',
                     userId: user?.id,
                     ftp: ftp,
-                    sourceWorkoutId: workoutId,
+                    sourceWorkoutId: workoutId!,
                   );
                 }
                 onHasStartedChanged(true);

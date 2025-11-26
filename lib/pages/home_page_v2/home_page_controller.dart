@@ -248,9 +248,9 @@ class HomePageController extends BeaconController {
           visibility: ActivityVisibility.private,
           user: ActivityUser.create(id: metadata.userId ?? 'local', name: 'You'),
           workout: ActivityWorkout.create(
-            id: metadata.sourceWorkoutId ?? workoutId,
+            id: metadata.sourceWorkoutId,
             title: metadata.workoutName,
-            slug: metadata.sourceWorkoutId ?? workoutId,
+            slug: metadata.sourceWorkoutId,
             duration: metadata.elapsedMs,
             plan: metadata.workoutPlan,
             category: category != null ? WorkoutCategory(category) : null,

@@ -59,7 +59,9 @@ class VekoloRobot {
 
   static const int _idlePumpStepMs = 100; // Pump in 100ms steps to process callbacks
 
-  late final logger = ChirpLogger(name: 'Robot', writers: [...Chirp.root.writers, SpotTimelineWriter()]);
+  late final logger = ChirpLogger(name: 'Robot')
+    ..addConsoleWriter(formatter: RainbowMessageFormatter())
+    ..addWriter(SpotTimelineWriter());
 
   Future<void> _setup() async {
     // Only setup once per test to preserve SharedPreferences across app restarts
@@ -861,13 +863,15 @@ class Aether {
   }
 }
 
-class SpotTimelineWriter implements ChirpAppender {
+class SpotTimelineWriter implements ChirpWriter {
+  final formatter = SimpleConsoleMessageFormatter();
+
   @override
   void write(LogRecord record) {
-    final formatter = SimpleConsoleMessageFormatter(showInstance: false);
-    final builder = ConsoleMessageBuilder();
+    final builder = ConsoleMessageBuffer();
     formatter.format(record, builder);
-    timeline.addEvent(details: builder.toString(), eventType: 'Robot');
+    final msg = builder.toString();
+    timeline.addEvent(details: msg, eventType: 'Robot');
   }
 }
 

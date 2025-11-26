@@ -115,6 +115,7 @@ void main() {
         testWorkoutPlan,
         userId: 'user-123',
         ftp: 200,
+        sourceWorkoutId: 'test-workout',
       );
 
       // Verify workout ID format (nanoid is 21 characters)
@@ -155,7 +156,7 @@ void main() {
     test('updateSessionStatus updates metadata and clears active flag', () async {
       final deps = await createTestDependencies();
 
-      final workoutId = await deps.persistence.createSession('Test Workout', testWorkoutPlan, ftp: 200);
+      final workoutId = await deps.persistence.createSession('Test Workout', testWorkoutPlan, ftp: 200, sourceWorkoutId: 'test-workout');
 
       // Update to completed
       await deps.persistence.updateSessionStatus(workoutId, SessionStatus.completed);
@@ -173,7 +174,7 @@ void main() {
     test('updateSessionStatus to abandoned clears active flag', () async {
       final deps = await createTestDependencies();
 
-      final workoutId = await deps.persistence.createSession('Test Workout', testWorkoutPlan, ftp: 200);
+      final workoutId = await deps.persistence.createSession('Test Workout', testWorkoutPlan, ftp: 200, sourceWorkoutId: 'test-workout');
 
       await deps.persistence.updateSessionStatus(workoutId, SessionStatus.abandoned);
 
@@ -185,7 +186,7 @@ void main() {
     test('deleteSession removes entire workout folder', () async {
       final deps = await createTestDependencies();
 
-      final workoutId = await deps.persistence.createSession('Test Workout', testWorkoutPlan, ftp: 200);
+      final workoutId = await deps.persistence.createSession('Test Workout', testWorkoutPlan, ftp: 200, sourceWorkoutId: 'test-workout');
 
       // Verify folder exists
       final workoutDir = await deps.persistence.getWorkoutDirectory(workoutId);
@@ -210,6 +211,7 @@ void main() {
         testWorkoutPlan,
         userId: 'user-123',
         ftp: 200,
+        sourceWorkoutId: 'test-workout',
       );
 
       final session = await deps.persistence.getActiveSession();
@@ -228,7 +230,7 @@ void main() {
     test('appendSample buffers and writes samples', () async {
       final deps = await createTestDependencies();
 
-      final workoutId = await deps.persistence.createSession('Test', testWorkoutPlan, ftp: 200);
+      final workoutId = await deps.persistence.createSession('Test', testWorkoutPlan, ftp: 200, sourceWorkoutId: 'test-workout');
 
       // Add samples (less than buffer size)
       final sample1 = WorkoutSample(
@@ -252,7 +254,7 @@ void main() {
     test('appendSample auto-flushes when buffer full', () async {
       final deps = await createTestDependencies();
 
-      final workoutId = await deps.persistence.createSession('Test', testWorkoutPlan, ftp: 200);
+      final workoutId = await deps.persistence.createSession('Test', testWorkoutPlan, ftp: 200, sourceWorkoutId: 'test-workout');
 
       // Add exactly buffer size samples (should trigger auto-flush)
       for (int i = 0; i < 5; i++) {
@@ -274,7 +276,7 @@ void main() {
     test('appendSamples writes batch directly', () async {
       final deps = await createTestDependencies();
 
-      final workoutId = await deps.persistence.createSession('Test', testWorkoutPlan, ftp: 200);
+      final workoutId = await deps.persistence.createSession('Test', testWorkoutPlan, ftp: 200, sourceWorkoutId: 'test-workout');
 
       final samples = List.generate(
         10,
@@ -299,7 +301,7 @@ void main() {
     test('loadSamples streams samples without loading all into memory', () async {
       final deps = await createTestDependencies();
 
-      final workoutId = await deps.persistence.createSession('Test', testWorkoutPlan, ftp: 200);
+      final workoutId = await deps.persistence.createSession('Test', testWorkoutPlan, ftp: 200, sourceWorkoutId: 'test-workout');
 
       // Add many samples
       final samples = List.generate(
@@ -328,7 +330,7 @@ void main() {
     test('samples with null values (stale metrics) are persisted correctly', () async {
       final deps = await createTestDependencies();
 
-      final workoutId = await deps.persistence.createSession('Test', testWorkoutPlan, ftp: 200);
+      final workoutId = await deps.persistence.createSession('Test', testWorkoutPlan, ftp: 200, sourceWorkoutId: 'test-workout');
 
       final staleSample = WorkoutSample(
         timestamp: testTime,
@@ -364,9 +366,9 @@ void main() {
       final deps = await createTestDependencies();
 
       // Create multiple workouts
-      final id1 = await deps.persistence.createSession('Workout 1', testWorkoutPlan, ftp: 200);
-      final id2 = await deps.persistence.createSession('Workout 2', testWorkoutPlan, ftp: 200);
-      final id3 = await deps.persistence.createSession('Workout 3', testWorkoutPlan, ftp: 200);
+      final id1 = await deps.persistence.createSession('Workout 1', testWorkoutPlan, ftp: 200, sourceWorkoutId: 'test-workout');
+      final id2 = await deps.persistence.createSession('Workout 2', testWorkoutPlan, ftp: 200, sourceWorkoutId: 'test-workout');
+      final id3 = await deps.persistence.createSession('Workout 3', testWorkoutPlan, ftp: 200, sourceWorkoutId: 'test-workout');
 
       final ids = await deps.persistence.listWorkoutIds();
       expect(ids.length, 3);

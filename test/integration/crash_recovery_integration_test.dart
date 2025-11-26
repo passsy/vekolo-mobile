@@ -83,7 +83,7 @@ void main() {
       );
 
       // Start recording
-      final sessionId = await recorder1.startRecording('Test Workout', ftp: 200);
+      final sessionId = await recorder1.startRecording('Test Workout', ftp: 200, sourceWorkoutId: 'test-workout');
       expect(sessionId, isNotEmpty);
 
       // Verify session created
@@ -177,7 +177,7 @@ void main() {
         persistence: persistence,
       );
 
-      final sessionId = await recorder.startRecording('Test', ftp: 200);
+      final sessionId = await recorder.startRecording('Test', ftp: 200, sourceWorkoutId: 'test-workout');
       player.start();
       await Future.delayed(Duration(milliseconds: 100));
 
@@ -208,7 +208,7 @@ void main() {
         persistence: persistence,
       );
 
-      final sessionId = await recorder.startRecording('Test', ftp: 200);
+      final sessionId = await recorder.startRecording('Test', ftp: 200, sourceWorkoutId: 'test-workout');
       await recorder.dispose();
       player.dispose();
 
@@ -233,7 +233,7 @@ void main() {
         persistence: persistence,
       );
 
-      final sessionId = await recorder.startRecording('Test', ftp: 200);
+      final sessionId = await recorder.startRecording('Test', ftp: 200, sourceWorkoutId: 'test-workout');
       player.start();
 
       // Wait for a few samples to be recorded
@@ -272,7 +272,7 @@ void main() {
         persistence: persistence,
       );
 
-      final sessionId = await recorder.startRecording('Test', ftp: 200);
+      final sessionId = await recorder.startRecording('Test', ftp: 200, sourceWorkoutId: 'test-workout');
       player.start();
 
       // Wait for metadata update interval (10 seconds + buffer)
@@ -299,7 +299,7 @@ void main() {
         persistence: persistence,
       );
 
-      final sessionId = await recorder1.startRecording('Test', ftp: 200);
+      final sessionId = await recorder1.startRecording('Test', ftp: 200, sourceWorkoutId: 'test-workout');
       player1.start();
       await Future.delayed(Duration(milliseconds: 500));
       await recorder1.dispose();

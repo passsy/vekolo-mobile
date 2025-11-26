@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:clock/clock.dart';
+import 'package:flutter/foundation.dart' show kIsWeb, TargetPlatform, defaultTargetPlatform;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:state_beacon/state_beacon.dart';
@@ -476,7 +477,9 @@ class BleScanner with WidgetsBindingObserver {
           rssi: result.rssi,
         );
         updated = true;
-        chirp.info('New device discovered: $deviceId (${result.advertisementData.advName})');
+        if (result.advertisementData.advName != "") {
+          chirp.info('New device discovered: $deviceId (${result.advertisementData.advName})');
+        }
         continue;
       }
 
@@ -651,13 +654,24 @@ class BleScanner with WidgetsBindingObserver {
 
   /// Handle app lifecycle state changes.
   ///
-  /// Stops scanning when app goes to background (inactive/paused) and resumes
-  /// when app comes to foreground (resumed) if tokens are still active.
+  /// Stops scanning when app goes to background and resumes when app comes
+  /// to foreground if tokens are still active.
+  ///
+  /// Platform differences:
+  /// - Mobile (iOS/Android): Stop on inactive/paused to save battery
+  /// - Desktop (macOS/Windows/Linux): Only stop on hidden/paused, continue
+  ///   scanning when just unfocused (inactive state)
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (_disposed) return;
 
     chirp.info('App lifecycle changed to: $state');
+
+    final isDesktop =
+        !kIsWeb &&
+        (defaultTargetPlatform == TargetPlatform.macOS ||
+            defaultTargetPlatform == TargetPlatform.windows ||
+            defaultTargetPlatform == TargetPlatform.linux);
 
     switch (state) {
       case AppLifecycleState.resumed:
@@ -668,10 +682,19 @@ class BleScanner with WidgetsBindingObserver {
         }
 
       case AppLifecycleState.inactive:
+        // On desktop, inactive just means unfocused - keep scanning
+        // On mobile, inactive means app is transitioning - stop scanning
+        if (!isDesktop && _isScanningBeacon.value) {
+          chirp.info('App inactive (mobile), stopping scan');
+          _stopPlatformScan();
+        } else if (isDesktop) {
+          chirp.info('App inactive (desktop), continuing scan');
+        }
+
       case AppLifecycleState.paused:
         // App going to background - stop scanning to save battery
         if (_isScanningBeacon.value) {
-          chirp.info('App backgrounded, stopping scan');
+          chirp.info('App paused, stopping scan');
           _stopPlatformScan();
         }
 

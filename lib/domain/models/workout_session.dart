@@ -59,9 +59,9 @@ class WorkoutSessionMetadata {
     required this.currentBlockIndex,
     required this.elapsedMs,
     required this.lastUpdated,
+    required this.sourceWorkoutId,
     this.endTime,
     this.userId,
-    this.sourceWorkoutId,
   });
 
   /// Creates from JSON using deep_pick.
@@ -79,7 +79,7 @@ class WorkoutSessionMetadata {
       currentBlockIndex: pick(json, 'currentBlockIndex').asIntOrThrow(),
       elapsedMs: pick(json, 'elapsedMs').asIntOrThrow(),
       lastUpdated: DateTime.parse(pick(json, 'lastUpdated').asStringOrThrow()),
-      sourceWorkoutId: pick(json, 'sourceWorkoutId').asStringOrNull(),
+      sourceWorkoutId: pick(json, 'sourceWorkoutId').asStringOrThrow(),
     );
   }
 
@@ -105,7 +105,7 @@ class WorkoutSessionMetadata {
   final String? userId;
 
   /// Source workout ID from library/API (for re-riding the same workout).
-  final String? sourceWorkoutId;
+  final String sourceWorkoutId;
 
   /// FTP at time of workout (for historical comparison).
   final int ftp;
@@ -132,7 +132,7 @@ class WorkoutSessionMetadata {
       if (endTime != null) 'endTime': endTime!.toIso8601String(),
       'status': status.value,
       if (userId != null) 'userId': userId,
-      if (sourceWorkoutId != null) 'sourceWorkoutId': sourceWorkoutId,
+      'sourceWorkoutId': sourceWorkoutId,
       'ftp': ftp,
       'totalSamples': totalSamples,
       'currentBlockIndex': currentBlockIndex,

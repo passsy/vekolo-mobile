@@ -66,8 +66,8 @@ dependency_overrides:
       url: https://github.com/passsy/fresh/
       path: packages/fresh
       ref: pull-validate-token-from-StarProxima
-  chirp:
-    path: /Users/pascalwelsch/Projects/passsy/chirp
+#  chirp:
+#    path: /Users/pascalwelsch/Projects/passsy/chirp
 flutter:
   uses-material-design: true
   assets:

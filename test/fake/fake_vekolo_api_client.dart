@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:vekolo/api/api_context.dart';
 import 'package:vekolo/api/vekolo_api_client.dart';
+import 'package:vekolo/domain/models/workout_session.dart';
 import 'package:vekolo/models/activity.dart';
 import 'package:vekolo/models/user.dart';
 
@@ -178,6 +179,34 @@ class FakeVekoloApiClient implements VekoloApiClient {
     }
     // Default: return 3 sample activities
     return ActivitiesResponse.create(activities: _createSampleActivities());
+  }
+
+  Future<UploadActivityResponse> Function({
+    required WorkoutSessionMetadata metadata,
+    required List<WorkoutSample> samples,
+    ActivityVisibility visibility,
+  })? overrideUploadActivity;
+
+  @override
+  Future<UploadActivityResponse> uploadActivity({
+    required WorkoutSessionMetadata metadata,
+    required List<WorkoutSample> samples,
+    ActivityVisibility visibility = ActivityVisibility.public,
+  }) async {
+    methodCalls.add('uploadActivity');
+    if (overrideUploadActivity != null) {
+      return overrideUploadActivity!(
+        metadata: metadata,
+        samples: samples,
+        visibility: visibility,
+      );
+    }
+    // Default: return success with fake activity ID
+    return UploadActivityResponse.create(
+      id: 'fake-activity-${metadata.workoutId}',
+      createdAt: DateTime.now().toIso8601String(),
+      url: 'https://vekolo.cc/activities/fake-activity-${metadata.workoutId}',
+    );
   }
 
   // Workout endpoint overrides

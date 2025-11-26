@@ -27,7 +27,7 @@ Future<UploadActivityResponse> postUploadActivity(
       //   'events': metadata.workoutPlan.toJson()['events'],
       // },
       // 'endTime': metadata.endTime!.toIso8601String(), // unnecessary
-      // 'ftp': metadata.ftp, // irrelevant
+      // 'ftp': metadata.ftp, // server knows this already, relevant for zone colors
       // 'visibility': visibility.value, // server side from profile settings
 
       'startTime': metadata.startTime.toIso8601String(), // ISO 8601

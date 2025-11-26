@@ -146,7 +146,7 @@ class WorkoutSessionPersistence {
     WorkoutPlan plan, {
     String? userId,
     required int ftp,
-    String? sourceWorkoutId,
+    required String sourceWorkoutId,
   }) async {
     // Generate unique ID using nanoid
     final workoutId = nanoid();

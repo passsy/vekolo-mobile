@@ -126,7 +126,7 @@ void main() {
       expect(deps.recordingService.sessionId, isNull);
 
       final sessionId = await tester.runAsyncWithFakeTimers(
-        () => deps.recordingService.startRecording('Test Workout', ftp: 200, userId: 'user-123'),
+        () => deps.recordingService.startRecording('Test Workout', ftp: 200, userId: 'user-123', sourceWorkoutId: 'test-workout'),
       );
 
       expect(sessionId, isNotNull);
@@ -152,10 +152,10 @@ void main() {
       final deps = await createTestDependencies(tester);
 
       final sessionId1 = await tester.runAsyncWithFakeTimers(
-        () => deps.recordingService.startRecording('Test', ftp: 200),
+        () => deps.recordingService.startRecording('Test', ftp: 200, sourceWorkoutId: 'test-workout'),
       );
       final sessionId2 = await tester.runAsyncWithFakeTimers(
-        () => deps.recordingService.startRecording('Test2', ftp: 200),
+        () => deps.recordingService.startRecording('Test2', ftp: 200, sourceWorkoutId: 'test-workout-2'),
       );
 
       expect(sessionId1, sessionId2);
@@ -169,7 +169,7 @@ void main() {
 
       // Create a session manually
       final sessionId = await tester.runAsync(
-        () => deps.persistence.createSession('Test Workout', testWorkoutPlan, ftp: 200),
+        () => deps.persistence.createSession('Test Workout', testWorkoutPlan, ftp: 200, sourceWorkoutId: 'test-workout'),
       );
       await tester.runAsync(() => deps.persistence.updateSessionStatus(sessionId!, SessionStatus.crashed));
 
@@ -202,7 +202,7 @@ void main() {
       final deps = await createTestDependencies(tester);
 
       final sessionId = await tester.runAsyncWithFakeTimers(
-        () => deps.recordingService.startRecording('Test', ftp: 200),
+        () => deps.recordingService.startRecording('Test', ftp: 200, sourceWorkoutId: 'test-workout'),
       );
 
       expect(sessionId, isNotNull);
@@ -226,7 +226,7 @@ void main() {
       final deps = await createTestDependencies(tester);
 
       final sessionId = await tester.runAsyncWithFakeTimers(
-        () => deps.recordingService.startRecording('Test', ftp: 200),
+        () => deps.recordingService.startRecording('Test', ftp: 200, sourceWorkoutId: 'test-workout'),
       );
 
       await tester.runAsync(() => deps.recordingService.stopRecording(completed: false));
@@ -258,7 +258,7 @@ void main() {
 
       // Start recording with fake timers
       final sessionId = await tester.runAsyncWithFakeTimers(
-        () => deps.recordingService.startRecording('Test', ftp: 200),
+        () => deps.recordingService.startRecording('Test', ftp: 200, sourceWorkoutId: 'test-workout'),
       );
 
       // Now pump to trigger timer callbacks
@@ -291,7 +291,7 @@ void main() {
       // Don't set any device data - all should be null
       deps.playerService.start();
       final sessionId = await tester.runAsyncWithFakeTimers(
-        () => deps.recordingService.startRecording('Test', ftp: 200),
+        () => deps.recordingService.startRecording('Test', ftp: 200, sourceWorkoutId: 'test-workout'),
       );
 
       // Elapse 1 sample
@@ -314,7 +314,7 @@ void main() {
 
       deps.playerService.start();
       final sessionId = await tester.runAsyncWithFakeTimers(
-        () => deps.recordingService.startRecording('Test', ftp: 200),
+        () => deps.recordingService.startRecording('Test', ftp: 200, sourceWorkoutId: 'test-workout'),
       );
 
       await tester.pump(const Duration(milliseconds: 1100));
@@ -334,7 +334,7 @@ void main() {
 
       deps.playerService.start();
       final sessionId = await tester.runAsyncWithFakeTimers(
-        () => deps.recordingService.startRecording('Test', ftp: 200),
+        () => deps.recordingService.startRecording('Test', ftp: 200, sourceWorkoutId: 'test-workout'),
       );
 
       await tester.pump(const Duration(milliseconds: 2100));
@@ -355,7 +355,7 @@ void main() {
 
       deps.playerService.start();
       final sessionId = await tester.runAsyncWithFakeTimers(
-        () => deps.recordingService.startRecording('Test', ftp: 200),
+        () => deps.recordingService.startRecording('Test', ftp: 200, sourceWorkoutId: 'test-workout'),
       );
 
       // Elapse time for more than 10 samples (metadata updates every 10 samples)
@@ -376,7 +376,7 @@ void main() {
 
       deps.playerService.start();
       final sessionId = await tester.runAsyncWithFakeTimers(
-        () => deps.recordingService.startRecording('Test', ftp: 200),
+        () => deps.recordingService.startRecording('Test', ftp: 200, sourceWorkoutId: 'test-workout'),
       );
 
       // Advance to next block
@@ -403,7 +403,7 @@ void main() {
       deps.deviceManager.setPower(100);
       deps.playerService.start();
       final sessionId = await tester.runAsyncWithFakeTimers(
-        () => deps.recordingService.startRecording('Test', ftp: 200),
+        () => deps.recordingService.startRecording('Test', ftp: 200, sourceWorkoutId: 'test-workout'),
       );
 
       // Wait for 2 samples
@@ -422,7 +422,7 @@ void main() {
 
       deps.playerService.start();
       final sessionId = await tester.runAsyncWithFakeTimers(
-        () => deps.recordingService.startRecording('Test', ftp: 200),
+        () => deps.recordingService.startRecording('Test', ftp: 200, sourceWorkoutId: 'test-workout'),
       );
 
       await tester.pump(const Duration(milliseconds: 1100));
@@ -446,7 +446,7 @@ void main() {
 
       deps.playerService.start();
       final sessionId = await tester.runAsyncWithFakeTimers(
-        () => deps.recordingService.startRecording('Test', ftp: 200),
+        () => deps.recordingService.startRecording('Test', ftp: 200, sourceWorkoutId: 'test-workout'),
       );
 
       await tester.pump(const Duration(milliseconds: 1100));
@@ -470,7 +470,7 @@ void main() {
       final deps = await createTestDependencies(tester);
 
       deps.playerService.start();
-      await tester.runAsyncWithFakeTimers(() => deps.recordingService.startRecording('Test', ftp: 200));
+      await tester.runAsyncWithFakeTimers(() => deps.recordingService.startRecording('Test', ftp: 200, sourceWorkoutId: 'test-workout'));
 
       deps.playerService.pause();
       await tester.runAsync(() => deps.recordingService.dispose());

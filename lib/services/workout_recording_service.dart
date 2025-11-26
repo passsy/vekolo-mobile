@@ -72,7 +72,7 @@ class WorkoutRecordingService {
     String workoutName, {
     String? userId,
     required int ftp,
-    String? sourceWorkoutId,
+    required String sourceWorkoutId,
   }) async {
     if (_isRecording) {
       chirp.info('Already recording session: $_sessionId');
