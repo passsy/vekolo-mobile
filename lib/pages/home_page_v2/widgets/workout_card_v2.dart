@@ -51,9 +51,11 @@ class WorkoutCardV2 extends StatelessWidget {
                     children: [
                       CircleAvatar(
                         radius: 20,
-                        backgroundImage: authorAvatarUrl != null ? NetworkImage(authorAvatarUrl!) : null,
+                        backgroundImage: authorAvatarUrl != null && !authorAvatarUrl!.startsWith('http://localhost')
+                            ? NetworkImage(authorAvatarUrl!)
+                            : null,
                         backgroundColor: Colors.white.withValues(alpha: 0.2),
-                        child: authorAvatarUrl == null
+                        child: authorAvatarUrl == null || authorAvatarUrl!.startsWith('http://localhost')
                             ? Text(
                                 authorName.isNotEmpty ? authorName[0].toUpperCase() : '?',
                                 style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
