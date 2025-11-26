@@ -35,6 +35,7 @@ dependencies:
       url: git@github.com:passsy/chirp.git
       ref: main
   flutter_svg: ^2.2.2
+  synchronized: ^3.4.0
 
 dev_dependencies:
   flutter_blue_plus_platform_interface: ^7.0.0
