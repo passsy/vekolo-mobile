@@ -57,6 +57,7 @@ class WorkoutRecordingService {
   Timer? _recordingTimer;
   String? _sessionId;
   bool _isRecording = false;
+  bool _disposed = false;
 
   /// Whether recording is currently active.
   bool get isRecording => _isRecording;
@@ -179,6 +180,11 @@ class WorkoutRecordingService {
   ///
   /// Reads current values from beacons (no subscriptions!) and writes to persistence.
   void _recordSample() {
+    // Guard against timer firing during/after dispose
+    if (_disposed) {
+      return;
+    }
+
     if (_sessionId == null) {
       chirp.info('Cannot record sample - no session ID');
       return;
@@ -215,10 +221,10 @@ class WorkoutRecordingService {
     if (_samplesSinceMetadataUpdate >= _metadataUpdateInterval) {
       _samplesSinceMetadataUpdate = 0;
 
-      if (_sessionId == null) return;
+      if (_sessionId == null || _disposed) return;
 
       final metadata = await _persistence.loadSessionMetadata(_sessionId!);
-      if (metadata == null) return;
+      if (metadata == null || _disposed) return;
 
       final updated = metadata.copyWith(
         currentBlockIndex: _playerService.currentBlockIndex$.value,
@@ -237,24 +243,17 @@ class WorkoutRecordingService {
   Future<void> dispose() async {
     chirp.info('Disposing');
 
+    // Mark as disposed first to prevent timer callbacks from accessing beacons
+    _disposed = true;
+
     // Stop timer
     _recordingTimer?.cancel();
     _recordingTimer = null;
 
     // Flush any pending samples (but don't mark as completed)
+    // Note: We don't update metadata here since player service beacons may already be disposed
     if (_isRecording && _sessionId != null) {
       await _persistence.flushAllSampleBuffers();
-
-      // Update metadata one final time
-      final metadata = await _persistence.loadSessionMetadata(_sessionId!);
-      if (metadata != null) {
-        final updated = metadata.copyWith(
-          currentBlockIndex: _playerService.currentBlockIndex$.value,
-          elapsedMs: _playerService.elapsedTime$.value,
-          lastUpdated: clock.now(),
-        );
-        await _persistence.updateSessionMetadata(updated);
-      }
     }
 
     _isRecording = false;

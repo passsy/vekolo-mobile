@@ -1,10 +1,7 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_blue_plus/flutter_blue_plus.dart' as fbp;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:spot/spot.dart';
 import 'package:vekolo/domain/models/device_info.dart';
 
-import '../helpers/ftms_data_builder.dart';
 import '../robot/robot_kit.dart';
 
 void main() {
@@ -28,33 +25,14 @@ void main() {
     await robot.launchApp(pairedDevices: [kickrCore, hrMonitor], loggedIn: true);
     await robot.tapStartWorkout("Sweet Spot Workout");
 
-    // Verify workout player page loaded
+    // Verify workout player page loaded and waiting for user to start pedaling
     robot.verifyPlayerIsShown();
-    spotText('Start pedaling to begin workout').existsAtLeastOnce();
+    robot.verifyWorkoutIsPaused();
 
-    // Indoor Bike Data UUID: 00002AD2-0000-1000-8000-00805f9b34fb
-    final indoorBikeDataUuid = fbp.Guid('00002AD2-0000-1000-8000-00805f9b34fb');
-
-    // Emit power at 150W, cadence at 90 RPM
-    final powerData = FtmsDataBuilder()
-        .withPower(150)
-        .withCadence(180) // 180 * 0.5 = 90 RPM
-        .withSpeed(3000) // 30 km/h
-        .build();
-
-    // Emit data to trigger workout start
-    kickrCore.emitCharacteristic(indoorBikeDataUuid, powerData);
-    await robot.pumpUntil(1000);
-
-    // Let workout run and record samples
-    for (int i = 0; i < 10; i++) {
-      kickrCore.emitCharacteristic(indoorBikeDataUuid, powerData);
-      await robot.pumpUntil(1000);
-      await robot.idle(1000);
-    }
-
-    // workout is started
-    spotText('Start pedaling to begin workout').doesNotExist();
+    // Start riding - power automatically matches workout target from ERG control
+    kickrCore.startRiding();
+    await robot.idle();
+    robot.verifyWorkoutIsRunning();
 
     // Simulate crash by closing app without completing workout
     await robot.closeApp();
@@ -71,45 +49,11 @@ void main() {
     spotText('We found an incomplete workout session from earlier.').existsAtLeastOnce();
 
     // Dismiss dialog by choosing Resume
-    await robot.resumeWorkout();
-
-    // Wait for workout player page to load and restore state
-    // Multiple idle/pump cycles needed because:
-    // 1. Navigation to player page
-    // 2. Async persistence operations (loadSessionMetadata, updateSessionStatus)
-    // 3. Recording service resume
-    await robot.pumpUntil(3000);
-    // Additional cycles to let persistence async operations complete
-    for (int i = 0; i < 10; i++) {
-      await robot.idle(1000);
-    }
-
-    // Verify workout player restored
+    await robot.tapResumeWorkout();
     robot.verifyPlayerIsShown();
     expect(kickrCore.isConnected, isTrue);
     expect(hrMonitor.isConnected, isTrue);
-
-    // Emit power to ensure workout continues running after resume
-    kickrCore.emitCharacteristic(indoorBikeDataUuid, powerData);
-    await robot.pumpUntil(1000);
-
-    // Verify workout is running after crash recovery
-    // The "Start pedaling" prompt should be gone and progress bar should show progress
-    spotText('Start pedaling to begin workout').doesNotExist();
-    final progressBar = spot<LinearProgressIndicator>().snapshot();
-    progressBar.existsOnce();
-    final progressWidget = progressBar.discovered.first.element.widget as LinearProgressIndicator;
-    expect(progressWidget.value, greaterThan(0.0));
-
-    // Continue emitting power and advance time by 10 seconds
-    for (int i = 0; i < 10; i++) {
-      kickrCore.emitCharacteristic(indoorBikeDataUuid, powerData);
-      await robot.idle(1000);
-    }
-
-    // Verify the workout is still running (basic smoke test)
-    // If the timer was working, the workout should still be active
-    robot.verifyPlayerIsShown();
+    robot.verifyWorkoutIsRunning();
   });
 
   robotTest('workout session crash recovery - resume option', (robot) async {
@@ -124,27 +68,14 @@ void main() {
     await robot.tapStartWorkout('Sweet Spot Workout');
 
     robot.verifyPlayerIsShown();
-    spotText('Start pedaling to begin workout').existsAtLeastOnce();
+    robot.verifyWorkoutIsPaused();
 
-    // Emit power data to start workout
-    final indoorBikeDataUuid = fbp.Guid('00002AD2-0000-1000-8000-00805f9b34fb');
-    final powerData = FtmsDataBuilder()
-        .withPower(150)
-        .withCadence(180) // 90 RPM
-        .withSpeed(3000) // 30 km/h
-        .build();
-
-    // Start workout by emitting power
-    kickrCore.emitCharacteristic(indoorBikeDataUuid, powerData);
-    await robot.pumpUntil(1000);
-
-    // Let workout run for a few seconds to record samples
-    for (int i = 0; i < 3; i++) {
-      kickrCore.emitCharacteristic(indoorBikeDataUuid, powerData);
-      await robot.pumpUntil(1000);
-    }
+    // Start riding for a few seconds to record samples
+    kickrCore.startRiding();
+    await robot.pumpUntil(3000);
 
     // Simulate crash by closing app without completing workout
+    kickrCore.stopRiding();
     await robot.closeApp();
 
     // Verify device disconnected
@@ -161,13 +92,9 @@ void main() {
     spotText('Start Fresh').existsAtLeastOnce();
 
     // Choose Resume
-    await robot.resumeWorkout();
+    await robot.tapResumeWorkout();
 
     // Wait for workout player page to load and restore state
-    // Multiple idle/pump cycles needed because:
-    // 1. Navigation to player page
-    // 2. Async persistence operations (loadSessionMetadata, updateSessionStatus)
-    // 3. Recording service resume
     await robot.pumpUntil(3000);
     for (int i = 0; i < 5; i++) {
       await robot.idle(500);
@@ -176,9 +103,10 @@ void main() {
     // Verify workout player restored
     robot.verifyPlayerIsShown();
 
-    // Continue workout by emitting power
-    kickrCore.emitCharacteristic(indoorBikeDataUuid, powerData);
+    // Continue riding
+    kickrCore.startRiding();
     await robot.idle(500);
+    kickrCore.stopRiding();
   });
 
   robotTest('workout session crash recovery - discard option', (robot) async {
@@ -193,17 +121,12 @@ void main() {
     // Navigate to workout player and start workout
     await robot.tapStartWorkout('Sweet Spot Workout');
 
-    spotText('Start pedaling to begin workout').existsAtLeastOnce();
-
-    // Emit power data to start workout
-    final indoorBikeDataUuid = fbp.Guid('00002AD2-0000-1000-8000-00805f9b34fb');
-    final powerData = FtmsDataBuilder().withPower(150).withCadence(180).withSpeed(3000).build();
+    robot.verifyWorkoutIsPaused();
 
     // Run workout for a few seconds
-    for (int i = 0; i < 3; i++) {
-      kickrCore.emitCharacteristic(indoorBikeDataUuid, powerData);
-      await robot.idle(1000);
-    }
+    kickrCore.startRiding();
+    await robot.pumpUntil(3000);
+    kickrCore.stopRiding();
 
     // Simulate crash
     await robot.closeApp();
@@ -224,7 +147,7 @@ void main() {
     // Verify can start a new workout
     await robot.tapStartWorkout('Sweet Spot Workout');
 
-    spotText('Start pedaling to begin workout').existsAtLeastOnce();
+    robot.verifyWorkoutIsPaused();
   });
 
   robotTest('workout session crash recovery - start fresh option', (robot) async {
@@ -239,17 +162,12 @@ void main() {
     // Navigate to workout player and start workout
     await robot.tapStartWorkout('Sweet Spot Workout');
 
-    spotText('Start pedaling to begin workout').existsAtLeastOnce();
-
-    // Emit power data to start workout
-    final indoorBikeDataUuid = fbp.Guid('00002AD2-0000-1000-8000-00805f9b34fb');
-    final powerData = FtmsDataBuilder().withPower(150).withCadence(180).withSpeed(3000).build();
+    robot.verifyWorkoutIsPaused();
 
     // Run workout for a few seconds
-    for (int i = 0; i < 3; i++) {
-      kickrCore.emitCharacteristic(indoorBikeDataUuid, powerData);
-      await robot.idle(1000);
-    }
+    kickrCore.startRiding();
+    await robot.pumpUntil(3000);
+    kickrCore.stopRiding();
 
     // Simulate crash
     await robot.closeApp();
@@ -268,12 +186,13 @@ void main() {
     await robot.pumpUntil(2000);
 
     // Should start a new workout from beginning
-    spotText('Start pedaling to begin workout').existsAtLeastOnce();
+    robot.verifyWorkoutIsPaused();
     robot.verifyPlayerIsShown();
 
-    // Emit power to verify workout works
-    kickrCore.emitCharacteristic(indoorBikeDataUuid, powerData);
+    // Start riding to verify workout works
+    kickrCore.startRiding();
     await robot.idle(500);
+    kickrCore.stopRiding();
   });
 
   robotTest('stale metrics return null after 5 seconds', (robot) async {
@@ -288,24 +207,15 @@ void main() {
     // Navigate to workout player
     await robot.tapStartWorkout('Sweet Spot Workout');
 
-    spotText('Start pedaling to begin workout').existsAtLeastOnce();
+    robot.verifyWorkoutIsPaused();
 
-    // Emit power data to start workout
-    final indoorBikeDataUuid = fbp.Guid('00002AD2-0000-1000-8000-00805f9b34fb');
-    final powerData = FtmsDataBuilder().withPower(150).withCadence(180).withSpeed(3000).build();
+    // Start riding to establish continuous data streaming
+    kickrCore.startRiding();
+    await robot.pumpUntil(3000);
 
-    // Start workout with power streaming
-    kickrCore.emitCharacteristic(indoorBikeDataUuid, powerData);
-    await robot.idle(1000);
-
-    // Emit a couple more times to establish streaming
-    kickrCore.emitCharacteristic(indoorBikeDataUuid, powerData);
-    await robot.idle(1000);
-    kickrCore.emitCharacteristic(indoorBikeDataUuid, powerData);
-    await robot.idle(1000);
-
-    // Stop power updates (simulate user stopping pedaling or device disconnection)
-    // Don't emit any more characteristics
+    // Stop riding (simulate user stopping pedaling)
+    // This stops power updates but keeps device connected
+    kickrCore.stopRiding();
 
     // Wait for staleness threshold (5 seconds)
     await robot.idle(5500);

@@ -2,6 +2,7 @@
 
 import 'dart:async';
 import 'dart:typed_data';
+
 import 'package:chirp/chirp.dart';
 import 'package:clock/clock.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
@@ -133,6 +134,7 @@ class FakeBlePlatform implements BlePlatform {
 
     final device = fakeDevice.bluetoothDevice;
     final services = <BluetoothService>[];
+    final controlPointUuid = Guid('00002AD9-0000-1000-8000-00805f9b34fb');
 
     for (final serviceUuid in fakeDevice.services) {
       // Create characteristics based on the service UUID
@@ -151,7 +153,18 @@ class FakeBlePlatform implements BlePlatform {
 
       // Replace real characteristics with fake ones that don't call the platform
       final fakeCharacteristics = bluetoothService.characteristics.map((char) {
-        final fakeChar = FakeBluetoothCharacteristic(uuid: char.uuid, properties: char.properties, device: device);
+        // For control point characteristic, add callback to intercept writes
+        void Function(List<int>)? onWrite;
+        if (char.uuid == controlPointUuid) {
+          onWrite = fakeDevice._handleControlPointWrite;
+        }
+
+        final fakeChar = FakeBluetoothCharacteristic(
+          uuid: char.uuid,
+          properties: char.properties,
+          device: device,
+          onWrite: onWrite,
+        );
         // Register characteristic with device for emitCharacteristic() access
         fakeDevice._characteristics[char.uuid] = fakeChar;
         return fakeChar;
@@ -406,6 +419,7 @@ class FakeBlePlatform implements BlePlatform {
     // We use BluetoothService.fromProto() with BmBluetoothService objects
     final device = fakeDevice.bluetoothDevice;
     final services = <BluetoothService>[];
+    final controlPointUuid = Guid('00002AD9-0000-1000-8000-00805f9b34fb');
 
     for (final serviceUuid in fakeDevice.services) {
       // Create characteristics based on the service UUID
@@ -424,7 +438,18 @@ class FakeBlePlatform implements BlePlatform {
 
       // Replace real characteristics with fake ones that don't call the platform
       final fakeCharacteristics = bluetoothService.characteristics.map((char) {
-        final fakeChar = FakeBluetoothCharacteristic(uuid: char.uuid, properties: char.properties, device: device);
+        // For control point characteristic, add callback to intercept writes
+        void Function(List<int>)? onWrite;
+        if (char.uuid == controlPointUuid) {
+          onWrite = fakeDevice._handleControlPointWrite;
+        }
+
+        final fakeChar = FakeBluetoothCharacteristic(
+          uuid: char.uuid,
+          properties: char.properties,
+          device: device,
+          onWrite: onWrite,
+        );
         // Register characteristic with device for emitCharacteristic() access
         fakeDevice._characteristics[char.uuid] = fakeChar;
         return fakeChar;
@@ -456,10 +481,18 @@ class FakeBlePlatform implements BlePlatform {
 /// This class mocks BluetoothCharacteristic methods without calling the
 /// FlutterBluePlus platform, allowing tests to run without real BLE hardware.
 class FakeBluetoothCharacteristic implements BluetoothCharacteristic {
-  FakeBluetoothCharacteristic({required this.uuid, required this.properties, required BluetoothDevice device})
-    : _device = device,
-      _isNotifying = false,
-      _valueController = StreamController<List<int>>.broadcast();
+  FakeBluetoothCharacteristic({
+    required this.uuid,
+    required this.properties,
+    required BluetoothDevice device,
+    this.onWrite,
+  }) : _device = device,
+       _isNotifying = false,
+       _valueController = StreamController<List<int>>.broadcast();
+
+  /// Callback invoked when data is written to this characteristic.
+  /// Used by FakeDevice to intercept control point commands.
+  final void Function(List<int> value)? onWrite;
 
   @override
   final Guid uuid;
@@ -531,6 +564,8 @@ class FakeBluetoothCharacteristic implements BluetoothCharacteristic {
     _lastValue = List<int>.from(value);
     // Emit the value on the stream
     _valueController.add(_lastValue);
+    // Notify callback if present
+    onWrite?.call(value);
   }
 
   @override
@@ -545,8 +580,10 @@ class FakeBluetoothCharacteristic implements BluetoothCharacteristic {
   ///
   /// Call this in tests to simulate the device sending data.
   void simulateValueReceived(List<int> value) {
-    _lastValue = List<int>.from(value);
-    _valueController.add(_lastValue);
+    if (!_valueController.isClosed) {
+      _lastValue = List<int>.from(value);
+      _valueController.add(_lastValue);
+    }
   }
 
   void dispose() {
@@ -767,6 +804,19 @@ class FakeDevice {
   /// Cache of characteristics for this device, keyed by UUID.
   final Map<Guid, FakeBluetoothCharacteristic> _characteristics = {};
 
+  /// Timer for continuous riding simulation
+  Timer? _ridingTimer;
+
+  /// Whether the device is currently simulating riding
+  bool get isRiding => _ridingTimer != null;
+
+  /// Current target power set by the app (from control point writes)
+  int? _targetPower;
+
+  /// Fixed cadence and speed for riding simulation
+  int _ridingCadence = 90;
+  int _ridingSpeed = 30;
+
   FakeDevice._({
     required this.id,
     required this.name,
@@ -853,6 +903,152 @@ class FakeDevice {
     }
   }
 
+  /// Handle control point characteristic writes from the app.
+  ///
+  /// Intercepts FTMS Control Point commands and updates internal state.
+  /// Op Code 0x05 = Set Target Power (ERG mode)
+  void _handleControlPointWrite(List<int> data) {
+    if (data.isEmpty) return;
+
+    final opCode = data[0];
+
+    // Op Code 0x00 = Request Control (acknowledge it)
+    if (opCode == 0x00) {
+      chirp.debug('Control point: Request Control received');
+      return;
+    }
+
+    // Op Code 0x05 = Set Target Power
+    if (opCode == 0x05 && data.length >= 3) {
+      _targetPower = data[1] | (data[2] << 8);
+      chirp.debug('Control point: Target power set to ${_targetPower}W');
+    }
+  }
+
+  /// Start continuously emitting FTMS Indoor Bike Data, simulating a real ride.
+  ///
+  /// This method starts a timer that emits power data at 1Hz (once per second),
+  /// mimicking how a real smart trainer streams data while someone is riding.
+  /// The simulation continues until [stopRiding] is called or the device is
+  /// disconnected/turned off.
+  ///
+  /// **Smart ERG Mode**: When the app sends target power commands to the control
+  /// point characteristic, this simulation automatically uses that target power
+  /// as the actual power output, just like a real smart trainer in ERG mode.
+  ///
+  /// Parameters:
+  /// - [cadenceRpm]: Instantaneous cadence in RPM (default: 90 RPM)
+  /// - [speedKmh]: Instantaneous speed in km/h (default: 30 km/h)
+  ///
+  /// Example:
+  /// ```dart
+  /// // Start riding - power will automatically match whatever the app requests
+  /// kickrCore.startRiding();
+  ///
+  /// // Let the workout run for 10 seconds
+  /// await robot.pumpUntil(10000);
+  ///
+  /// // Stop riding
+  /// kickrCore.stopRiding();
+  /// ```
+  void startRiding({int cadenceRpm = 90, int speedKmh = 30}) {
+    // Stop any existing riding simulation
+    stopRiding();
+
+    _ridingCadence = cadenceRpm;
+    _ridingSpeed = speedKmh;
+
+    chirp.info('Starting riding simulation: ${cadenceRpm}RPM, ${speedKmh}km/h (power from ERG control)');
+
+    // Emit immediately with current target power (or default), then every second
+    final power = _targetPower ?? 150;
+    emitIndoorBikeData(powerWatts: power, cadenceRpm: cadenceRpm, speedKmh: speedKmh);
+
+    _ridingTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      // Use target power from control point, or default to 150W
+      final power = _targetPower ?? 150;
+      emitIndoorBikeData(powerWatts: power, cadenceRpm: _ridingCadence, speedKmh: _ridingSpeed);
+    });
+  }
+
+  /// Stop the continuous riding simulation.
+  ///
+  /// Safe to call even if not currently riding.
+  void stopRiding() {
+    if (_ridingTimer != null) {
+      chirp.info('Stopping riding simulation');
+      _ridingTimer?.cancel();
+      _ridingTimer = null;
+    }
+  }
+
+  /// Emit FTMS Indoor Bike Data with the specified power, cadence, and speed.
+  ///
+  /// This is a convenience method for emitting realistic FTMS data without
+  /// having to construct the binary packet manually.
+  ///
+  /// Parameters:
+  /// - [powerWatts]: Instantaneous power in watts (e.g., 150 = 150W)
+  /// - [cadenceRpm]: Instantaneous cadence in RPM (e.g., 90 = 90 RPM)
+  /// - [speedKmh]: Instantaneous speed in km/h (e.g., 30 = 30 km/h)
+  ///
+  /// Example:
+  /// ```dart
+  /// kickrCore.emitIndoorBikeData(powerWatts: 150, cadenceRpm: 90, speedKmh: 30);
+  /// ```
+  void emitIndoorBikeData({int? powerWatts, int? cadenceRpm, int? speedKmh}) {
+    // Indoor Bike Data UUID: 00002AD2-0000-1000-8000-00805f9b34fb
+    final indoorBikeDataUuid = Guid('00002AD2-0000-1000-8000-00805f9b34fb');
+
+    // Build FTMS Indoor Bike Data packet
+    // Calculate flags based on what data we're including
+    int flags = 0x0000;
+
+    // Bit 0: More Data (0 = speed present, 1 = speed not present)
+    if (speedKmh == null) {
+      flags |= 1 << 0;
+    }
+
+    // Bit 2: Instantaneous Cadence Present
+    if (cadenceRpm != null) {
+      flags |= 1 << 2;
+    }
+
+    // Bit 6: Instantaneous Power Present
+    if (powerWatts != null) {
+      flags |= 1 << 6;
+    }
+
+    // Build the packet
+    final buffer = <int>[];
+
+    // Add flags (uint16, little endian)
+    buffer.add(flags & 0xFF);
+    buffer.add((flags >> 8) & 0xFF);
+
+    // Add speed if present (uint16, resolution 0.01 km/h)
+    if (speedKmh != null) {
+      final speedX100 = (speedKmh * 100).round();
+      buffer.add(speedX100 & 0xFF);
+      buffer.add((speedX100 >> 8) & 0xFF);
+    }
+
+    // Add cadence if present (uint16, resolution 0.5 RPM)
+    if (cadenceRpm != null) {
+      final cadenceX2 = (cadenceRpm * 2).round();
+      buffer.add(cadenceX2 & 0xFF);
+      buffer.add((cadenceX2 >> 8) & 0xFF);
+    }
+
+    // Add power if present (sint16)
+    if (powerWatts != null) {
+      buffer.add(powerWatts & 0xFF);
+      buffer.add((powerWatts >> 8) & 0xFF);
+    }
+
+    emitCharacteristic(indoorBikeDataUuid, buffer);
+  }
+
   /// Emit a BLE characteristic notification with the given data.
   ///
   /// This simulates the device sending data to subscribed characteristics.
@@ -877,6 +1073,12 @@ class FakeDevice {
   /// kickr.emitCharacteristic(indoorBikeDataUuid, [0x44, 0x02, 0x00, 0x00, 0x96, 0x00]);
   /// ```
   void emitCharacteristic(Guid characteristicUuid, List<int> data) {
+    // Silently ignore emissions when disconnected to prevent race conditions
+    // during app disposal when beacons may already be disposed
+    if (!_isConnected) {
+      return;
+    }
+
     final char = _characteristics[characteristicUuid];
     if (char == null) {
       throw Exception(

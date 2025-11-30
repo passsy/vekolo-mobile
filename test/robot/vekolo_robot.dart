@@ -703,12 +703,34 @@ class VekoloRobot {
     spot<WorkoutScreenContent>().existsOnce();
   }
 
-  Future<void> resumeWorkout() async {
+  /// Verifies that the workout is paused/waiting to start.
+  ///
+  /// The workout is considered paused when the "Start pedaling to begin workout"
+  /// text is shown, indicating the user hasn't started producing power yet.
+  void verifyWorkoutIsPaused() {
+    logger.robotLog('verify workout is paused (waiting to start)');
+    spotText('Start pedaling to begin workout').existsAtLeastOnce();
+  }
+
+  /// Verifies that the workout is running (not paused).
+  ///
+  /// The workout is considered running when the "Start pedaling" prompt is gone
+  /// and the progress bar shows progress > 0.
+  void verifyWorkoutIsRunning() {
+    logger.robotLog('verify workout is running');
+    spotText('Start pedaling to begin workout').doesNotExist();
+    final progressBar = spot<LinearProgressIndicator>().snapshot();
+    progressBar.existsOnce();
+    final progressWidget = progressBar.discovered.first.element.widget as LinearProgressIndicator;
+    expect(progressWidget.value, greaterThan(0.0), reason: 'Progress bar should show progress > 0');
+  }
+
+  Future<void> tapResumeWorkout() async {
     logger.robotLog('resuming workout from crash recovery notification');
     // Tap the "Resume" button (there will be 2 matches: title has "Resume Workout?" and button has "Resume")
     await act.tap(spotText('Resume').atIndex(1));
     // Wait for navigation and workout player to load
-    await idle(3000);
+    await idle();
   }
 
   Future<void> discardWorkout() async {
@@ -847,6 +869,9 @@ class Aether {
 
     final device = fakeBlePlatform.addDevice(deviceId, name, rssi: rssi, services: serviceUuids);
     device.turnOn();
+
+    // Ensure riding simulation is stopped before test cleanup to prevent beacon warnings
+    addTearDown(device.stopRiding);
 
     return device;
   }
