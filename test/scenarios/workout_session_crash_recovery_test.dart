@@ -1,6 +1,6 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart' as fbp;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:meta/meta.dart';
 import 'package:spot/spot.dart';
 import 'package:vekolo/domain/models/device_info.dart';
 
@@ -74,7 +74,15 @@ void main() {
     await robot.resumeWorkout();
 
     // Wait for workout player page to load and restore state
-    await robot.pumpUntil(2000);
+    // Multiple idle/pump cycles needed because:
+    // 1. Navigation to player page
+    // 2. Async persistence operations (loadSessionMetadata, updateSessionStatus)
+    // 3. Recording service resume
+    await robot.pumpUntil(3000);
+    // Additional cycles to let persistence async operations complete
+    for (int i = 0; i < 10; i++) {
+      await robot.idle(1000);
+    }
 
     // Verify workout player restored
     robot.verifyPlayerIsShown();
@@ -85,9 +93,13 @@ void main() {
     kickrCore.emitCharacteristic(indoorBikeDataUuid, powerData);
     await robot.pumpUntil(1000);
 
-    // Verify workout timer is running after crash recovery
-    // The elapsed time should be visible and updating
-    spotText('ELAPSED').existsAtLeastOnce();
+    // Verify workout is running after crash recovery
+    // The "Start pedaling" prompt should be gone and progress bar should show progress
+    spotText('Start pedaling to begin workout').doesNotExist();
+    final progressBar = spot<LinearProgressIndicator>().snapshot();
+    progressBar.existsOnce();
+    final progressWidget = progressBar.discovered.first.element.widget as LinearProgressIndicator;
+    expect(progressWidget.value, greaterThan(0.0));
 
     // Continue emitting power and advance time by 10 seconds
     for (int i = 0; i < 10; i++) {
@@ -152,7 +164,14 @@ void main() {
     await robot.resumeWorkout();
 
     // Wait for workout player page to load and restore state
-    await robot.pumpUntil(2000);
+    // Multiple idle/pump cycles needed because:
+    // 1. Navigation to player page
+    // 2. Async persistence operations (loadSessionMetadata, updateSessionStatus)
+    // 3. Recording service resume
+    await robot.pumpUntil(3000);
+    for (int i = 0; i < 5; i++) {
+      await robot.idle(500);
+    }
 
     // Verify workout player restored
     robot.verifyPlayerIsShown();

@@ -558,7 +558,6 @@ class DeviceManager {
       final smartTrainer = _smartTrainerBeacon.value?.connectedDevice;
       final device = powerSource ?? smartTrainer;
       final powerData = device?.powerStream?.value;
-      chirp.debug('Power Data: $powerData');
       return powerData;
     }).withStalenessDetection(threshold: _stalenessThreshold);
 
@@ -666,10 +665,19 @@ class DeviceManager {
   ///
   /// Errors are logged but don't block initialization. Unavailable devices are silently skipped.
   Future<void> initialize() async {
+    chirp.debug('initializing');
+    // Guard against multiple initialization calls
+    if (_initialized) {
+      throw 'initialize() already called';
+    }
+    _initialized = true;
+
     final assignments = await persistence.loadAssignments();
     _restoreAssignments(assignments);
     _startAutoConnectIfNeeded(assignments);
   }
+
+  bool _initialized = false;
 
   /// Starts auto-connect scanning if there are saved device assignments.
   void _startAutoConnectIfNeeded(DeviceAssignments assignments) {

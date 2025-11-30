@@ -136,7 +136,7 @@ void main() {
       // Verify metadata content
       final metadata = await deps.persistence.loadSessionMetadata(workoutId);
       expect(metadata, isNotNull);
-      expect(metadata!.workoutId, workoutId);
+      expect(metadata!.sessionId, workoutId);
       expect(metadata.workoutName, 'Test Workout');
       expect(metadata.status, SessionStatus.active);
       expect(metadata.userId, 'user-123');

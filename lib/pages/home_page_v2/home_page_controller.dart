@@ -286,7 +286,11 @@ class HomePageController extends BeaconController {
             notificationService.clearAll();
             context.push(
               '/workout-player?resuming=true',
-              extra: {'plan': incompleteSession.workoutPlan, 'name': incompleteSession.workoutName},
+              extra: {
+                'workoutId': incompleteSession.sourceWorkoutId,
+                'plan': incompleteSession.workoutPlan,
+                'name': incompleteSession.workoutName,
+              },
             );
           },
           onDiscard: () async {
@@ -299,7 +303,11 @@ class HomePageController extends BeaconController {
             if (context.mounted) {
               context.push(
                 '/workout-player',
-                extra: {'plan': incompleteSession.workoutPlan, 'name': incompleteSession.workoutName},
+                extra: {
+                  'workoutId': incompleteSession.sourceWorkoutId,
+                  'plan': incompleteSession.workoutPlan,
+                  'name': incompleteSession.workoutName,
+                },
               );
             }
           },

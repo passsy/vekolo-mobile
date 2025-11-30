@@ -9,6 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:spot/spot.dart';
+import 'package:state_beacon/state_beacon.dart';
 import 'package:vekolo/app/app.dart';
 import 'package:vekolo/app/logger.dart';
 import 'package:vekolo/app/refs.dart';
@@ -77,9 +78,12 @@ class VekoloRobot {
       GoogleFonts.sairaExtraCondensed(fontWeight: FontWeight.w400),
     ]);
 
-    // Setup mock SharedPreferences and SecureStorage ONCE per test
+    // Setup mock disk based storage ONCE per test
     // This ensures data persists across app restarts within the same test
     createTestSharedPreferencesAsync();
+    // Vekolo always uses the async version, but packages like wiredash depend on the sync one
+    SharedPreferences.setMockInitialValues({});
+    // store for auth tokens
     FlutterSecureStorage.setMockInitialValues({});
 
     // Setup path_provider for workout session persistence

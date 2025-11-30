@@ -203,9 +203,9 @@ class FakeVekoloApiClient implements VekoloApiClient {
     }
     // Default: return success with fake activity ID
     return UploadActivityResponse.create(
-      id: 'fake-activity-${metadata.workoutId}',
+      id: 'fake-activity-${metadata.sessionId}',
       createdAt: DateTime.now().toIso8601String(),
-      url: 'https://vekolo.cc/activities/fake-activity-${metadata.workoutId}',
+      url: 'https://vekolo.cc/activities/fake-activity-${metadata.sessionId}',
     );
   }
 

@@ -6,6 +6,7 @@ import 'package:clock/clock.dart';
 import 'package:nanoid2/nanoid2.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:synchronized/synchronized.dart';
 import 'package:vekolo/domain/models/workout/workout_models.dart';
 import 'package:vekolo/domain/models/workout_session.dart';
 
@@ -41,6 +42,10 @@ class WorkoutSessionPersistence {
   // Sample buffering for performance (write every N samples)
   static const int _sampleBufferSize = 5;
   final Map<String, List<WorkoutSample>> _sampleBuffers = {};
+
+  // Per-session locks to prevent concurrent metadata writes
+  // Multiple async operations (sample count updates, progress updates) can race
+  final Map<String, Lock> _metadataLocks = {};
 
   /// Get the workouts base directory path.
   ///
@@ -158,7 +163,7 @@ class WorkoutSessionPersistence {
 
     // Create initial metadata
     final metadata = WorkoutSessionMetadata(
-      workoutId: workoutId,
+      sessionId: workoutId,
       workoutName: workoutName,
       workoutPlan: plan,
       startTime: clock.now(),
@@ -255,20 +260,28 @@ class WorkoutSessionPersistence {
     }
   }
 
+  /// Get or create a lock for a specific session.
+  Lock _getLock(String sessionId) => _metadataLocks.putIfAbsent(sessionId, Lock.new);
+
   /// Save metadata to file.
+  ///
+  /// Uses a per-session lock to prevent concurrent writes from corrupting the file.
+  /// Multiple async operations (sample count updates, progress updates) can race.
   Future<void> _saveMetadata(WorkoutSessionMetadata metadata) async {
-    final metadataFile = await getMetadataFile(metadata.workoutId);
-    final json = jsonEncode(metadata.toJson());
+    await _getLock(metadata.sessionId).synchronized(() async {
+      final metadataFile = await getMetadataFile(metadata.sessionId);
+      final json = jsonEncode(metadata.toJson());
 
-    // Ensure parent directory exists before writing
-    final parentDir = metadataFile.parent;
-    if (!await parentDir.exists()) {
-      await parentDir.create(recursive: true);
-    }
+      // Ensure parent directory exists before writing
+      final parentDir = metadataFile.parent;
+      if (!await parentDir.exists()) {
+        await parentDir.create(recursive: true);
+      }
 
-    // Use flush: true to ensure data is written to disk immediately
-    // This prevents race conditions in tests and crash scenarios
-    metadataFile.writeAsStringSync(json, flush: true);
+      // Use flush: true to ensure data is written to disk immediately
+      // This prevents race conditions in tests and crash scenarios
+      metadataFile.writeAsStringSync(json, flush: true);
+    });
   }
 
   // ==========================================================================

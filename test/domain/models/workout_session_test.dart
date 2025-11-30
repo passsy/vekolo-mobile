@@ -40,7 +40,7 @@ void main() {
     );
 
     final testMetadata = WorkoutSessionMetadata(
-      workoutId: 'V1StGXR8_Z5jdHi6B-myT',
+      sessionId: 'V1StGXR8_Z5jdHi6B-myT',
       workoutName: 'Sweet Spot Intervals',
       workoutPlan: testWorkoutPlan,
       startTime: DateTime.parse('2025-01-15T10:00:00.000Z'),
@@ -73,7 +73,7 @@ void main() {
 
     test('toJson omits null fields correctly', () {
       final metadataWithoutOptionals = WorkoutSessionMetadata(
-        workoutId: testMetadata.workoutId,
+        sessionId: testMetadata.sessionId,
         workoutName: testMetadata.workoutName,
         workoutPlan: testMetadata.workoutPlan,
         startTime: testMetadata.startTime,
@@ -95,7 +95,7 @@ void main() {
       final json = testMetadata.toJson();
       final deserialized = WorkoutSessionMetadata.fromJson(json);
 
-      expect(deserialized.workoutId, testMetadata.workoutId);
+      expect(deserialized.sessionId, testMetadata.sessionId);
       expect(deserialized.workoutName, testMetadata.workoutName);
       expect(deserialized.workoutPlan.plan.length, testMetadata.workoutPlan.plan.length);
       expect(deserialized.startTime, testMetadata.startTime);
@@ -120,7 +120,7 @@ void main() {
       expect(updated.endTime, DateTime.parse('2025-01-15T10:30:00.000Z'));
       expect(updated.totalSamples, 456);
       // Other fields unchanged
-      expect(updated.workoutId, testMetadata.workoutId);
+      expect(updated.sessionId, testMetadata.sessionId);
       expect(updated.workoutName, testMetadata.workoutName);
       expect(updated.ftp, testMetadata.ftp);
     });
@@ -138,7 +138,7 @@ void main() {
     final testWorkoutPlan = WorkoutPlan(plan: [const PowerBlock(id: 'warmup', duration: 300000, power: 0.5)]);
 
     final testMetadata = WorkoutSessionMetadata(
-      workoutId: 'V1StGXR8_Z5jdHi6B-myT',
+      sessionId: 'V1StGXR8_Z5jdHi6B-myT',
       workoutName: 'Test Workout',
       workoutPlan: testWorkoutPlan,
       startTime: DateTime.parse('2025-01-15T10:00:00.000Z'),
@@ -154,7 +154,7 @@ void main() {
     test('fromMetadata creates session from metadata', () {
       final session = WorkoutSession.fromMetadata(testMetadata);
 
-      expect(session.id, testMetadata.workoutId);
+      expect(session.id, testMetadata.sessionId);
       expect(session.workoutName, testMetadata.workoutName);
       expect(session.workoutPlan, testMetadata.workoutPlan);
       expect(session.startTime, testMetadata.startTime);

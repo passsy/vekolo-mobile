@@ -17,6 +17,7 @@ void main() {
         status: SessionStatus.active,
         elapsedMs: 123000, // 2:03
         currentBlockIndex: 2,
+        sourceWorkoutId: 'source-workout-123',
         lastSampleTime: DateTime.now().subtract(Duration(minutes: 5)),
       );
     });
@@ -155,6 +156,7 @@ void main() {
         status: SessionStatus.active,
         elapsedMs: 65000, // 1:05
         currentBlockIndex: 0,
+        sourceWorkoutId: 'source-1',
       );
 
       await tester.pumpWidget(
@@ -175,6 +177,7 @@ void main() {
         status: SessionStatus.active,
         elapsedMs: 10000,
         currentBlockIndex: 0,
+        sourceWorkoutId: 'source-1',
       );
 
       await tester.pumpWidget(

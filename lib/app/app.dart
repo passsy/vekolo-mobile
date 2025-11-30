@@ -5,6 +5,7 @@ import 'package:chirp/chirp.dart';
 import 'package:context_plus/context_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:state_beacon/state_beacon.dart';
 import 'package:vekolo/api/pretty_log_interceptor.dart';
 import 'package:wiredash/wiredash.dart';
 import 'package:vekolo/api/vekolo_api_client.dart';
@@ -39,14 +40,19 @@ class VekoloApp extends StatefulWidget {
 
 class _VekoloAppState extends State<VekoloApp> {
   bool _initialized = false;
+  bool _isInitializing = false;
   String? _initializationError;
   String? _initializationStackTrace;
   DateTime? _initializationStartTime;
 
   /// Perform async initialization of services before mounting the main app / drawing the first frame
   Future<void> _initialize(BuildContext context) async {
+    if (_isInitializing) return;
+    _isInitializing = true;
     _initializationStartTime ??= DateTime.now();
     if (!mounted) return;
+
+    BeaconScheduler.useFlutterScheduler();
 
     // Configure system UI for dark mode with edge-to-edge
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
@@ -105,6 +111,7 @@ class _VekoloAppState extends State<VekoloApp> {
       }
     } catch (e, stack) {
       chirp.error('Initialization failed', error: e, stackTrace: stack);
+      _isInitializing = false; // Allow retry
       if (mounted) {
         setState(() {
           _initializationError = e.toString();
@@ -121,6 +128,7 @@ class _VekoloAppState extends State<VekoloApp> {
         onStop: () {
           setState(() {
             _initialized = false;
+            _isInitializing = false;
           });
         },
         builder: (context) {

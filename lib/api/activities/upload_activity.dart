@@ -19,7 +19,7 @@ Future<UploadActivityResponse> postUploadActivity(
   final response = await context.authDio.post(
     '/api/activities/upload',
     data: {
-      'idempotencyKey': metadata.workoutId,
+      'idempotencyKey': metadata.sessionId,
       'workoutId': metadata.sourceWorkoutId,
       'startTime': metadata.startTime.toIso8601String(),
       'dataPoints': samples.map(_sampleToDataPoint).toList(),

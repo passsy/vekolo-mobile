@@ -1,12 +1,11 @@
 import 'dart:async';
+
 import 'package:chirp/chirp.dart';
 import 'package:clock/clock.dart';
-
 import 'package:context_plus/context_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:state_beacon/state_beacon.dart';
-import 'package:wiredash/wiredash.dart';
 import 'package:vekolo/app/refs.dart';
 import 'package:vekolo/domain/devices/device_manager.dart';
 import 'package:vekolo/domain/models/workout/workout_models.dart';
@@ -16,6 +15,7 @@ import 'package:vekolo/services/workout_player_service.dart';
 import 'package:vekolo/services/workout_recording_service.dart';
 import 'package:vekolo/widgets/workout_resume_dialog.dart';
 import 'package:vekolo/widgets/workout_screen_content.dart';
+import 'package:wiredash/wiredash.dart';
 
 /// Page for executing structured workouts with real-time power control.
 ///
@@ -94,24 +94,27 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
       late final WorkoutPlan workoutPlan;
       late final String workoutName;
 
-      // Option 1: Load from API using workout ID (for new workouts)
-      if (widget.workoutId != null) {
+      // Option 1: Use provided workout plan (for resume or direct plan passing)
+      if (widget.workoutPlan != null) {
+        chirp.info('Using provided workout plan: ${widget.workoutName}');
+        workoutPlan = widget.workoutPlan!;
+        workoutName = widget.workoutName ?? 'Workout';
+      }
+      // Option 2: Load from API using workout ID (for new workouts)
+      else if (widget.workoutId != null) {
         chirp.info('Loading workout from API: ${widget.workoutId}');
 
         if (!mounted) return;
         final apiClient = Refs.apiClient.of(context);
         final workoutResponse = await apiClient.workout(slug: widget.workoutId!);
+        if (!mounted) return;
 
         workoutPlan = workoutResponse.plan;
         workoutName = workoutResponse.title;
 
         chirp.info('Loaded workout: $workoutName with ${workoutPlan.plan.length} blocks');
-      }
-      // Option 2: Use provided workout plan (for resume)
-      else {
-        chirp.info('Using provided workout plan for resume: ${widget.workoutName}');
-        workoutPlan = widget.workoutPlan!;
-        workoutName = widget.workoutName ?? 'Workout';
+      } else {
+        throw StateError('WorkoutPlayerPage requires either workoutPlan or workoutId');
       }
 
       // Initialize player service
@@ -124,6 +127,7 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
 
       // Check for incomplete workout sessions
       final incompleteSession = await persistence.getActiveSession();
+      if (!mounted) return;
 
       ResumeChoice? resumeChoice;
       if (incompleteSession != null && mounted && !widget.isResuming) {
@@ -155,6 +159,8 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
         resumeChoice = ResumeChoice.resume;
       }
 
+      if (!mounted) return;
+
       final playerService = WorkoutPlayerService(workoutPlan: workoutPlan, deviceManager: deviceManager, ftp: ftp);
 
       // Initialize recording service
@@ -178,6 +184,14 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
         await recordingService.resumeRecording(sessionId: incompleteSession.id);
 
         chirp.info('Workout state restored successfully');
+      }
+
+      // Check if widget was disposed during async operations
+      if (!mounted) {
+        chirp.info('Widget disposed during workout loading, cleaning up');
+        recordingService.dispose();
+        playerService.dispose();
+        return;
       }
 
       // Listen to triggered events
@@ -397,7 +411,7 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
   Widget build(BuildContext context) {
     if (_isLoading) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Loading Workout...')),
+        appBar: AppBar(title: Text('Loading Workout ${widget.workoutId}...')),
         body: const Center(child: CircularProgressIndicator()),
       );
     }

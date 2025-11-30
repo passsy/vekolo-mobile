@@ -49,7 +49,7 @@ enum SessionStatus {
 class WorkoutSessionMetadata {
   /// Creates workout session metadata.
   const WorkoutSessionMetadata({
-    required this.workoutId,
+    required this.sessionId,
     required this.workoutName,
     required this.workoutPlan,
     required this.startTime,
@@ -67,7 +67,8 @@ class WorkoutSessionMetadata {
   /// Creates from JSON using deep_pick.
   factory WorkoutSessionMetadata.fromJson(Map<String, dynamic> json) {
     return WorkoutSessionMetadata(
-      workoutId: pick(json, 'workoutId').asStringOrThrow(),
+      // JSON key remains 'workoutId' for backwards compatibility with persisted data
+      sessionId: pick(json, 'workoutId').asStringOrThrow(),
       workoutName: pick(json, 'workoutName').asStringOrThrow(),
       workoutPlan: WorkoutPlan.fromJson(pick(json, 'workoutPlanJson').asMapOrThrow<String, dynamic>()),
       startTime: DateTime.parse(pick(json, 'startTime').asStringOrThrow()),
@@ -83,8 +84,9 @@ class WorkoutSessionMetadata {
     );
   }
 
-  /// Unique workout session ID (nanoid, e.g., "V1StGXR8_Z5jdHi6B-myT").
-  final String workoutId;
+  /// Unique session ID (nanoid, e.g., "V1StGXR8_Z5jdHi6B-myT").
+  /// This identifies this specific workout session/recording.
+  final String sessionId;
 
   /// Workout name (e.g., "Sweet Spot Intervals").
   final String workoutName;
@@ -125,7 +127,8 @@ class WorkoutSessionMetadata {
   /// Converts to JSON.
   Map<String, dynamic> toJson() {
     return {
-      'workoutId': workoutId,
+      // JSON key remains 'workoutId' for backwards compatibility with persisted data
+      'workoutId': sessionId,
       'workoutName': workoutName,
       'workoutPlanJson': workoutPlan.toJson(),
       'startTime': startTime.toIso8601String(),
@@ -143,7 +146,7 @@ class WorkoutSessionMetadata {
 
   /// Creates a copy with optional field replacements.
   WorkoutSessionMetadata copyWith({
-    String? workoutId,
+    String? sessionId,
     String? workoutName,
     WorkoutPlan? workoutPlan,
     DateTime? startTime,
@@ -158,7 +161,7 @@ class WorkoutSessionMetadata {
     DateTime? lastUpdated,
   }) {
     return WorkoutSessionMetadata(
-      workoutId: workoutId ?? this.workoutId,
+      sessionId: sessionId ?? this.sessionId,
       workoutName: workoutName ?? this.workoutName,
       workoutPlan: workoutPlan ?? this.workoutPlan,
       startTime: startTime ?? this.startTime,
@@ -192,19 +195,21 @@ class WorkoutSession {
     required this.status,
     required this.elapsedMs,
     required this.currentBlockIndex,
+    required this.sourceWorkoutId,
     this.lastSampleTime,
   });
 
   /// Creates from metadata.
   factory WorkoutSession.fromMetadata(WorkoutSessionMetadata metadata) {
     return WorkoutSession(
-      id: metadata.workoutId,
+      id: metadata.sessionId,
       workoutName: metadata.workoutName,
       workoutPlan: metadata.workoutPlan,
       startTime: metadata.startTime,
       status: metadata.status,
       elapsedMs: metadata.elapsedMs,
       currentBlockIndex: metadata.currentBlockIndex,
+      sourceWorkoutId: metadata.sourceWorkoutId,
       lastSampleTime: metadata.lastUpdated,
     );
   }
@@ -229,6 +234,9 @@ class WorkoutSession {
 
   /// Current block index (for resume).
   final int currentBlockIndex;
+
+  /// Source workout ID from library/API (for re-riding the same workout).
+  final String sourceWorkoutId;
 
   /// Last time a sample was recorded (for display).
   final DateTime? lastSampleTime;
