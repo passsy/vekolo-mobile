@@ -19,6 +19,7 @@ class ApiConfig {
       case 'prod':
       default:
         if (kDebugMode) {
+          // return devBaseUrl;
           return stagingBaseUrl;
         } else {
           return productionBaseUrl;

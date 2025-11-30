@@ -76,11 +76,9 @@ packages:
   chirp:
     dependency: "direct main"
     description:
-      path: "."
-      ref: main
-      resolved-ref: e947de94909ae846cd0675e985cace7f3419c3dc
-      url: "git@github.com:passsy/chirp.git"
-    source: git
+      path: "/Users/pascalwelsch/Projects/passsy/chirp"
+      relative: false
+    source: path
     version: "0.5.0"
   ci:
     dependency: transitive
@@ -909,6 +907,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.4.1"
+  synchronized:
+    dependency: "direct main"
+    description:
+      name: synchronized
+      sha256: c254ade258ec8282947a0acbbc90b9575b4f19673533ee46f2f6e9b3aeefd7c0
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.4.0"
   term_glyph:
     dependency: transitive
     description:

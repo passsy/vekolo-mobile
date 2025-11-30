@@ -557,7 +557,9 @@ class DeviceManager {
       final powerSource = _powerSourceBeacon.value?.connectedDevice;
       final smartTrainer = _smartTrainerBeacon.value?.connectedDevice;
       final device = powerSource ?? smartTrainer;
-      return device?.powerStream?.value;
+      final powerData = device?.powerStream?.value;
+      chirp.debug('Power Data: $powerData');
+      return powerData;
     }).withStalenessDetection(threshold: _stalenessThreshold);
 
     // Cadence stream: derived beacon selecting the appropriate device, with staleness detection

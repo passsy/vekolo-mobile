@@ -1,10 +1,12 @@
+import 'dart:ui';
+
 import 'package:chirp/chirp.dart';
 
 import 'package:context_plus/context_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:wiredash/wiredash.dart';
 import 'package:vekolo/api/pretty_log_interceptor.dart';
+import 'package:wiredash/wiredash.dart';
 import 'package:vekolo/api/vekolo_api_client.dart';
 import 'package:vekolo/app/colors.dart';
 import 'package:vekolo/app/refs.dart';
@@ -134,17 +136,16 @@ class _VekoloAppState extends State<VekoloApp> {
             key: (apiClientProvider,),
           );
 
-          final apiClientRef = Refs.apiClient.bindWhenUnbound(
-            context,
-            () => VekoloApiClient(
+          final apiClientRef = Refs.apiClient.bindWhenUnbound(context, () {
+            Chirp.debug("Using API: ${ApiConfig.baseUrl}");
+            return VekoloApiClient(
               baseUrl: ApiConfig.baseUrl,
               interceptors: [
-                PrettyLogInterceptor(logMode: LogMode.unexpectedResponses),
+                PrettyLogInterceptor(logMode: LogMode.all),
                 authService.apiInterceptor,
               ],
-            ),
-            key: (authService,),
-          );
+            );
+          }, key: (authService,));
           apiClient = apiClientRef;
 
           final blePlatform = Refs.blePlatform.bindWhenUnbound(
@@ -282,6 +283,7 @@ class _VekoloAppState extends State<VekoloApp> {
                   theme: ThemeData(colorScheme: ColorScheme.fromSeed(seedColor: Colors.orange)),
                   debugShowCheckedModeBanner: false,
                   routerConfig: Refs.router.of(context),
+                  scrollBehavior: const _MouseDragScrollBehavior(),
                 );
               },
             ),
@@ -329,4 +331,17 @@ class AppRestartState extends State<AppRestart> {
     }
     return Builder(key: _key, builder: widget.builder);
   }
+}
+
+/// Enables mouse drag scrolling on desktop platforms
+class _MouseDragScrollBehavior extends MaterialScrollBehavior {
+  const _MouseDragScrollBehavior();
+
+  @override
+  Set<PointerDeviceKind> get dragDevices => {
+        PointerDeviceKind.touch,
+        PointerDeviceKind.mouse,
+        PointerDeviceKind.stylus,
+        PointerDeviceKind.trackpad,
+      };
 }

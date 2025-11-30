@@ -29,9 +29,6 @@ void main() {
     await robot.waitUntilConnected();
     expect(availableDevice.isConnected, isTrue);
 
-    // Note: Navigation back to devices page after scanner doesn't work reliably
-    // So we skip that step and just open scanner again
-
     // Connect and assign the unavailable device to heart rate
     await robot.openScanner();
     await robot.selectDeviceInScanner('Unavailable Device');
@@ -61,29 +58,30 @@ void main() {
     await act.dragUntilVisible(dragStart: spotText('DATA SOURCES'), dragTarget: spotText('HEART RATE'));
 
     // Verify unavailable device is shown with UnavailableDeviceCard
-    final unavailableCard = spot<UnavailableDeviceCard>();
-    unavailableCard.existsOnce();
+    final hrSection = spot<DataSourceSection>().withChild(spotText('HEART RATE'))..existsOnce();
+    final unavailableHrCard = hrSection.spot<UnavailableDeviceCard>();
+    unavailableHrCard.existsOnce();
 
     // Verify the unavailable device shows the correct name
-    unavailableCard.spotText('Unavailable Device').existsOnce();
+    unavailableHrCard.spotText('Unavailable Device').existsOnce();
 
     // Verify "Device not available" message is shown
-    unavailableCard.spotText('Device not available').existsOnce();
+    unavailableHrCard.spotText('Device not available').existsOnce();
 
     // Verify device ID is shown
-    unavailableCard.spotText('ID: ${unavailableDevice.id}').existsOnce();
+    unavailableHrCard.spotText('ID: ${unavailableDevice.id}').existsOnce();
 
     // Verify unassign button exists and tap it
-    final unassignButton = unavailableCard.spot<OutlinedButton>().withChild(spotText('Unassign'));
+    final unassignButton = unavailableHrCard.spot<OutlinedButton>().withChild(spotText('Unassign'));
     unassignButton.existsOnce();
 
     await act.tap(unassignButton);
 
     // Wait for unassignment to propagate
-    await robot.idle(100);
+    await robot.idle();
 
     // Verify the unavailable device card is now gone
-    spot<UnavailableDeviceCard>().doesNotExist();
+    unavailableHrCard.doesNotExist();
   });
 
   robotTest('unassign unavailable device removes it from assignments', (robot) async {

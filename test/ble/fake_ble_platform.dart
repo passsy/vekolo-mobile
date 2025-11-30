@@ -2,6 +2,7 @@
 
 import 'dart:async';
 import 'dart:typed_data';
+import 'package:chirp/chirp.dart';
 import 'package:clock/clock.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:flutter_blue_plus_platform_interface/flutter_blue_plus_platform_interface.dart';
@@ -891,6 +892,8 @@ class FakeDevice {
       );
     }
 
+    final hexValue = data.map((byte) => byte.toRadixString(16).padLeft(2, '0').toUpperCase()).join(' ');
+    chirp.debug('Sending Notification to $characteristicUuid: ${hexValue}');
     char.simulateValueReceived(data);
   }
 

@@ -1,5 +1,6 @@
 import 'package:flutter_blue_plus/flutter_blue_plus.dart' as fbp;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:meta/meta.dart';
 import 'package:spot/spot.dart';
 import 'package:vekolo/domain/models/device_info.dart';
 
@@ -16,7 +17,6 @@ void main() {
   // - State restoration on resume
 
   robotTest('workout session records samples and survives crash', (robot) async {
-    timeline.mode = TimelineMode.always;
     // Setup: Create trainer device with power/HR/cadence capabilities
     final kickrCore = robot.aether.createDevice(
       name: 'Kickr Core',
@@ -47,10 +47,14 @@ void main() {
     await robot.pumpUntil(1000);
 
     // Let workout run and record samples
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < 10; i++) {
       kickrCore.emitCharacteristic(indoorBikeDataUuid, powerData);
       await robot.pumpUntil(1000);
+      await robot.idle(1000);
     }
+
+    // workout is started
+    spotText('Start pedaling to begin workout').doesNotExist();
 
     // Simulate crash by closing app without completing workout
     await robot.closeApp();

@@ -16,6 +16,9 @@ Future<ActivitiesResponse> getActivities(ApiContext context, {String? timeline})
   // Use publicDio for public timeline or no timeline
   final dio = (timeline != null && timeline != 'public') ? context.authDio : context.publicDio;
 
+  // TODO there should be a timeline mode "mixed";
+  // TODO see workouts/starred to get my starred
+  // TODO send app version to server and ask if it can still be used
   final response = await dio.get('/api/activities', queryParameters: {if (timeline != null) 'timeline': timeline});
 
   if (response.statusCode != 200) {

@@ -1,3 +1,4 @@
+import 'package:chirp/chirp.dart';
 import 'package:clock/clock.dart' show clock;
 import 'package:context_plus/context_plus.dart';
 import 'package:flutter/material.dart';
@@ -9,13 +10,14 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:spot/spot.dart';
 import 'package:vekolo/app/app.dart';
-import 'package:chirp/chirp.dart';
 import 'package:vekolo/app/logger.dart';
 import 'package:vekolo/app/refs.dart';
 import 'package:vekolo/domain/models/device_info.dart';
 import 'package:vekolo/pages/devices_page.dart';
+import 'package:vekolo/pages/home_page_v2/home_page_v2.dart';
 import 'package:vekolo/pages/scanner_page.dart';
 import 'package:vekolo/services/device_assignment_persistence.dart';
+import 'package:vekolo/widgets/splash_screen.dart';
 import 'package:vekolo/widgets/workout_screen_content.dart';
 
 import '../ble/fake_ble_platform.dart';
@@ -110,7 +112,11 @@ class VekoloRobot {
   /// );
   /// // kickrCore is now connected and ready to use
   /// ```
-  Future<void> launchApp({bool loggedIn = false, List<FakeDevice> pairedDevices = const []}) async {
+  Future<void> launchApp({
+    bool loggedIn = false,
+    List<FakeDevice> pairedDevices = const [],
+    bool awaitLaunchScreen = true,
+  }) async {
     logger.robotLog(
       'Launching the app',
       data: {
@@ -172,6 +178,10 @@ class VekoloRobot {
       for (final device in pairedDevices) {
         expect(device.isConnected, isTrue, reason: 'Device ${device.name} should be auto-connected');
       }
+    }
+
+    if (awaitLaunchScreen) {
+      await waitForHomePage();
     }
   }
 
@@ -266,6 +276,13 @@ class VekoloRobot {
       }
       rethrow;
     }
+  }
+
+  /// Waits for the [SplashScreen] to disappear and the [HomePage2] to become visible
+  Future<void> waitForHomePage() async {
+    await idle(1000);
+    await idle();
+    spot<HomePage2>().existsOnce();
   }
 
   Future<void> closeApp() async {
@@ -868,7 +885,7 @@ class SpotTimelineWriter implements ChirpWriter {
 
   @override
   void write(LogRecord record) {
-    final builder = ConsoleMessageBuffer();
+    final builder = ConsoleMessageBuffer(supportsColors: false);
     formatter.format(record, builder);
     final msg = builder.toString();
     timeline.addEvent(details: msg, eventType: 'Robot');

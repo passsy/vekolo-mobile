@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:state_beacon/state_beacon.dart';
@@ -75,6 +76,11 @@ class ActivitiesTab extends StatelessWidget {
 
     return CustomScrollView(
       slivers: [
+        // Pull to refresh
+        CupertinoSliverRefreshControl(
+          onRefresh: () => controller.loadActivities(),
+        ),
+
         // Top Bar (not an AppBar, just padding with icons)
         const SliverToBoxAdapter(child: SizedBox(height: 120)),
 

@@ -109,6 +109,7 @@ class WorkoutCardV2 extends StatelessWidget {
                       ],
                       Text(
                         date,
+                        textAlign: TextAlign.end,
                         style: GoogleFonts.publicSans(
                           color: Colors.white.withValues(alpha: 0.3),
                           fontSize: 11,
