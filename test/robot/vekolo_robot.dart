@@ -21,6 +21,7 @@ import 'package:vekolo/services/device_assignment_persistence.dart';
 import 'package:vekolo/widgets/splash_screen.dart';
 import 'package:vekolo/widgets/workout_screen_content.dart';
 
+import '../ble/fake_ble_permissions.dart';
 import '../ble/fake_ble_platform.dart';
 import '../fake/fake_auth_service.dart';
 import '../fake/fake_vekolo_api_client.dart';
@@ -57,6 +58,7 @@ class VekoloRobot {
   late final Aether aether = Aether(fakeBlePlatform: _blePlatform);
 
   final _blePlatform = FakeBlePlatform();
+  final _blePermissions = FakeBlePermissions();
 
   bool _isSetup = false;
 
@@ -155,6 +157,7 @@ class VekoloRobot {
           Refs.authService.bind(context, () => fakeAuthService);
           Refs.apiClient.bind(context, () => fakeApiClient);
           Refs.blePlatform.bindValue(context, _blePlatform);
+          Refs.blePermissions.bindValue(context, _blePermissions);
 
           return VekoloApp();
         },
@@ -316,6 +319,10 @@ class VekoloRobot {
     await act.tap(spotText('Scan'));
     await idle(500);
     spot<ScannerPage>().existsOnce();
+
+    // Wait for scanner to be ready (showing "Scanning..." or device list)
+    // The scanner needs time to initialize after postFrameCallback
+    await idle(500);
   }
 
   Future<void> selectDeviceInScanner(String name) async {
@@ -621,6 +628,45 @@ class VekoloRobot {
         match: (it) => assignHRButtonEnabled ? it.isNotNull() : it.isNull(),
       );
     }
+  }
+
+  /// Verifies the state of an unavailable device card for the specified data source.
+  ///
+  /// An unavailable device is one that was previously assigned but is not currently
+  /// discoverable (e.g., turned off, out of range).
+  ///
+  /// Parameters:
+  /// - [dataSourceName]: The data source section name (e.g., "HEART RATE", "POWER")
+  /// - [exists]: Whether the unavailable device card should exist (default: true)
+  /// - [deviceName]: Expected device name shown on the card (only checked if exists is true)
+  /// - [deviceId]: Expected device ID shown on the card (only checked if exists is true)
+  void verifyUnavailableDevice(String dataSourceName, {bool exists = true, String? deviceName, String? deviceId}) {
+    logger.robotLog('verify unavailable device: $dataSourceName (exists: $exists${deviceName != null ? ', name: $deviceName' : ''}${deviceId != null ? ', id: $deviceId' : ''})');
+    spot<DevicesPage>().existsOnce();
+
+    final section = spot<DataSourceSection>().withChild(spotText(dataSourceName))..existsOnce();
+    final card = section.spot<UnavailableDeviceCard>();
+
+    if (exists) {
+      card.existsOnce();
+      if (deviceName != null) card.spotText(deviceName).existsOnce();
+      card.spotText('Device not available').existsOnce();
+      if (deviceId != null) card.spotText('ID: $deviceId').existsOnce();
+    } else {
+      card.doesNotExist();
+    }
+  }
+
+  /// Taps the unassign button on an unavailable device card in the specified data source section.
+  Future<void> unassignUnavailableDevice(String dataSourceName) async {
+    logger.robotLog('unassign unavailable device: $dataSourceName');
+    spot<DevicesPage>().existsOnce();
+
+    final section = spot<DataSourceSection>().withChild(spotText(dataSourceName))..existsOnce();
+    final card = section.spot<UnavailableDeviceCard>()..existsOnce();
+    final unassignButton = card.spot<OutlinedButton>().withChild(spotText('Unassign'));
+    await act.tap(unassignButton);
+    await idle();
   }
 
   Future<void> tapDisconnectButton() async {

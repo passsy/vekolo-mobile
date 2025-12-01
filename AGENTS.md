@@ -71,8 +71,9 @@ source.subscribe((value) {
 - Use fakes (in-memory implementations) over mocks
 - Test domain logic without hardware dependencies
 - See `test/fake/` for fake implementations
-- Use `addTearDown()` for cleanup, avoid `setUp()`/`tearDown()`
+- Use `addTearDown()` or `addFlutterTearDown()` for cleanup, avoid `setUp()`/`tearDown()`
 - Never update `test/robot_kit.dart`. It is a copy of a Flutter platform file, which is very unlikely to have any bugs
+- prefer robot.idle() without passing in a duration when no exact duration is known to "just wait a bit for async operations"
 - **CRITICAL: ALWAYS test the real production code in /lib!**
   - **NEVER EVER create a local implementation in test files**
   - **NEVER copy/duplicate production code into tests**
@@ -92,4 +93,3 @@ source.subscribe((value) {
 - [docs/state_beacon_overview.md](./docs/state_beacon_overview.md) - **State management guide (read this first)**
 - [docs/BLE_DEVICE_ARCHITECTURE.md](./docs/BLE_DEVICE_ARCHITECTURE.md) - BLE device handling
 - [docs/DEVICE_ASSIGNMENT_ARCHITECTURE.md](./docs/DEVICE_ASSIGNMENT_ARCHITECTURE.md) - Device role assignment
-
