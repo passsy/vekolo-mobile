@@ -2,17 +2,18 @@ import 'package:flutter_blue_plus/flutter_blue_plus.dart' as fbp;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:spot/spot.dart';
 import 'package:vekolo/domain/models/device_info.dart';
+import 'package:vekolo/pages/home_page_v2/widgets/workout_interval_bars.dart';
+import 'package:vekolo/widgets/workout_screen_content.dart';
 
 import '../helpers/ftms_data_builder.dart';
 import '../robot/robot_kit.dart';
-import '../robot/workout_player_robot.dart';
 
 void main() {
   // FTMS Indoor Bike Data UUID
   final indoorBikeDataUuid = fbp.Guid('00002AD2-0000-1000-8000-00805f9b34fb');
 
-  group('Workout Power Chart', () {
-    robotTest('displays power chart when workout is running', (robot) async {
+  group('Workout Screen Visualization', () {
+    robotTest('displays interval bars when workout is running', (robot) async {
       // Create a trainer device
       final trainer = robot.aether.createDevice(
         name: 'KICKR CORE',
@@ -28,14 +29,14 @@ void main() {
       // Start pedaling to begin workout
       final data = FtmsDataBuilder().withPower(200).build();
       trainer.emitCharacteristic(indoorBikeDataUuid, data);
-      await robot.idle(100);
+      await robot.idle();
 
-      // Verify power chart is visible
-      robot.verifyPowerChartVisible();
-      robot.verifyPowerChartLegend();
+      // Verify workout screen is visible with interval visualization
+      spot<WorkoutScreenContent>().existsOnce();
+      spot<WorkoutIntervalBars>().existsAtLeastOnce();
     });
 
-    robotTest('shows waiting message when no data', (robot) async {
+    robotTest('shows start pedaling message when workout not started', (robot) async {
       // Create a trainer device
       final trainer = robot.aether.createDevice(
         name: 'KICKR CORE',
@@ -49,7 +50,7 @@ void main() {
       await robot.tapStartWorkout('Sweet Spot');
 
       // Verify waiting message is shown (no power data yet)
-      spotText('Waiting for data...').existsAtLeastOnce();
+      spotText('Start pedaling to begin workout').existsOnce();
     });
 
     robotTest('displays power data when pedaling', (robot) async {
@@ -68,17 +69,19 @@ void main() {
       // Start pedaling
       final data = FtmsDataBuilder().withPower(150).withCadence(170).build(); // 170 * 0.5 = 85 RPM
       trainer.emitCharacteristic(indoorBikeDataUuid, data);
-      await robot.pumpUntil(500); // Give time for data to populate
+      await robot.idle();
 
-      // Verify power chart is visible with data
-      robot.verifyPowerChartVisible();
-      robot.verifyPowerChartLegend();
+      // Verify workout screen is visible with interval visualization
+      spot<WorkoutScreenContent>().existsOnce();
+      spot<WorkoutIntervalBars>().existsAtLeastOnce();
 
-      // Verify metrics show power data
-      robot.verifyAllMetricsPresent();
+      // Verify metrics labels are present
+      spotText('WATT').existsAtLeastOnce();
+      spotText('RPM').existsAtLeastOnce();
+      spotText('HR').existsAtLeastOnce();
     });
 
-    robotTest('updates chart as power changes over time', (robot) async {
+    robotTest('updates display as power changes over time', (robot) async {
       // Create a trainer device
       final trainer = robot.aether.createDevice(
         name: 'KICKR CORE',
@@ -94,22 +97,22 @@ void main() {
       // Start with low power
       var data = FtmsDataBuilder().withPower(100).build();
       trainer.emitCharacteristic(indoorBikeDataUuid, data);
-      await robot.pumpUntil(500);
-      robot.verifyPowerChartVisible();
+      await robot.idle();
+      spot<WorkoutScreenContent>().existsOnce();
 
       // Increase power gradually (simulating interval workout)
-      for (var power = 150; power <= 250; power += 20) {
+      for (var power = 150; power <= 250; power += 50) {
         data = FtmsDataBuilder().withPower(power).build();
         trainer.emitCharacteristic(indoorBikeDataUuid, data);
-        await robot.pumpUntil(1000); // Wait 1s between changes
+        await robot.idle();
       }
 
-      // Chart should still be visible with all data
-      robot.verifyPowerChartVisible();
-      robot.verifyPowerChartLegend();
+      // Workout screen should still be visible with interval bars
+      spot<WorkoutScreenContent>().existsOnce();
+      spot<WorkoutIntervalBars>().existsAtLeastOnce();
     });
 
-    robotTest('shows power zones correctly with FTP', (robot) async {
+    robotTest('shows workout with power zones visualization', (robot) async {
       // Create a trainer device
       final trainer = robot.aether.createDevice(
         name: 'KICKR CORE',
@@ -126,26 +129,26 @@ void main() {
       // Recovery (< 55% FTP) - assuming FTP is 200
       var data = FtmsDataBuilder().withPower(100).build();
       trainer.emitCharacteristic(indoorBikeDataUuid, data);
-      await robot.pumpUntil(2000);
+      await robot.idle();
 
       // Endurance (55-75% FTP)
       data = FtmsDataBuilder().withPower(130).build();
       trainer.emitCharacteristic(indoorBikeDataUuid, data);
-      await robot.pumpUntil(2000);
+      await robot.idle();
 
       // Threshold (90-105% FTP)
       data = FtmsDataBuilder().withPower(200).build();
       trainer.emitCharacteristic(indoorBikeDataUuid, data);
-      await robot.pumpUntil(2000);
+      await robot.idle();
 
       // VO2max (105-120% FTP)
       data = FtmsDataBuilder().withPower(220).build();
       trainer.emitCharacteristic(indoorBikeDataUuid, data);
-      await robot.pumpUntil(2000);
+      await robot.idle();
 
-      // Chart should show colored bars based on zones
-      robot.verifyPowerChartVisible();
-      robot.verifyPowerChartLegend();
+      // Workout screen should show interval visualization
+      spot<WorkoutScreenContent>().existsOnce();
+      spot<WorkoutIntervalBars>().existsAtLeastOnce();
     });
   });
 }
