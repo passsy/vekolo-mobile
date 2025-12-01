@@ -80,6 +80,12 @@ source.subscribe((value) {
   - If production code needs fixing, FIX IT FIRST, then test it
   - Creating "reference implementations" in tests is the WORST anti-pattern possible
 
+### Fixing tests
+- When a tests fails, first read the error/exception
+- Add logging (with chirp) at key boundaries upfront when investigating. It simplifies debugging when actions can be viewed in order
+- Remove logs AFTER tests are green
+- Trust the users gut feeling. Explore and verify the user hypotheses first before looking for alternative solutions
+
 ## Documentation
 
 - [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) - Overall system architecture
