@@ -783,8 +783,12 @@ class VekoloRobot {
     logger.robotLog('resuming workout from crash recovery notification');
     // Tap the "Resume" button (there will be 2 matches: title has "Resume Workout?" and button has "Resume")
     await act.tap(spotText('Resume').atIndex(1));
-    // Wait for navigation and workout player to load
-    await idle();
+    // Wait for workout player to fully load (includes async session restoration)
+    await tester.verify.waitUntilExistsAtLeastOnce(
+      spot<WorkoutScreenContent>(),
+      timeout: const Duration(seconds: 5),
+    );
+    await idle(500); // wait for screen transition
   }
 
   Future<void> discardWorkout() async {
