@@ -5,6 +5,7 @@ publish_to: 'none' # never publish!
 version: 0.5.1+2
 
 environment:
+  flutter: 3.38.3
   sdk: ^3.9.2
 
 dependencies:
