@@ -255,6 +255,13 @@ class WorkoutRecordingService {
   Future<void> dispose() async {
     chirp.info('Disposing');
 
+    // Capture beacon values synchronously BEFORE any await, since playerService
+    // may be disposed while we're awaiting async operations
+    final blockIndex = _playerService.currentBlockIndex$.value;
+    final elapsed = _playerService.elapsedTime$.value;
+    final now = clock.now();
+    final sessionId = _sessionId;
+
     // Mark as disposed first to prevent timer callbacks from accessing beacons
     _disposed = true;
 
@@ -263,9 +270,19 @@ class WorkoutRecordingService {
     _recordingTimer = null;
 
     // Flush any pending samples (but don't mark as completed)
-    // Note: We don't update metadata here since player service beacons may already be disposed
-    if (_isRecording && _sessionId != null) {
+    if (_isRecording && sessionId != null) {
       await _persistence.flushAllSampleBuffers();
+
+      // Update metadata one final time
+      final metadata = await _persistence.loadSessionMetadata(sessionId);
+      if (metadata != null) {
+        final updated = metadata.copyWith(
+          currentBlockIndex: blockIndex,
+          elapsedMs: elapsed,
+          lastUpdated: now,
+        );
+        await _persistence.updateSessionMetadata(updated);
+      }
     }
 
     _isRecording = false;
