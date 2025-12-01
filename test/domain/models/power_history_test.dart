@@ -4,11 +4,7 @@ import 'package:vekolo/domain/models/power_history.dart';
 void main() {
   group('PowerDataPoint', () {
     test('creates data point with required fields', () {
-      const point = PowerDataPoint(
-        timestamp: 1000,
-        actualWatts: 200,
-        targetWatts: 180,
-      );
+      const point = PowerDataPoint(timestamp: 1000, actualWatts: 200, targetWatts: 180);
 
       expect(point.timestamp, 1000);
       expect(point.actualWatts, 200);

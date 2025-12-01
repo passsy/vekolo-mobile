@@ -351,11 +351,7 @@ class _ScannerPageState extends State<ScannerPage> {
                 ),
                 child: const Row(
                   mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.help_outline),
-                    SizedBox(width: 8),
-                    Text('My device is not listed'),
-                  ],
+                  children: [Icon(Icons.help_outline), SizedBox(width: 8), Text('My device is not listed')],
                 ),
               ),
             ),
@@ -470,10 +466,7 @@ class DeviceCapabilityChip extends StatelessWidget {
         children: [
           Icon(icon, size: 14),
           const SizedBox(width: 4),
-          DefaultTextStyle(
-            style: const TextStyle(fontSize: 11),
-            child: label,
-          ),
+          DefaultTextStyle(style: const TextStyle(fontSize: 11), child: label),
         ],
       ),
       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,

@@ -77,9 +77,7 @@ class ActivitiesTab extends StatelessWidget {
     return CustomScrollView(
       slivers: [
         // Pull to refresh
-        CupertinoSliverRefreshControl(
-          onRefresh: () => controller.loadActivities(),
-        ),
+        CupertinoSliverRefreshControl(onRefresh: () => controller.loadActivities()),
 
         // Top Bar (not an AppBar, just padding with icons)
         const SliverToBoxAdapter(child: SizedBox(height: 120)),
@@ -87,25 +85,22 @@ class ActivitiesTab extends StatelessWidget {
         // Notifications
         if (notifications.isNotEmpty)
           SliverList(
-            delegate: SliverChildBuilderDelegate(
-              (context, index) {
-                final notification = notifications[index];
-                // Only allow dismissing notifications with autoDismissSeconds (not workout resume)
-                final canDismiss = notification.autoDismissSeconds != null;
-                return NotificationCard(
-                  icon: notification.icon,
-                  title: notification.title,
-                  message: notification.message,
-                  backgroundColor: notification.backgroundColor,
-                  iconColor: notification.iconColor,
-                  actionLabel: notification.actionLabel,
-                  onAction: notification.onAction,
-                  actions: notification.actions,
-                  onDismiss: canDismiss ? () => controller.notificationService.dismiss(notification.id) : null,
-                );
-              },
-              childCount: notifications.length,
-            ),
+            delegate: SliverChildBuilderDelegate((context, index) {
+              final notification = notifications[index];
+              // Only allow dismissing notifications with autoDismissSeconds (not workout resume)
+              final canDismiss = notification.autoDismissSeconds != null;
+              return NotificationCard(
+                icon: notification.icon,
+                title: notification.title,
+                message: notification.message,
+                backgroundColor: notification.backgroundColor,
+                iconColor: notification.iconColor,
+                actionLabel: notification.actionLabel,
+                onAction: notification.onAction,
+                actions: notification.actions,
+                onDismiss: canDismiss ? () => controller.notificationService.dismiss(notification.id) : null,
+              );
+            }, childCount: notifications.length),
           ),
 
         // Loading state

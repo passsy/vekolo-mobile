@@ -810,10 +810,6 @@ class WorkoutPlayerService {
     final actualPower = _deviceManager.powerStream.value?.watts ?? 0;
     final targetPower = powerTarget$.value;
 
-    powerHistory.record(
-      timestamp: _workoutElapsedTime,
-      actualWatts: actualPower,
-      targetWatts: targetPower,
-    );
+    powerHistory.record(timestamp: _workoutElapsedTime, actualWatts: actualPower, targetWatts: targetPower);
   }
 }

@@ -3,7 +3,9 @@ import 'package:vekolo_sidekick/src/commands/build_vekolo/distribute/android_bui
 
 /// Enable or disable app signing based on the distribution.
 void setSigningConfig(SigningConfig signingConfig) {
-  final File buildGradle = mainProject!.root.directory('android').file('app/build.gradle.kts');
+  final File buildGradle = mainProject!.root
+      .directory('android')
+      .file('app/build.gradle.kts');
 
   if (signingConfig == SigningConfig.unsigned) {
     print("Configure APK/AAB to be unsigned");
@@ -27,7 +29,8 @@ void setSigningConfig(SigningConfig signingConfig) {
     buildGradle.replaceSectionWith(
       startTag: '// begin: release signingConfig',
       endTag: '// end: release signingConfig',
-      content: '''
+      content:
+          '''
 
             signingConfig = signingConfigs.getByName("$configName")
             ''',

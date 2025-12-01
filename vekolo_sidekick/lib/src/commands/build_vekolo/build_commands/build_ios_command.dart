@@ -17,12 +17,21 @@ class BuildIosCommand extends Command {
       availableIosDistributionSpecs.map((spec) => spec.distribution).toList();
 
   BuildIosCommand() {
-    argParser.addFlag('new-keychain', help: 'Creates a new keychain for this build, useful on CI', defaultsTo: null);
-    argParser.addFlag('clean', help: 'Run flutter clean before building', defaultsTo: true);
+    argParser.addFlag(
+      'new-keychain',
+      help: 'Creates a new keychain for this build, useful on CI',
+      defaultsTo: null,
+    );
+    argParser.addFlag(
+      'clean',
+      help: 'Run flutter clean before building',
+      defaultsTo: true,
+    );
     argParser.addOption(
       'distribution',
       allowed: _allowedDistributions.map((it) => it.name),
-      help: 'Where this build should be distributed, that decides which signing key to use',
+      help:
+          'Where this build should be distributed, that decides which signing key to use',
     );
   }
 
@@ -35,7 +44,9 @@ class BuildIosCommand extends Command {
     }
 
     final distributionArg = argResults!['distribution'] as String?;
-    final distribution = _allowedDistributions.firstOrNullWhere((element) => element.name == distributionArg);
+    final distribution = _allowedDistributions.firstOrNullWhere(
+      (element) => element.name == distributionArg,
+    );
     if (distribution == null) {
       print(
         'No --distribution specified, '
@@ -62,7 +73,9 @@ class BuildIosCommand extends Command {
     }
 
     // resolve distribution spec
-    final specMap = Map.fromEntries(availableIosDistributionSpecs.map((s) => MapEntry(s.distribution, s)));
+    final specMap = Map.fromEntries(
+      availableIosDistributionSpecs.map((s) => MapEntry(s.distribution, s)),
+    );
     final spec = specMap[distribution]!;
 
     // Bootstrap for the target distribution
@@ -86,7 +99,8 @@ class BuildIosCommand extends Command {
     ], workingDirectory: mainProject!.root);
 
     bool? newKeychain = argResults!['new-keychain'] as bool?;
-    newKeychain ??= env['CI'] == 'true' || spec.build.createNewKeychainByDefault;
+    newKeychain ??=
+        env['CI'] == 'true' || spec.build.createNewKeychainByDefault;
 
     // Build the ipa with manual signing
     final ipa = await buildIpa(
@@ -99,7 +113,10 @@ class BuildIosCommand extends Command {
       package: mainProject,
     );
 
-    final File releaseIpa = _copyIpaToReleaseDir(ipa, buildNumber: buildNumber.toString());
+    final File releaseIpa = _copyIpaToReleaseDir(
+      ipa,
+      buildNumber: buildNumber.toString(),
+    );
     env['IOS_IPA_PATH'] = releaseIpa.absolute.path;
     print(green('Successfully built IPA: ${releaseIpa.absolute.path}'));
 
@@ -113,7 +130,9 @@ class BuildIosCommand extends Command {
     final pubSpec = PubSpec.loadFromPath(versionFile.absolute.path);
     final version = pubSpec.version;
     _releaseDir.createSync(recursive: true);
-    final releaseIpa = _releaseDir.file('vekolo-${version.semVersion}-$buildNumber.ipa');
+    final releaseIpa = _releaseDir.file(
+      'vekolo-${version.semVersion}-$buildNumber.ipa',
+    );
     ipaFile.copySync(releaseIpa.absolute.path);
     return releaseIpa;
   }

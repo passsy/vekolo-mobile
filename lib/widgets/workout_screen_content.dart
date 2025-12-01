@@ -155,18 +155,13 @@ class WorkoutScreenContent extends StatelessWidget {
                             Padding(
                               padding: EdgeInsets.symmetric(horizontal: spacing.horizontal * 2),
                               child: Container(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: spacing.medium,
-                                  vertical: spacing.medium,
-                                ),
+                                padding: EdgeInsets.symmetric(horizontal: spacing.medium, vertical: spacing.medium),
                                 decoration: BoxDecoration(
                                   color: Colors.white.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: Text(
-                                  !hasStarted
-                                      ? 'Start pedaling to begin workout'
-                                      : 'Paused - Start pedaling to resume',
+                                  !hasStarted ? 'Start pedaling to begin workout' : 'Paused - Start pedaling to resume',
                                   style: GoogleFonts.publicSans(
                                     color: Colors.white,
                                     fontSize: 16,
@@ -279,10 +274,7 @@ class WorkoutScreenContent extends StatelessWidget {
                     remainingTime: remainingTime,
                   ),
                   SizedBox(height: spacing.small),
-                  WorkoutTimestamps(
-                    elapsedTime: elapsedTime,
-                    remainingTime: remainingTime,
-                  ),
+                  WorkoutTimestamps(elapsedTime: elapsedTime, remainingTime: remainingTime),
                   SizedBox(height: spacing.medium),
                 ],
               ),
@@ -355,10 +347,6 @@ class WorkoutScreenContent extends StatelessWidget {
     }
   }
 
-
-
-
-
   /// Converts workout plan blocks into interval bars for visualization
   List<IntervalBar> _generateIntervalsFromWorkout() {
     final intervals = <IntervalBar>[];
@@ -409,7 +397,6 @@ class WorkoutScreenContent extends StatelessWidget {
     if (powerFraction < 1.20) return const Color(0xFFFF6F00); // VO2max - deep orange
     return const Color(0xFFE91E63); // Anaerobic - pink
   }
-
 
   /// Generate a zoomed view of intervals (±15 minutes around current position)
   List<IntervalBar> _generateZoomedIntervals() {
@@ -472,7 +459,6 @@ class WorkoutScreenContent extends StatelessWidget {
 
     return zoomedIntervals;
   }
-
 }
 
 /// Displays a row of KPI metrics (power, cadence, heart rate, speed).
@@ -509,10 +495,30 @@ class WorkoutKpiRow extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
-            _KpiMetric(label: const Text('WATT'), value: Text((currentPower ?? 0).toString()), fontSize: kpiValueFontSize, spacing: smallSpacing),
-            _KpiMetric(label: const Text('RPM'), value: Text((currentCadence ?? 0).toString()), fontSize: kpiValueFontSize, spacing: smallSpacing),
-            _KpiMetric(label: const Text('HR'), value: Text((currentHeartRate ?? 0).toString()), fontSize: kpiValueFontSize, spacing: smallSpacing),
-            _KpiMetric(label: const Text('SPEED'), value: Text(currentSpeed != null ? currentSpeed!.toStringAsFixed(1) : '0'), fontSize: kpiValueFontSize, spacing: smallSpacing),
+            _KpiMetric(
+              label: const Text('WATT'),
+              value: Text((currentPower ?? 0).toString()),
+              fontSize: kpiValueFontSize,
+              spacing: smallSpacing,
+            ),
+            _KpiMetric(
+              label: const Text('RPM'),
+              value: Text((currentCadence ?? 0).toString()),
+              fontSize: kpiValueFontSize,
+              spacing: smallSpacing,
+            ),
+            _KpiMetric(
+              label: const Text('HR'),
+              value: Text((currentHeartRate ?? 0).toString()),
+              fontSize: kpiValueFontSize,
+              spacing: smallSpacing,
+            ),
+            _KpiMetric(
+              label: const Text('SPEED'),
+              value: Text(currentSpeed != null ? currentSpeed!.toStringAsFixed(1) : '0'),
+              fontSize: kpiValueFontSize,
+              spacing: smallSpacing,
+            ),
           ],
         ),
       ),
@@ -522,12 +528,7 @@ class WorkoutKpiRow extends StatelessWidget {
 
 /// Single KPI metric display with label and value.
 class _KpiMetric extends StatelessWidget {
-  const _KpiMetric({
-    required this.label,
-    required this.value,
-    required this.fontSize,
-    required this.spacing,
-  });
+  const _KpiMetric({required this.label, required this.value, required this.fontSize, required this.spacing});
 
   final Widget label;
   final Widget value;
@@ -548,11 +549,7 @@ class _KpiMetric extends StatelessWidget {
         ),
         SizedBox(height: spacing),
         DefaultTextStyle(
-          style: GoogleFonts.sairaExtraCondensed(
-            color: Colors.white,
-            fontSize: fontSize,
-            fontWeight: FontWeight.w400,
-          ),
+          style: GoogleFonts.sairaExtraCondensed(color: Colors.white, fontSize: fontSize, fontWeight: FontWeight.w400),
           child: value,
         ),
       ],
@@ -751,11 +748,7 @@ class WorkoutBottomTimeline extends StatelessWidget {
 
 /// Displays elapsed and remaining time timestamps.
 class WorkoutTimestamps extends StatelessWidget {
-  const WorkoutTimestamps({
-    required this.elapsedTime,
-    required this.remainingTime,
-    super.key,
-  });
+  const WorkoutTimestamps({required this.elapsedTime, required this.remainingTime, super.key});
 
   final int elapsedTime;
   final int remainingTime;

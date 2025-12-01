@@ -238,11 +238,7 @@ class WorkoutRecordingService {
         return;
       }
 
-      final updated = metadata.copyWith(
-        currentBlockIndex: blockIndex,
-        elapsedMs: elapsed,
-        lastUpdated: now,
-      );
+      final updated = metadata.copyWith(currentBlockIndex: blockIndex, elapsedMs: elapsed, lastUpdated: now);
 
       await _persistence.updateSessionMetadata(updated);
     }
@@ -276,11 +272,7 @@ class WorkoutRecordingService {
       // Update metadata one final time
       final metadata = await _persistence.loadSessionMetadata(sessionId);
       if (metadata != null) {
-        final updated = metadata.copyWith(
-          currentBlockIndex: blockIndex,
-          elapsedMs: elapsed,
-          lastUpdated: now,
-        );
+        final updated = metadata.copyWith(currentBlockIndex: blockIndex, elapsedMs: elapsed, lastUpdated: now);
         await _persistence.updateSessionMetadata(updated);
       }
     }

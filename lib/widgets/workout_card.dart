@@ -57,12 +57,7 @@ class WorkoutCard extends StatelessWidget {
             // Workout blocks
             ...blocks.expand(
               (block) => [
-                WorkoutBlockItem(
-                  icon: block.icon,
-                  title: block.title,
-                  subtitle: block.subtitle,
-                  color: block.color,
-                ),
+                WorkoutBlockItem(icon: block.icon, title: block.title, subtitle: block.subtitle, color: block.color),
                 const SizedBox(height: 12),
               ],
             ),
@@ -86,7 +81,6 @@ class WorkoutCard extends StatelessWidget {
       ),
     );
   }
-
 }
 
 /// Displays a single workout block with an icon, title, and subtitle.
@@ -122,11 +116,15 @@ class WorkoutBlockItem extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               DefaultTextStyle(
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold) ?? const TextStyle(fontWeight: FontWeight.bold),
+                style:
+                    Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold) ??
+                    const TextStyle(fontWeight: FontWeight.bold),
                 child: title,
               ),
               DefaultTextStyle(
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey[600]) ?? TextStyle(color: Colors.grey[600]),
+                style:
+                    Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey[600]) ??
+                    TextStyle(color: Colors.grey[600]),
                 child: subtitle,
               ),
             ],

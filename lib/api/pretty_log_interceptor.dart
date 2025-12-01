@@ -72,7 +72,9 @@ class PrettyLogInterceptor extends Interceptor {
       final traceId = err.requestOptions.extra['trace-id'] as String?;
       final duration = _calculateDuration(err.requestOptions);
       final statusCode = err.response?.statusCode;
-      buffer.writeln('[$traceId] ← ERROR ${statusCode ?? ''} ${err.requestOptions.method} ${err.requestOptions.uri} (${duration}ms)');
+      buffer.writeln(
+        '[$traceId] ← ERROR ${statusCode ?? ''} ${err.requestOptions.method} ${err.requestOptions.uri} (${duration}ms)',
+      );
       buffer.writeln('${err.type}: ${err.message ?? ''}');
       buffer.writeln();
       buffer.writeln(_buildCurl(err.requestOptions));

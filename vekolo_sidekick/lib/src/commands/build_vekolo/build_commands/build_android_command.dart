@@ -13,15 +13,22 @@ class BuildAndroidCommand extends Command {
   String get name => 'android';
 
   static List<AndroidDistribution> get _allowedDistributions =>
-      availableAndroidDistributionSpecs.map((spec) => spec.distribution).toList();
+      availableAndroidDistributionSpecs
+          .map((spec) => spec.distribution)
+          .toList();
 
   BuildAndroidCommand() {
     argParser.addOption(
       'distribution',
       allowed: _allowedDistributions.map((it) => it.name),
-      help: 'Where this build should be distributed, that decides which signing key to use',
+      help:
+          'Where this build should be distributed, that decides which signing key to use',
     );
-    argParser.addFlag('clean', help: 'Run flutter clean before building', defaultsTo: true);
+    argParser.addFlag(
+      'clean',
+      help: 'Run flutter clean before building',
+      defaultsTo: true,
+    );
     argParser.addOption(
       'outputFormat',
       help: 'The output format',
@@ -39,18 +46,24 @@ class BuildAndroidCommand extends Command {
 
   AndroidDistribution? get distribution {
     final value = argResults!['distribution'] as String?;
-    return _allowedDistributions.firstOrNullWhere((element) => element.name == value);
+    return _allowedDistributions.firstOrNullWhere(
+      (element) => element.name == value,
+    );
   }
 
   AndroidOutputFormat outputFormat(AndroidDistributionSpec spec) {
     final value = argResults!['outputFormat'] as String?;
-    return AndroidOutputFormat.values.firstOrNullWhere((element) => element.name == value) ??
+    return AndroidOutputFormat.values.firstOrNullWhere(
+          (element) => element.name == value,
+        ) ??
         spec.build.defaultOutputFormat;
   }
 
   SigningConfig? get signingConfig {
     final value = argResults!['signingConfig'] as String?;
-    return SigningConfig.values.firstOrNullWhere((element) => element.name == value);
+    return SigningConfig.values.firstOrNullWhere(
+      (element) => element.name == value,
+    );
   }
 
   /// Use the signingConfig argument if provided, otherwise use the default signing config for the distribution
@@ -63,7 +76,9 @@ class BuildAndroidCommand extends Command {
 
   String releaseName(AndroidDistributionSpec spec, String buildNumber) {
     final File versionFile = mainProject!.pubspec;
-    final version = PubSpec.loadFromPath(versionFile.absolute.path).version.semVersion;
+    final version = PubSpec.loadFromPath(
+      versionFile.absolute.path,
+    ).version.semVersion;
 
     return 'vekolo-'
         '${distribution!.name}-'
@@ -83,7 +98,9 @@ class BuildAndroidCommand extends Command {
     }
 
     // resolve distribution spec
-    final specMap = Map.fromEntries(availableAndroidDistributionSpecs.map((s) => MapEntry(s.distribution, s)));
+    final specMap = Map.fromEntries(
+      availableAndroidDistributionSpecs.map((s) => MapEntry(s.distribution, s)),
+    );
     final spec = specMap[distribution]!;
     final signing = resolvedSigningConfig(spec);
     setSigningConfig(signing);
@@ -91,7 +108,8 @@ class BuildAndroidCommand extends Command {
     // load signing passwords to env if available
     if (signing == SigningConfig.playUpload) {
       if (spec.build.storePasswordProvider != null) {
-        env['ANDROID_PLAY_STORE_PASSWORD'] = spec.build.storePasswordProvider!();
+        env['ANDROID_PLAY_STORE_PASSWORD'] =
+            spec.build.storePasswordProvider!();
       }
       if (spec.build.keyPasswordProvider != null) {
         env['ANDROID_PLAY_KEY_PASSWORD'] = spec.build.keyPasswordProvider!();
@@ -99,7 +117,8 @@ class BuildAndroidCommand extends Command {
     }
     if (signing == SigningConfig.adHoc) {
       if (spec.build.storePasswordProvider != null) {
-        env['ANDROID_ADHOC_STORE_PASSWORD'] = spec.build.storePasswordProvider!();
+        env['ANDROID_ADHOC_STORE_PASSWORD'] =
+            spec.build.storePasswordProvider!();
       }
       if (spec.build.keyPasswordProvider != null) {
         env['ANDROID_ADHOC_KEY_PASSWORD'] = spec.build.keyPasswordProvider!();
@@ -115,7 +134,9 @@ class BuildAndroidCommand extends Command {
     }
 
     final currentOutputFormat = outputFormat(spec);
-    print('Building Android app (${currentOutputFormat.name}) in release mode...');
+    print(
+      'Building Android app (${currentOutputFormat.name}) in release mode...',
+    );
     if (_releaseDir.existsSync()) {
       _releaseDir.deleteSync(recursive: true);
     }
@@ -125,27 +146,36 @@ class BuildAndroidCommand extends Command {
     final buildNumber = DateTime.now().millisecondsSinceEpoch ~/ 1000;
     final mainDartFile = spec.build.mainDartFile;
 
-    await flutter(
-      [
-        'build',
-        currentOutputFormat.name,
-        '--target=$mainDartFile',
-        '--build-number=$buildNumber',
-        '--dart-define=DISTRIBUTION=${distribution!.name}',
-        '--dart-define=BUILDNUMBER=$buildNumber',
-      ],
-      workingDirectory: mainProject!.root,
-    );
+    await flutter([
+      'build',
+      currentOutputFormat.name,
+      '--target=$mainDartFile',
+      '--build-number=$buildNumber',
+      '--dart-define=DISTRIBUTION=${distribution!.name}',
+      '--dart-define=BUILDNUMBER=$buildNumber',
+    ], workingDirectory: mainProject!.root);
 
     switch (currentOutputFormat) {
       case AndroidOutputFormat.apk:
-        final File apk = mainProject!.buildDir.file('app/outputs/flutter-apk/app-release.apk');
-        final outputLocation = _copyApkToReleaseDir(apk, spec, buildNumber: buildNumber.toString());
+        final File apk = mainProject!.buildDir.file(
+          'app/outputs/flutter-apk/app-release.apk',
+        );
+        final outputLocation = _copyApkToReleaseDir(
+          apk,
+          spec,
+          buildNumber: buildNumber.toString(),
+        );
         env['ANDROID_APK_PATH'] = outputLocation.absolute.path;
         print(green('Successfully built APK: ${outputLocation.absolute.path}'));
       case AndroidOutputFormat.aab:
-        final File aab = mainProject!.buildDir.file('app/outputs/bundle/release/app-release.aab');
-        final outputLocation = _copyAabToReleaseDir(aab, spec, buildNumber: buildNumber.toString());
+        final File aab = mainProject!.buildDir.file(
+          'app/outputs/bundle/release/app-release.aab',
+        );
+        final outputLocation = _copyAabToReleaseDir(
+          aab,
+          spec,
+          buildNumber: buildNumber.toString(),
+        );
         env['ANDROID_AAB_PATH'] = outputLocation.absolute.path;
         print(green('Successfully built AAB: ${outputLocation.absolute.path}'));
     }
@@ -156,17 +186,29 @@ class BuildAndroidCommand extends Command {
   }
 
   /// Place the apk properly named in the /build/release directory
-  File _copyApkToReleaseDir(File apkFile, AndroidDistributionSpec spec, {required String buildNumber}) {
+  File _copyApkToReleaseDir(
+    File apkFile,
+    AndroidDistributionSpec spec, {
+    required String buildNumber,
+  }) {
     _releaseDir.createSync(recursive: true);
-    final releaseApk = _releaseDir.file('${releaseName(spec, buildNumber)}.apk');
+    final releaseApk = _releaseDir.file(
+      '${releaseName(spec, buildNumber)}.apk',
+    );
     apkFile.copySync(releaseApk.absolute.path);
     return releaseApk;
   }
 
   /// Place the aab properly named in the /build/release directory
-  File _copyAabToReleaseDir(File aabFile, AndroidDistributionSpec spec, {required String buildNumber}) {
+  File _copyAabToReleaseDir(
+    File aabFile,
+    AndroidDistributionSpec spec, {
+    required String buildNumber,
+  }) {
     _releaseDir.createSync(recursive: true);
-    final releaseAab = _releaseDir.file('${releaseName(spec, buildNumber)}.aab');
+    final releaseAab = _releaseDir.file(
+      '${releaseName(spec, buildNumber)}.aab',
+    );
     aabFile.copySync(releaseAab.absolute.path);
     return releaseAab;
   }

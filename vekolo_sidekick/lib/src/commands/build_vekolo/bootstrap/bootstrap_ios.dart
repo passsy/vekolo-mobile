@@ -4,10 +4,14 @@ import 'package:vekolo_sidekick/src/commands/build_vekolo/distribute/ios_build_s
 
 /// Bootstraps the iOS project for development or distribution.
 void bootstrapIos(IosDistributionSpec spec) {
-  final pbxproj = XcodePbxproj(mainProject!.root.file('ios/Runner.xcodeproj/project.pbxproj'));
+  final pbxproj = XcodePbxproj(
+    mainProject!.root.file('ios/Runner.xcodeproj/project.pbxproj'),
+  );
 
   pbxproj.setBundleIdentifier(spec.bootstrap.bundleId);
-  pbxproj.setProvisioningProfileSpecifier(spec.bootstrap.provisioningProfileSpecifier);
+  pbxproj.setProvisioningProfileSpecifier(
+    spec.bootstrap.provisioningProfileSpecifier,
+  );
   setIosAppName(spec.bootstrap.appName);
 }
 

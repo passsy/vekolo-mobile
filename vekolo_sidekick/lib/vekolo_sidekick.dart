@@ -13,7 +13,10 @@ final SidekickVault vault = SidekickVault(
 );
 
 Future<void> runVekolo(List<String> args) async {
-  final runner = initializeSidekick(mainProjectPath: '.', flutterSdkPath: flutterSdkSymlink());
+  final runner = initializeSidekick(
+    mainProjectPath: '.',
+    flutterSdkPath: flutterSdkSymlink(),
+  );
   addSdkInitializer(initializePuro);
 
   runner

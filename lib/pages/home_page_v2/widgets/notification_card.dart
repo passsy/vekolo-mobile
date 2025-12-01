@@ -57,20 +57,12 @@ class NotificationCard extends StatelessWidget {
                 // Header with icon and title
                 Row(
                   children: [
-                    Icon(
-                      icon,
-                      size: 32,
-                      color: iconColor ?? Colors.white,
-                    ),
+                    Icon(icon, size: 32, color: iconColor ?? Colors.white),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
                         title,
-                        style: GoogleFonts.publicSans(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                        ),
+                        style: GoogleFonts.publicSans(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600),
                       ),
                     ),
                     if (onDismiss != null)
@@ -96,49 +88,41 @@ class NotificationCard extends StatelessWidget {
                 // Multiple action buttons if provided
                 if (actions.isNotEmpty) ...[
                   const SizedBox(height: 16),
-                  ...actions.map((action) => Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: SizedBox(
-                          width: double.infinity,
-                          child: action.isPrimary
-                              ? ElevatedButton(
-                                  onPressed: action.onTap,
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFFFF6F00),
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(vertical: 14),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                  ),
-                                  child: Text(
-                                    action.label,
-                                    style: GoogleFonts.publicSans(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                )
-                              : OutlinedButton(
-                                  onPressed: action.onTap,
-                                  style: OutlinedButton.styleFrom(
-                                    foregroundColor: Colors.white,
-                                    side: const BorderSide(color: Colors.white54),
-                                    padding: const EdgeInsets.symmetric(vertical: 14),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                  ),
-                                  child: Text(
-                                    action.label,
-                                    style: GoogleFonts.publicSans(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w400,
-                                    ),
-                                  ),
+                  ...actions.map(
+                    (action) => Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: action.isPrimary
+                            ? ElevatedButton(
+                                onPressed: action.onTap,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFFFF6F00),
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                 ),
-                        ),
-                      )),
+                                child: Text(
+                                  action.label,
+                                  style: GoogleFonts.publicSans(fontSize: 16, fontWeight: FontWeight.w600),
+                                ),
+                              )
+                            : OutlinedButton(
+                                onPressed: action.onTap,
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: Colors.white,
+                                  side: const BorderSide(color: Colors.white54),
+                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                ),
+                                child: Text(
+                                  action.label,
+                                  style: GoogleFonts.publicSans(fontSize: 16, fontWeight: FontWeight.w400),
+                                ),
+                              ),
+                      ),
+                    ),
+                  ),
                 ] else if (actionLabel != null && onAction != null) ...[
                   // Legacy single action button support
                   const SizedBox(height: 16),
@@ -150,16 +134,11 @@ class NotificationCard extends StatelessWidget {
                         backgroundColor: const Color(0xFFFF6F00),
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
                       child: Text(
                         actionLabel!,
-                        style: GoogleFonts.publicSans(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
+                        style: GoogleFonts.publicSans(fontSize: 16, fontWeight: FontWeight.w600),
                       ),
                     ),
                   ),

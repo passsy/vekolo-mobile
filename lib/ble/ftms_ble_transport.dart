@@ -393,11 +393,7 @@ class FtmsBleTransport
         offset += 2;
       }
 
-      chirp.debug('Received bike data', data: {
-        'power': power,
-        'speed': speed,
-        'cadence': cadence,
-      });
+      chirp.debug('Received bike data', data: {'power': power, 'speed': speed, 'cadence': cadence});
 
       // Update beacons with parsed data
       if (power != null) {

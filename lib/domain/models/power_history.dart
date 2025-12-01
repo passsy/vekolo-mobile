@@ -7,11 +7,7 @@ library;
 /// A single power data point at a specific time.
 class PowerDataPoint {
   /// Creates a power data point.
-  const PowerDataPoint({
-    required this.timestamp,
-    required this.actualWatts,
-    required this.targetWatts,
-  });
+  const PowerDataPoint({required this.timestamp, required this.actualWatts, required this.targetWatts});
 
   /// Timestamp of the data point (milliseconds since workout start).
   final int timestamp;
@@ -51,10 +47,7 @@ class PowerHistory {
   ///
   /// - [intervalMs] - Time between data points in milliseconds (default 15000 = 15s)
   /// - [maxDataPoints] - Maximum number of data points to keep (default 120 = 30 minutes at 15s intervals)
-  PowerHistory({
-    this.intervalMs = 15000,
-    this.maxDataPoints = 120,
-  });
+  PowerHistory({this.intervalMs = 15000, this.maxDataPoints = 120});
 
   /// Interval between data points in milliseconds.
   final int intervalMs;
@@ -87,11 +80,7 @@ class PowerHistory {
   /// the oldest data point is removed.
   ///
   /// Returns true if the data point was recorded, false if skipped.
-  bool record({
-    required int timestamp,
-    required int actualWatts,
-    required int targetWatts,
-  }) {
+  bool record({required int timestamp, required int actualWatts, required int targetWatts}) {
     // Check if we should record based on interval
     if (_lastRecordedTimestamp != null) {
       final timeSinceLastRecord = timestamp - _lastRecordedTimestamp!;
@@ -101,11 +90,7 @@ class PowerHistory {
     }
 
     // Create and add data point
-    final dataPoint = PowerDataPoint(
-      timestamp: timestamp,
-      actualWatts: actualWatts,
-      targetWatts: targetWatts,
-    );
+    final dataPoint = PowerDataPoint(timestamp: timestamp, actualWatts: actualWatts, targetWatts: targetWatts);
     _dataPoints.add(dataPoint);
     _lastRecordedTimestamp = timestamp;
 

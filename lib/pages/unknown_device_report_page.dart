@@ -243,8 +243,9 @@ class _UnknownDeviceReportPageState extends State<UnknownDeviceReportPage> {
           // Build service-to-characteristics mapping
           final serviceCharacteristics = <String, List<String>>{};
           for (final service in services) {
-            serviceCharacteristics[service.uuid.toString()] =
-              service.characteristics.map((c) => c.uuid.toString()).toList();
+            serviceCharacteristics[service.uuid.toString()] = service.characteristics
+                .map((c) => c.uuid.toString())
+                .toList();
           }
 
           // Track unknown device report with device information
@@ -478,7 +479,6 @@ class _UnknownDeviceReportPageState extends State<UnknownDeviceReportPage> {
     }
   }
 
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -489,41 +489,41 @@ class _UnknownDeviceReportPageState extends State<UnknownDeviceReportPage> {
       body: switch (_pageState) {
         UnknownDevicePageState.scanning => const _ScanningStateView(),
         UnknownDevicePageState.deviceList => _DeviceListStateView(
-            devices: _devices,
-            isScanning: _isScanning,
-            onDeviceSelected: _onDeviceSelected,
-            onStartScan: _startScan,
-            onStopScan: _stopScan,
-          ),
+          devices: _devices,
+          isScanning: _isScanning,
+          onDeviceSelected: _onDeviceSelected,
+          onStartScan: _startScan,
+          onStopScan: _stopScan,
+        ),
         UnknownDevicePageState.connecting => _ConnectingStateView(
-            selectedDevice: _selectedDevice,
-            currentServiceIndex: _currentServiceIndex,
-            totalServices: _totalServices,
-          ),
+          selectedDevice: _selectedDevice,
+          currentServiceIndex: _currentServiceIndex,
+          totalServices: _totalServices,
+        ),
         UnknownDevicePageState.review => _ReviewStateView(
-            form: _form,
-            selectedDevice: _selectedDevice,
-            collectedData: _collectedData,
-            onSubmit: _submitReport,
-            onBack: _backToDeviceList,
-          ),
+          form: _form,
+          selectedDevice: _selectedDevice,
+          collectedData: _collectedData,
+          onSubmit: _submitReport,
+          onBack: _backToDeviceList,
+        ),
         UnknownDevicePageState.error => _ErrorStateView(
-            errorMessage: _errorMessage,
-            onRetry: _retryConnection,
-            onBack: _backToDeviceList,
-          ),
+          errorMessage: _errorMessage,
+          onRetry: _retryConnection,
+          onBack: _backToDeviceList,
+        ),
         UnknownDevicePageState.success => _SuccessStateView(
-            onReportAnother: () {
-              setState(() {
-                _selectedDevice = null;
-                _errorMessage = '';
-                _collectedData = '';
-                _form.control('notes').value = '';
-              });
-              _startScan();
-            },
-            onClose: () => Navigator.of(context).pop(),
-          ),
+          onReportAnother: () {
+            setState(() {
+              _selectedDevice = null;
+              _errorMessage = '';
+              _collectedData = '';
+              _form.control('notes').value = '';
+            });
+            _startScan();
+          },
+          onClose: () => Navigator.of(context).pop(),
+        ),
       },
     );
   }
@@ -585,10 +585,7 @@ class _DeviceListStateView extends StatelessWidget {
             children: [
               const Text('Select a device to report', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
               const SizedBox(height: 8),
-              Text(
-                'Found ${devices.length} device(s) nearby',
-                style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-              ),
+              Text('Found ${devices.length} device(s) nearby', style: TextStyle(fontSize: 14, color: Colors.grey[600])),
             ],
           ),
         ),
@@ -652,22 +649,14 @@ class _DeviceListStateView extends StatelessWidget {
                     onPressed: onStopScan,
                     child: const Row(
                       mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.stop),
-                        SizedBox(width: 8),
-                        Text('Stop Scan'),
-                      ],
+                      children: [Icon(Icons.stop), SizedBox(width: 8), Text('Stop Scan')],
                     ),
                   )
                 : OutlinedButton(
                     onPressed: onStartScan,
                     child: const Row(
                       mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.refresh),
-                        SizedBox(width: 8),
-                        Text('Scan Again'),
-                      ],
+                      children: [Icon(Icons.refresh), SizedBox(width: 8), Text('Scan Again')],
                     ),
                   ),
           ),
@@ -855,11 +844,7 @@ class _ReviewStateView extends StatelessWidget {
 
 /// Displays error state with error message and retry option.
 class _ErrorStateView extends StatelessWidget {
-  const _ErrorStateView({
-    required this.errorMessage,
-    required this.onRetry,
-    required this.onBack,
-  });
+  const _ErrorStateView({required this.errorMessage, required this.onRetry, required this.onBack});
 
   final String errorMessage;
   final VoidCallback onRetry;
@@ -902,10 +887,7 @@ class _ErrorStateView extends StatelessWidget {
 
 /// Displays success state after report submission.
 class _SuccessStateView extends StatelessWidget {
-  const _SuccessStateView({
-    required this.onReportAnother,
-    required this.onClose,
-  });
+  const _SuccessStateView({required this.onReportAnother, required this.onClose});
 
   final VoidCallback onReportAnother;
   final VoidCallback onClose;

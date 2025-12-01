@@ -418,25 +418,25 @@ class VekoloRobot {
   /// - [assignHRButtonEnabled]: If specified, verifies the "Assign to HR" button is enabled
   /// - [assignHRButtonVisible]: If specified, verifies the "Assign to HR" button exists
   void verifyDeviceState(
-      String dataSourceName, {
-        bool? connectButtonEnabled,
-        bool? connectButtonVisible,
-        bool? isConnecting,
-        bool? disconnectButtonEnabled,
-        bool? disconnectButtonVisible,
-        bool? unassignButtonEnabled,
-        bool? unassignButtonVisible,
-        bool? removeButtonEnabled,
-        bool? removeButtonVisible,
-        bool? assignPowerButtonEnabled,
-        bool? assignPowerButtonVisible,
-        bool? assignCadenceButtonEnabled,
-        bool? assignCadenceButtonVisible,
-        bool? assignSpeedButtonEnabled,
-        bool? assignSpeedButtonVisible,
-        bool? assignHRButtonEnabled,
-        bool? assignHRButtonVisible,
-      }) {
+    String dataSourceName, {
+    bool? connectButtonEnabled,
+    bool? connectButtonVisible,
+    bool? isConnecting,
+    bool? disconnectButtonEnabled,
+    bool? disconnectButtonVisible,
+    bool? unassignButtonEnabled,
+    bool? unassignButtonVisible,
+    bool? removeButtonEnabled,
+    bool? removeButtonVisible,
+    bool? assignPowerButtonEnabled,
+    bool? assignPowerButtonVisible,
+    bool? assignCadenceButtonEnabled,
+    bool? assignCadenceButtonVisible,
+    bool? assignSpeedButtonEnabled,
+    bool? assignSpeedButtonVisible,
+    bool? assignHRButtonEnabled,
+    bool? assignHRButtonVisible,
+  }) {
     spot<DevicesPage>().existsOnce();
 
     // Build log message from specified checks
@@ -641,7 +641,9 @@ class VekoloRobot {
   /// - [deviceName]: Expected device name shown on the card (only checked if exists is true)
   /// - [deviceId]: Expected device ID shown on the card (only checked if exists is true)
   void verifyUnavailableDevice(String dataSourceName, {bool exists = true, String? deviceName, String? deviceId}) {
-    logger.robotLog('verify unavailable device: $dataSourceName (exists: $exists${deviceName != null ? ', name: $deviceName' : ''}${deviceId != null ? ', id: $deviceId' : ''})');
+    logger.robotLog(
+      'verify unavailable device: $dataSourceName (exists: $exists${deviceName != null ? ', name: $deviceName' : ''}${deviceId != null ? ', id: $deviceId' : ''})',
+    );
     spot<DevicesPage>().existsOnce();
 
     final section = spot<DataSourceSection>().withChild(spotText(dataSourceName))..existsOnce();
@@ -784,10 +786,7 @@ class VekoloRobot {
     // Tap the "Resume" button (there will be 2 matches: title has "Resume Workout?" and button has "Resume")
     await act.tap(spotText('Resume').atIndex(1));
     // Wait for workout player to fully load (includes async session restoration)
-    await tester.verify.waitUntilExistsAtLeastOnce(
-      spot<WorkoutScreenContent>(),
-      timeout: const Duration(seconds: 5),
-    );
+    await tester.verify.waitUntilExistsAtLeastOnce(spot<WorkoutScreenContent>(), timeout: const Duration(seconds: 5));
     await idle(500); // wait for screen transition
   }
 

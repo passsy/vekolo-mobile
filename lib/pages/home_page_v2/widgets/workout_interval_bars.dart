@@ -36,10 +36,7 @@ class WorkoutIntervalBars extends StatelessWidget {
         : 0.0;
 
     // Build the interval bars widget (will be used for both colored and greyscale)
-    final intervalsWidget = _IntervalBarsRow(
-      intervals: intervals,
-      height: height,
-    );
+    final intervalsWidget = _IntervalBarsRow(intervals: intervals, height: height);
 
     return Stack(
       children: [
@@ -47,27 +44,18 @@ class WorkoutIntervalBars extends StatelessWidget {
         if (currentTimeMs != null && totalDurationMs != null)
           ClipRect(
             clipper: _LeftClipper(progress),
-            child: ColorFiltered(
-              colorFilter: _greyscaleFilter,
-              child: intervalsWidget,
-            ),
+            child: ColorFiltered(colorFilter: _greyscaleFilter, child: intervalsWidget),
           ),
         // Top layer: Colored version (future)
         if (currentTimeMs != null && totalDurationMs != null)
-          ClipRect(
-            clipper: _RightClipper(progress),
-            child: intervalsWidget,
-          )
+          ClipRect(clipper: _RightClipper(progress), child: intervalsWidget)
         else
           intervalsWidget,
         // Progress indicator line
         if (currentTimeMs != null && totalDurationMs != null && totalDurationMs! > 0)
           Positioned.fill(
             child: CustomPaint(
-              painter: _ProgressIndicatorPainter(
-                progress: progress,
-                height: height,
-              ),
+              painter: _ProgressIndicatorPainter(progress: progress, height: height),
             ),
           ),
       ],
@@ -91,10 +79,7 @@ class WorkoutIntervalBars extends StatelessWidget {
 ///
 /// The width of each bar is proportional to its duration relative to other bars.
 class _IntervalBarsRow extends StatelessWidget {
-  const _IntervalBarsRow({
-    required this.intervals,
-    required this.height,
-  });
+  const _IntervalBarsRow({required this.intervals, required this.height});
 
   final List<IntervalBar> intervals;
   final double height;
@@ -124,10 +109,7 @@ class _IntervalBarsRow extends StatelessWidget {
                       )
                     : Container(
                         height: height * interval.intensity,
-                        decoration: BoxDecoration(
-                          color: interval.color,
-                          borderRadius: BorderRadius.circular(2),
-                        ),
+                        decoration: BoxDecoration(color: interval.color, borderRadius: BorderRadius.circular(2)),
                       ),
               ),
             ),
@@ -245,10 +227,7 @@ class _RampBarPainter extends CustomPainter {
 
 /// Custom painter for the progress indicator line
 class _ProgressIndicatorPainter extends CustomPainter {
-  const _ProgressIndicatorPainter({
-    required this.progress,
-    required this.height,
-  });
+  const _ProgressIndicatorPainter({required this.progress, required this.height});
 
   final double progress;
   final double height;
@@ -263,22 +242,14 @@ class _ProgressIndicatorPainter extends CustomPainter {
       ..strokeWidth = 2
       ..style = PaintingStyle.stroke;
 
-    canvas.drawLine(
-      Offset(xPosition, 0),
-      Offset(xPosition, size.height),
-      paint,
-    );
+    canvas.drawLine(Offset(xPosition, 0), Offset(xPosition, size.height), paint);
 
     // Draw a small circle at the top for better visibility
     final circlePaint = Paint()
       ..color = Colors.white
       ..style = PaintingStyle.fill;
 
-    canvas.drawCircle(
-      Offset(xPosition, 0),
-      3,
-      circlePaint,
-    );
+    canvas.drawCircle(Offset(xPosition, 0), 3, circlePaint);
   }
 
   @override

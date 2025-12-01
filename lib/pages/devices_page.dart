@@ -599,11 +599,7 @@ class DeviceCard extends StatelessWidget {
                           ),
                           child: const Row(
                             mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.delete_outline),
-                              SizedBox(width: 8),
-                              Text('Remove'),
-                            ],
+                            children: [Icon(Icons.delete_outline), SizedBox(width: 8), Text('Remove')],
                           ),
                         ),
                     ],
@@ -649,11 +645,7 @@ class DeviceCard extends StatelessWidget {
                         ),
                         child: const Row(
                           mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.link_off),
-                            SizedBox(width: 8),
-                            Text('Unassign'),
-                          ],
+                          children: [Icon(Icons.link_off), SizedBox(width: 8), Text('Unassign')],
                         ),
                       ),
                       if (onRemove != null)
@@ -665,11 +657,7 @@ class DeviceCard extends StatelessWidget {
                           ),
                           child: const Row(
                             mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.delete_outline),
-                              SizedBox(width: 8),
-                              Text('Remove'),
-                            ],
+                            children: [Icon(Icons.delete_outline), SizedBox(width: 8), Text('Remove')],
                           ),
                         ),
                     ],
@@ -744,11 +732,7 @@ class SmartTrainerSection extends StatelessWidget {
                 onPressed: onShowAssignmentDialog,
                 child: const Row(
                   mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.add),
-                    SizedBox(width: 8),
-                    Text('Assign Smart Trainer'),
-                  ],
+                  children: [Icon(Icons.add), SizedBox(width: 8), Text('Assign Smart Trainer')],
                 ),
               ),
           ],
@@ -837,11 +821,7 @@ class DataSourceSection extends StatelessWidget {
                 onPressed: onShowAssignmentDialog,
                 child: const Row(
                   mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.add),
-                    SizedBox(width: 8),
-                    Text('Assign Device'),
-                  ],
+                  children: [Icon(Icons.add), SizedBox(width: 8), Text('Assign Device')],
                 ),
               ),
           ],
@@ -1035,11 +1015,7 @@ class UnavailableDeviceCard extends StatelessWidget {
                   ),
                   child: const Row(
                     mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.link_off),
-                      SizedBox(width: 8),
-                      Text('Unassign'),
-                    ],
+                    children: [Icon(Icons.link_off), SizedBox(width: 8), Text('Unassign')],
                   ),
                 ),
               ],

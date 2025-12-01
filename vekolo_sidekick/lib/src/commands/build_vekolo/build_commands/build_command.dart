@@ -8,7 +8,8 @@ class BuildCommand extends Command {
   final String name = 'build';
 
   @override
-  final String description = 'Build the vekolo app for different platforms and distributions';
+  final String description =
+      'Build the vekolo app for different platforms and distributions';
 
   BuildCommand() {
     addSubcommand(BuildAndroidCommand());

@@ -87,11 +87,7 @@ class WorkoutCardV2 extends StatelessWidget {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(
-                                Icons.smartphone,
-                                size: 12,
-                                color: Colors.white.withValues(alpha: 0.9),
-                              ),
+                              Icon(Icons.smartphone, size: 12, color: Colors.white.withValues(alpha: 0.9)),
                               const SizedBox(width: 4),
                               Text(
                                 'LOCAL',

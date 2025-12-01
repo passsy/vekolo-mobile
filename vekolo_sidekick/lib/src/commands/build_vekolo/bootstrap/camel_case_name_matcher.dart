@@ -10,9 +10,13 @@ class CamelCaseNameMatcher {
   ///
   /// Only returns at match if it is the only match. Throws an error when multiple candidates match the pattern.
   static String find(String pattern, List<String> candidates) {
-    final matches = candidates.where((candidate) => _matches(pattern, candidate)).toList();
+    final matches = candidates
+        .where((candidate) => _matches(pattern, candidate))
+        .toList();
     if (matches.isEmpty) {
-      throw ArgumentError('No candidate matches the pattern $pattern. Candidates: $candidates');
+      throw ArgumentError(
+        'No candidate matches the pattern $pattern. Candidates: $candidates',
+      );
     }
     if (matches.length > 1) {
       final exactMatch = matches.firstOrNullWhere((match) => match == pattern);
@@ -20,7 +24,9 @@ class CamelCaseNameMatcher {
         return exactMatch;
       }
 
-      throw ArgumentError('Multiple candidates match the pattern $pattern: $matches');
+      throw ArgumentError(
+        'Multiple candidates match the pattern $pattern: $matches',
+      );
     }
     return matches.single;
   }

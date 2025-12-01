@@ -26,7 +26,12 @@ class AndroidDistributionSpec {
   final AndroidBuildSpecs build;
   final AndroidDeploySpecs? deploy;
 
-  AndroidDistributionSpec({required this.distribution, required this.bootstrap, required this.build, this.deploy});
+  AndroidDistributionSpec({
+    required this.distribution,
+    required this.bootstrap,
+    required this.build,
+    this.deploy,
+  });
 }
 
 /// Bootstrap configuration for Android distributions
@@ -82,7 +87,10 @@ final List<AndroidDistributionSpec> availableAndroidDistributionSpecs = [
   // Development
   AndroidDistributionSpec(
     distribution: AndroidDistribution.dev,
-    bootstrap: AndroidBootstrapSpecs(appName: 'Vekolo Dev', applicationId: 'cc.vekolo.dev'),
+    bootstrap: AndroidBootstrapSpecs(
+      appName: 'Vekolo Dev',
+      applicationId: 'cc.vekolo.dev',
+    ),
     build: AndroidBuildSpecs(
       defaultOutputFormat: AndroidOutputFormat.apk,
       defaultSigningConfig: SigningConfig.dev,
@@ -97,7 +105,10 @@ final List<AndroidDistributionSpec> availableAndroidDistributionSpecs = [
   // Staging - uses ad-hoc signing for APK distribution
   AndroidDistributionSpec(
     distribution: AndroidDistribution.staging,
-    bootstrap: AndroidBootstrapSpecs(appName: 'Vekolo Staging', applicationId: 'cc.vekolo.staging'),
+    bootstrap: AndroidBootstrapSpecs(
+      appName: 'Vekolo Staging',
+      applicationId: 'cc.vekolo.staging',
+    ),
     build: AndroidBuildSpecs(
       defaultOutputFormat: AndroidOutputFormat.apk,
       defaultSigningConfig: SigningConfig.adHoc,
@@ -106,14 +117,18 @@ final List<AndroidDistributionSpec> availableAndroidDistributionSpecs = [
     ),
     deploy: AndroidDeploySpecs(
       playStoreTrack: 'internal',
-      serviceAccountFileProvider: () => vault.loadFile('android_service_account.json.gpg'),
+      serviceAccountFileProvider: () =>
+          vault.loadFile('android_service_account.json.gpg'),
     ),
   ),
 
   // Production - uses play-upload signing for AAB
   AndroidDistributionSpec(
     distribution: AndroidDistribution.prod,
-    bootstrap: AndroidBootstrapSpecs(appName: 'Vekolo', applicationId: 'cc.vekolo'),
+    bootstrap: AndroidBootstrapSpecs(
+      appName: 'Vekolo',
+      applicationId: 'cc.vekolo',
+    ),
     build: AndroidBuildSpecs(
       defaultOutputFormat: AndroidOutputFormat.aab,
       defaultSigningConfig: SigningConfig.playUpload,
@@ -122,7 +137,8 @@ final List<AndroidDistributionSpec> availableAndroidDistributionSpecs = [
     ),
     deploy: AndroidDeploySpecs(
       playStoreTrack: 'production',
-      serviceAccountFileProvider: () => vault.loadFile('android_service_account.json.gpg'),
+      serviceAccountFileProvider: () =>
+          vault.loadFile('android_service_account.json.gpg'),
     ),
   ),
 ];

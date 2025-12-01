@@ -11,12 +11,18 @@ void bootstrapAndroid(AndroidDistributionSpec spec) {
 void setAndroidApplicationId(Directory androidDir, String applicationId) {
   print('Setting applicationId to "$applicationId"');
   final File buildGradle = androidDir.file('app/build.gradle.kts');
-  buildGradle.replaceSectionWith(startTag: 'applicationId = "', endTag: '"', content: applicationId);
+  buildGradle.replaceSectionWith(
+    startTag: 'applicationId = "',
+    endTag: '"',
+    content: applicationId,
+  );
 }
 
 void setAndroidAppName(Directory androidDir, String appName) {
   print('Setting Android app name to "$appName"');
-  final File stringsXml = androidDir.file('app/src/main/res/values/strings.xml');
+  final File stringsXml = androidDir.file(
+    'app/src/main/res/values/strings.xml',
+  );
 
   if (!stringsXml.existsSync()) {
     // Create strings.xml if it doesn't exist
@@ -29,6 +35,10 @@ void setAndroidAppName(Directory androidDir, String appName) {
 ''');
   } else {
     // Update existing strings.xml
-    stringsXml.replaceSectionWith(startTag: '<string name="app_name">', endTag: '</string>', content: appName);
+    stringsXml.replaceSectionWith(
+      startTag: '<string name="app_name">',
+      endTag: '</string>',
+      content: appName,
+    );
   }
 }

@@ -2,20 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:state_beacon/state_beacon.dart';
 
 /// Types of notifications that can be shown
-enum NotificationType {
-  workoutResumeAvailable,
-  info,
-  warning,
-  error,
-}
+enum NotificationType { workoutResumeAvailable, info, warning, error }
 
 /// Action button for a notification
 class NotificationAction {
-  const NotificationAction({
-    required this.label,
-    required this.onTap,
-    this.isPrimary = false,
-  });
+  const NotificationAction({required this.label, required this.onTap, this.isPrimary = false});
 
   final String label;
   final VoidCallback onTap;

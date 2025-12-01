@@ -289,7 +289,6 @@ class _ProfilePageState extends State<ProfilePage> {
       ),
     );
   }
-
 }
 
 /// A card displaying a user profile statistic (FTP or weight).

@@ -744,11 +744,7 @@ class DeviceManager {
     // Track device connected via auto-connect
     Wiredash.trackEvent(
       'device_connected_auto',
-      data: {
-        'device_name': device.name,
-        'device_type': device.type.toString(),
-        'transports': device.transportIds,
-      },
+      data: {'device_name': device.name, 'device_type': device.type.toString(), 'transports': device.transportIds},
     );
   }
 

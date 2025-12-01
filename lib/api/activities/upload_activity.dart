@@ -81,11 +81,7 @@ enum UploadDeviceType {
 
 /// Device info for upload API.
 class UploadDevice {
-  const UploadDevice({
-    required this.name,
-    required this.type,
-    required this.manufacturer,
-  });
+  const UploadDevice({required this.name, required this.type, required this.manufacturer});
 
   /// Creates from [DeviceInfo].
   factory UploadDevice.fromDeviceInfo(DeviceInfo info) {
@@ -100,11 +96,7 @@ class UploadDevice {
   final UploadDeviceType type;
   final String manufacturer;
 
-  Map<String, dynamic> toJson() => {
-        'name': name,
-        'type': type.value,
-        'manufacturer': manufacturer,
-      };
+  Map<String, dynamic> toJson() => {'name': name, 'type': type.value, 'manufacturer': manufacturer};
 }
 
 UploadDeviceType _mapDeviceType(DeviceType type) {

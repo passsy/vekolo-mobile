@@ -126,7 +126,12 @@ void main() {
       expect(deps.recordingService.sessionId, isNull);
 
       final sessionId = await tester.runAsyncWithFakeTimers(
-        () => deps.recordingService.startRecording('Test Workout', ftp: 200, userId: 'user-123', sourceWorkoutId: 'test-workout'),
+        () => deps.recordingService.startRecording(
+          'Test Workout',
+          ftp: 200,
+          userId: 'user-123',
+          sourceWorkoutId: 'test-workout',
+        ),
       );
 
       expect(sessionId, isNotNull);
@@ -169,7 +174,8 @@ void main() {
 
       // Create a session manually
       final sessionId = await tester.runAsync(
-        () => deps.persistence.createSession('Test Workout', testWorkoutPlan, ftp: 200, sourceWorkoutId: 'test-workout'),
+        () =>
+            deps.persistence.createSession('Test Workout', testWorkoutPlan, ftp: 200, sourceWorkoutId: 'test-workout'),
       );
       await tester.runAsync(() => deps.persistence.updateSessionStatus(sessionId!, SessionStatus.crashed));
 
@@ -470,7 +476,9 @@ void main() {
       final deps = await createTestDependencies(tester);
 
       deps.playerService.start();
-      await tester.runAsyncWithFakeTimers(() => deps.recordingService.startRecording('Test', ftp: 200, sourceWorkoutId: 'test-workout'));
+      await tester.runAsyncWithFakeTimers(
+        () => deps.recordingService.startRecording('Test', ftp: 200, sourceWorkoutId: 'test-workout'),
+      );
 
       deps.playerService.pause();
       await tester.runAsync(() => deps.recordingService.dispose());

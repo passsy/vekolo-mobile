@@ -185,7 +185,8 @@ class FakeVekoloApiClient implements VekoloApiClient {
     required WorkoutSessionMetadata metadata,
     required List<WorkoutSample> samples,
     required List<UploadDevice> devices,
-  })? overrideUploadActivity;
+  })?
+  overrideUploadActivity;
 
   @override
   Future<UploadActivityResponse> uploadActivity({
@@ -195,11 +196,7 @@ class FakeVekoloApiClient implements VekoloApiClient {
   }) async {
     methodCalls.add('uploadActivity');
     if (overrideUploadActivity != null) {
-      return overrideUploadActivity!(
-        metadata: metadata,
-        samples: samples,
-        devices: devices,
-      );
+      return overrideUploadActivity!(metadata: metadata, samples: samples, devices: devices);
     }
     // Default: return success with fake activity ID
     return UploadActivityResponse.create(

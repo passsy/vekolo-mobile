@@ -52,7 +52,11 @@ class WorkoutResumeDialog extends StatelessWidget {
             value: Text('$minutes:${seconds.toString().padLeft(2, '0')}'),
           ),
           const SizedBox(height: 8),
-          WorkoutInfoRow(icon: Icons.calendar_today, label: const Text('Started'), value: Text(_formatTimestamp(session.startTime))),
+          WorkoutInfoRow(
+            icon: Icons.calendar_today,
+            label: const Text('Started'),
+            value: Text(_formatTimestamp(session.startTime)),
+          ),
           const SizedBox(height: 16),
           const Text(
             'Would you like to resume where you left off?',
@@ -76,7 +80,6 @@ class WorkoutResumeDialog extends StatelessWidget {
     );
   }
 
-
   String _formatTimestamp(DateTime timestamp) {
     final now = DateTime.now();
     final difference = now.difference(timestamp);
@@ -98,12 +101,7 @@ class WorkoutResumeDialog extends StatelessWidget {
 /// Used in dialogs to show metadata like elapsed time or timestamps in a
 /// consistent format with an icon prefix.
 class WorkoutInfoRow extends StatelessWidget {
-  const WorkoutInfoRow({
-    required this.icon,
-    required this.label,
-    required this.value,
-    super.key,
-  });
+  const WorkoutInfoRow({required this.icon, required this.label, required this.value, super.key});
 
   /// Icon to display at the start of the row.
   final IconData icon;

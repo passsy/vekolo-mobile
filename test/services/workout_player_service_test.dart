@@ -193,7 +193,9 @@ void main() {
         myFakeAsync((async) {
           final deviceManager = createDeviceManager();
           final plan = WorkoutPlan(
-            plan: [PowerBlock(id: 'block1', duration: 10000, power: 0.8, cadence: 90, cadenceLow: 80, cadenceHigh: 100)],
+            plan: [
+              PowerBlock(id: 'block1', duration: 10000, power: 0.8, cadence: 90, cadenceLow: 80, cadenceHigh: 100),
+            ],
           );
 
           final player = WorkoutPlayerService(workoutPlan: plan, deviceManager: deviceManager, ftp: 200);
@@ -214,7 +216,14 @@ void main() {
           final deviceManager = createDeviceManager();
           final plan = WorkoutPlan(
             plan: [
-              RampBlock(id: 'ramp1', duration: 10000, powerStart: 0.5, powerEnd: 1.0, cadenceStart: 80, cadenceEnd: 100),
+              RampBlock(
+                id: 'ramp1',
+                duration: 10000,
+                powerStart: 0.5,
+                powerEnd: 1.0,
+                cadenceStart: 80,
+                cadenceEnd: 100,
+              ),
             ],
           );
 

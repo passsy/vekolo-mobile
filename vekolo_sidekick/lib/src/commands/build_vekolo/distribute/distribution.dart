@@ -22,7 +22,4 @@ enum AndroidDistribution {
   prod,
 }
 
-enum OperatingSystem {
-  android,
-  ios,
-}
+enum OperatingSystem { android, ios }
