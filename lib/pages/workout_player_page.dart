@@ -372,6 +372,9 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
             }
           }
         }
+      } else if (!isPaused && currentPower >= autoPauseThreshold && _lowPowerStartTime != null) {
+        // Power recovered above threshold, reset timer
+        setState(() => _lowPowerStartTime = null);
       }
     });
   }

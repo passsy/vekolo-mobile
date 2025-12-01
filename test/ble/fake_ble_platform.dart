@@ -488,7 +488,10 @@ class FakeBluetoothCharacteristic implements BluetoothCharacteristic {
     this.onWrite,
   }) : _device = device,
        _isNotifying = false,
-       _valueController = StreamController<List<int>>.broadcast();
+       // sync: true ensures events are delivered synchronously during fake time jumps.
+       // Processing thousands of events is fast; only pumping (drawing frames) is expensive in real time.
+       // Without sync: true, stream events are batched as microtasks and delivered after pump() completes.
+       _valueController = StreamController<List<int>>.broadcast(sync: true);
 
   /// Callback invoked when data is written to this characteristic.
   /// Used by FakeDevice to intercept control point commands.
@@ -1097,6 +1100,11 @@ class FakeDevice {
     final hexValue = data.map((byte) => byte.toRadixString(16).padLeft(2, '0').toUpperCase()).join(' ');
     chirp.debug('Sending Notification to $characteristicUuid: ${hexValue}');
     char.simulateValueReceived(data);
+
+    // Flush beacon updates after stream processing completes.
+    // The Future() schedules this as a microtask that runs after the current
+    // synchronous processing, ensuring derived beacons see the new values.
+    Future(() => BeaconScheduler.flush());
   }
 
   /// Convert this fake device to a FlutterBluePlus ScanResult.

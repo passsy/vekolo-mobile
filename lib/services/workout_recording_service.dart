@@ -221,15 +221,27 @@ class WorkoutRecordingService {
     if (_samplesSinceMetadataUpdate >= _metadataUpdateInterval) {
       _samplesSinceMetadataUpdate = 0;
 
-      if (_sessionId == null || _disposed) return;
+      if (_sessionId == null || _disposed) {
+        return;
+      }
 
-      final metadata = await _persistence.loadSessionMetadata(_sessionId!);
-      if (metadata == null || _disposed) return;
+      // Capture values synchronously before any async operations.
+      // This ensures we save the correct elapsed time even if the service
+      // is disposed while waiting for persistence I/O.
+      final sessionId = _sessionId!;
+      final elapsed = _playerService.elapsedTime$.value;
+      final blockIndex = _playerService.currentBlockIndex$.value;
+      final now = clock.now();
+
+      final metadata = await _persistence.loadSessionMetadata(sessionId);
+      if (metadata == null) {
+        return;
+      }
 
       final updated = metadata.copyWith(
-        currentBlockIndex: _playerService.currentBlockIndex$.value,
-        elapsedMs: _playerService.elapsedTime$.value,
-        lastUpdated: clock.now(),
+        currentBlockIndex: blockIndex,
+        elapsedMs: elapsed,
+        lastUpdated: now,
       );
 
       await _persistence.updateSessionMetadata(updated);

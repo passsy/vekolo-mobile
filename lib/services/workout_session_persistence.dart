@@ -190,22 +190,25 @@ class WorkoutSessionPersistence {
   /// Load session metadata from file.
   ///
   /// Returns null if metadata file doesn't exist or is corrupted.
+  /// Uses a lock to prevent reading while another operation is writing.
   Future<WorkoutSessionMetadata?> loadSessionMetadata(String workoutId) async {
-    final metadataFile = await getMetadataFile(workoutId);
+    return _getLock(workoutId).synchronized(() async {
+      final metadataFile = await getMetadataFile(workoutId);
 
-    if (!await metadataFile.exists()) {
-      chirp.info('Metadata file not found: $workoutId');
-      return null;
-    }
+      if (!await metadataFile.exists()) {
+        chirp.info('Metadata file not found: $workoutId');
+        return null;
+      }
 
-    try {
-      final jsonString = await metadataFile.readAsString();
-      final json = jsonDecode(jsonString) as Map<String, dynamic>;
-      return WorkoutSessionMetadata.fromJson(json);
-    } catch (e, stackTrace) {
-      chirp.error('Failed to load metadata for $workoutId', error: e, stackTrace: stackTrace);
-      return null;
-    }
+      try {
+        final jsonString = await metadataFile.readAsString();
+        final json = jsonDecode(jsonString) as Map<String, dynamic>;
+        return WorkoutSessionMetadata.fromJson(json);
+      } catch (e, stackTrace) {
+        chirp.error('Failed to load metadata for $workoutId', error: e, stackTrace: stackTrace);
+        return null;
+      }
+    });
   }
 
   /// Update session status.

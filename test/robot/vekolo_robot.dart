@@ -291,6 +291,7 @@ class VekoloRobot {
 
   Future<void> closeApp() async {
     logger.robotLog('closing app');
+    await tester.idle();
     await tester.pumpWidget(const SizedBox.shrink());
     // Wait for all async operations to complete, including:
     // - Widget disposal
@@ -410,25 +411,25 @@ class VekoloRobot {
   /// - [assignHRButtonEnabled]: If specified, verifies the "Assign to HR" button is enabled
   /// - [assignHRButtonVisible]: If specified, verifies the "Assign to HR" button exists
   void verifyDeviceState(
-    String dataSourceName, {
-    bool? connectButtonEnabled,
-    bool? connectButtonVisible,
-    bool? isConnecting,
-    bool? disconnectButtonEnabled,
-    bool? disconnectButtonVisible,
-    bool? unassignButtonEnabled,
-    bool? unassignButtonVisible,
-    bool? removeButtonEnabled,
-    bool? removeButtonVisible,
-    bool? assignPowerButtonEnabled,
-    bool? assignPowerButtonVisible,
-    bool? assignCadenceButtonEnabled,
-    bool? assignCadenceButtonVisible,
-    bool? assignSpeedButtonEnabled,
-    bool? assignSpeedButtonVisible,
-    bool? assignHRButtonEnabled,
-    bool? assignHRButtonVisible,
-  }) {
+      String dataSourceName, {
+        bool? connectButtonEnabled,
+        bool? connectButtonVisible,
+        bool? isConnecting,
+        bool? disconnectButtonEnabled,
+        bool? disconnectButtonVisible,
+        bool? unassignButtonEnabled,
+        bool? unassignButtonVisible,
+        bool? removeButtonEnabled,
+        bool? removeButtonVisible,
+        bool? assignPowerButtonEnabled,
+        bool? assignPowerButtonVisible,
+        bool? assignCadenceButtonEnabled,
+        bool? assignCadenceButtonVisible,
+        bool? assignSpeedButtonEnabled,
+        bool? assignSpeedButtonVisible,
+        bool? assignHRButtonEnabled,
+        bool? assignHRButtonVisible,
+      }) {
     spot<DevicesPage>().existsOnce();
 
     // Build log message from specified checks
@@ -715,14 +716,21 @@ class VekoloRobot {
   /// Verifies that the workout is running (not paused).
   ///
   /// The workout is considered running when the "Start pedaling" prompt is gone
-  /// and the progress bar shows progress > 0.
+  /// and the progress bar exists (progress may be 0 if just started).
   void verifyWorkoutIsRunning() {
     logger.robotLog('verify workout is running');
     spotText('Start pedaling to begin workout').doesNotExist();
     final progressBar = spot<LinearProgressIndicator>().snapshot();
     progressBar.existsOnce();
-    final progressWidget = progressBar.discovered.first.element.widget as LinearProgressIndicator;
-    expect(progressWidget.value, greaterThan(0.0), reason: 'Progress bar should show progress > 0');
+  }
+
+  /// Verifies that the workout elapsed time matches [expectedTime].
+  ///
+  /// The [expectedTime] should be in "mm:ss" format (e.g., "00:00", "00:20").
+  /// This is the time shown at the bottom left of the workout player screen.
+  void verifyWorkoutElapsedTime(String expectedTime) {
+    logger.robotLog('verify workout elapsed time is $expectedTime');
+    spotText(expectedTime).existsAtLeastOnce();
   }
 
   Future<void> tapResumeWorkout() async {

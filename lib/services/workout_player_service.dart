@@ -125,22 +125,39 @@ class WorkoutPlayerService {
   /// Current block index in the flattened plan.
   int _currentBlockIndex = 0;
 
-  /// Total elapsed time in the workout (milliseconds).
+  /// The absolute clock time when the workout first started (or was restored).
   ///
-  /// This is the cumulative time including all pauses. When paused,
-  /// this value is frozen. When resumed, we continue from this point.
-  int _workoutElapsedTime = 0;
+  /// This is set once when [start] is first called and never changes after that
+  /// (except when restoring from a saved session via [restoreState]).
+  DateTime? _workoutStartTime;
 
-  /// Timestamp when the workout was last resumed.
+  /// Total time spent paused in milliseconds.
   ///
-  /// Used to calculate elapsed time during playback. Null when paused.
-  DateTime? _lastResumeTime;
+  /// Accumulated when resuming from pauses. This is added to when the workout
+  /// is unpaused to account for the time spent in pause state.
+  int _totalPausedDuration = 0;
+
+  /// The clock time when the current pause started, or null if not paused.
+  ///
+  /// Set when [pause] is called, cleared when [start] resumes the workout.
+  DateTime? _currentPauseStartTime;
+
+  /// Cached elapsed time from the last calculation.
+  ///
+  /// This is updated on each tick via [_calculateElapsedTime].
+  /// Use this for internal calculations that need the elapsed time.
+  int _workoutElapsedTime = 0;
 
   /// Timer for the playback loop.
   Timer? _timer;
 
   /// Timer interval in milliseconds.
-  static const int _timerInterval = 100;
+  ///
+  /// This controls how often the UI updates and power targets are synced.
+  /// The workout state is calculated based on elapsed clock time, so larger
+  /// intervals are fine - they just mean less frequent UI updates.
+  /// 1 second is sufficient for UI updates while being efficient.
+  static const int _timerInterval = 1000;
 
   /// Set of event IDs that have already been triggered.
   ///
@@ -266,8 +283,22 @@ class WorkoutPlayerService {
 
     chirp.info('Starting workout');
 
-    // Mark as resumed
-    _lastResumeTime = clock.now();
+    final now = clock.now();
+
+    // First start - record the workout start time
+    if (_workoutStartTime == null) {
+      _workoutStartTime = now;
+      chirp.info('Workout start time set to: $_workoutStartTime');
+    }
+
+    // If resuming from pause, add the pause duration to total
+    if (_currentPauseStartTime != null) {
+      final pauseDuration = now.difference(_currentPauseStartTime!).inMilliseconds;
+      _totalPausedDuration += pauseDuration;
+      _currentPauseStartTime = null;
+      chirp.info('Resumed after ${pauseDuration}ms pause (total paused: ${_totalPausedDuration}ms)');
+    }
+
     isPaused.value = false;
 
     // Start syncing to trainer
@@ -275,6 +306,9 @@ class WorkoutPlayerService {
 
     // Start timer loop
     _startTimer();
+
+    // Immediately update state (don't wait for first timer tick)
+    _tick();
   }
 
   /// Pauses the workout.
@@ -290,12 +324,11 @@ class WorkoutPlayerService {
 
     chirp.info('Pausing workout');
 
-    // Update elapsed time before pausing
-    _updateGlobalElapsedTime();
+    // Record when pause started (used to calculate pause duration on resume)
+    _currentPauseStartTime = clock.now();
 
     // Mark as paused
     isPaused.value = true;
-    _lastResumeTime = null;
 
     // Stop timer
     _stopTimer();
@@ -320,10 +353,25 @@ class WorkoutPlayerService {
 
     chirp.info('Skipping block $_currentBlockIndex');
 
-    // Calculate how much time to add (remaining time in current block)
+    // Calculate the target elapsed time (end of current block)
     final elapsedUntilCurrentBlock = _getWorkoutElapsedUntilCurrentBlock();
     final blockDuration = _getBlockDuration(currentBlock);
-    _workoutElapsedTime = elapsedUntilCurrentBlock + blockDuration;
+    final targetElapsedTime = elapsedUntilCurrentBlock + blockDuration;
+
+    // Calculate current elapsed time
+    final currentElapsedTime = _calculateElapsedTime();
+
+    // Adjust pause duration to make elapsed time jump to target
+    // elapsed = now - startTime - pausedDuration
+    // targetElapsed = now - startTime - newPausedDuration
+    // newPausedDuration = pausedDuration - (targetElapsed - currentElapsed)
+    final skipAmount = targetElapsedTime - currentElapsedTime;
+    if (skipAmount > 0) {
+      _totalPausedDuration -= skipAmount;
+    }
+
+    // Update cached elapsed time
+    _workoutElapsedTime = targetElapsedTime;
 
     // Update displays
     elapsedTime$.value = _workoutElapsedTime;
@@ -374,9 +422,10 @@ class WorkoutPlayerService {
   /// Use this when the user manually ends the workout before finishing
   /// all blocks.
   void completeEarly() {
+    // Update cached elapsed time before completing
+    _workoutElapsedTime = _calculateElapsedTime();
     chirp.info('Completing workout early at ${_workoutElapsedTime}ms');
 
-    _updateGlobalElapsedTime();
     _completeWorkout();
   }
 
@@ -416,7 +465,16 @@ class WorkoutPlayerService {
       _currentBlockIndex = currentBlockIndex;
     }
 
-    // Restore elapsed time
+    // Restore elapsed time by setting start time and pause duration
+    // such that when start() is called, elapsed time will be elapsedMs
+    // We set start time to "now" and adjust pause duration to be negative
+    // to account for the already-elapsed time
+    final now = clock.now();
+    _workoutStartTime = now;
+    _totalPausedDuration = -elapsedMs;
+    _currentPauseStartTime = now; // Will be cleared when start() is called
+
+    // Update cached elapsed time
     _workoutElapsedTime = elapsedMs;
     elapsedTime$.value = _workoutElapsedTime;
 
@@ -429,7 +487,6 @@ class WorkoutPlayerService {
 
     // Ensure workout stays paused after restore
     isPaused.value = true;
-    _lastResumeTime = null;
 
     chirp.info('State restored successfully');
   }
@@ -479,35 +536,48 @@ class WorkoutPlayerService {
     _timer = null;
   }
 
-  /// Timer tick - called every 100ms during playback.
+  /// Timer tick - called periodically during playback.
   ///
   /// This is the core of the workout player. On each tick:
-  /// 1. Update global elapsed time
-  /// 2. Update remaining time and progress
-  /// 3. Handle current block (calculate power, check if complete)
-  /// 4. Check and trigger events
-  /// 5. Update power target in sync service
+  /// 1. Calculate elapsed time from clock (handles large time jumps)
+  /// 2. Advance through completed blocks
+  /// 3. Update remaining time and progress
+  /// 4. Calculate power target for current block
+  /// 5. Check and trigger events
+  ///
+  /// The state is calculated based on elapsed clock time, so this method
+  /// correctly handles large time jumps (e.g., in tests) by advancing
+  /// through multiple blocks if needed.
   void _tick() {
     if (isPaused.value || _currentBlockIndex >= _flattenedPlan.length) {
       return;
     }
 
-    // Update elapsed time
-    _updateGlobalElapsedTime();
+    // Calculate elapsed time from clock (handles large time jumps correctly)
+    _workoutElapsedTime = _calculateElapsedTime();
+
+    // Advance through any completed blocks (handles large time jumps)
+    _advanceToCurrentBlock();
+
+    // Check if workout is complete after advancing
+    if (_currentBlockIndex >= _flattenedPlan.length) {
+      return;
+    }
 
     // Update remaining time and progress
     final newRemainingTime = (_totalDuration - _workoutElapsedTime).clamp(0, _totalDuration);
     if (newRemainingTime != remainingTime$.value) {
       remainingTime$.value = newRemainingTime;
-      elapsedTime$.value = _workoutElapsedTime;
       _updateProgress();
     }
+    // Always update elapsedTime$ beacon for crash recovery metadata
+    elapsedTime$.value = _workoutElapsedTime;
 
-    // Handle current block
+    // Calculate power target for current block
     final currentBlock = _flattenedPlan[_currentBlockIndex];
     if (currentBlock != null) {
       final blockElapsedTime = _workoutElapsedTime - _getWorkoutElapsedUntilCurrentBlock();
-      _handleBlock(currentBlock, blockElapsedTime);
+      _updatePowerTarget(currentBlock, blockElapsedTime);
     }
 
     // Record power history
@@ -517,30 +587,50 @@ class WorkoutPlayerService {
     _checkEvents(_workoutElapsedTime);
   }
 
+  /// Advances the block index to match the current elapsed time.
+  ///
+  /// This handles large time jumps by skipping through completed blocks
+  /// until we find the block that should be active at the current time.
+  void _advanceToCurrentBlock() {
+    while (_currentBlockIndex < _flattenedPlan.length) {
+      final elapsedUntilCurrentBlock = _getWorkoutElapsedUntilCurrentBlock();
+      final blockDuration = _getBlockDuration(_flattenedPlan[_currentBlockIndex]);
+      final blockEndTime = elapsedUntilCurrentBlock + blockDuration;
+
+      if (_workoutElapsedTime < blockEndTime) {
+        // Current block is still active
+        break;
+      }
+
+      // Block is complete, advance to next
+      _currentBlockIndex++;
+      _updateCurrentAndNextBlock();
+    }
+
+    // Check if we've completed all blocks
+    if (_currentBlockIndex >= _flattenedPlan.length) {
+      _completeWorkout();
+    }
+  }
+
   // ==========================================================================
   // Private Implementation - Block Handling
   // ==========================================================================
 
-  /// Handles the current block at the given elapsed time.
+  /// Updates power target and cadence for the current block.
   ///
-  /// Calculates power target, cadence targets, and checks if the block
-  /// is complete. Routes to specific handlers based on block type.
-  void _handleBlock(dynamic block, int elapsedTime) {
+  /// Routes to specific handlers based on block type.
+  /// Block advancement is handled separately by [_advanceToCurrentBlock].
+  void _updatePowerTarget(dynamic block, int blockElapsedTime) {
     if (block is PowerBlock) {
-      _handlePowerBlock(block, elapsedTime);
+      _updatePowerBlockTarget(block, blockElapsedTime);
     } else if (block is RampBlock) {
-      _handleRampBlock(block, elapsedTime);
+      _updateRampBlockTarget(block, blockElapsedTime);
     }
   }
 
-  /// Handles a power block (constant power).
-  void _handlePowerBlock(PowerBlock block, int elapsedTime) {
-    // Check if block is complete
-    if (elapsedTime >= block.duration) {
-      _advanceToNextBlock();
-      return;
-    }
-
+  /// Updates power target for a power block (constant power).
+  void _updatePowerBlockTarget(PowerBlock block, int blockElapsedTime) {
     // Calculate power target in watts
     // Note: block.power already has powerScaleFactor applied from flattening
     final powerWatts = (block.power * _ftp).round();
@@ -551,21 +641,19 @@ class WorkoutPlayerService {
     cadenceLow$.value = block.cadenceLow;
     cadenceHigh$.value = block.cadenceHigh;
 
+    // Update remaining time in current block
+    final blockRemainingTime = (block.duration - blockElapsedTime).clamp(0, block.duration);
+    currentBlockRemainingTime$.value = blockRemainingTime;
+
     // Update sync service with new target
     _syncService.currentTarget.value = ErgCommand(targetWatts: powerWatts, timestamp: clock.now());
   }
 
-  /// Handles a ramp block (gradually changing power).
-  void _handleRampBlock(RampBlock block, int elapsedTime) {
-    // Check if block is complete
-    if (elapsedTime >= block.duration) {
-      _advanceToNextBlock();
-      return;
-    }
-
+  /// Updates power target for a ramp block (gradually changing power).
+  void _updateRampBlockTarget(RampBlock block, int blockElapsedTime) {
     // Calculate interpolated power target
     // Note: block.powerStart/End already have powerScaleFactor applied from flattening
-    final progress = (elapsedTime / block.duration).clamp(0.0, 1.0);
+    final progress = (blockElapsedTime / block.duration).clamp(0.0, 1.0);
     final relativePower = block.powerStart + progress * (block.powerEnd - block.powerStart);
     final powerWatts = (relativePower * _ftp).round();
     powerTarget$.value = powerWatts;
@@ -580,18 +668,12 @@ class WorkoutPlayerService {
     cadenceLow$.value = block.cadenceLow;
     cadenceHigh$.value = block.cadenceHigh;
 
+    // Update remaining time in current block
+    final blockRemainingTime = (block.duration - blockElapsedTime).clamp(0, block.duration);
+    currentBlockRemainingTime$.value = blockRemainingTime;
+
     // Update sync service with new target
     _syncService.currentTarget.value = ErgCommand(targetWatts: powerWatts, timestamp: clock.now());
-  }
-
-  /// Advances to the next block.
-  void _advanceToNextBlock() {
-    _currentBlockIndex++;
-    _updateCurrentAndNextBlock();
-
-    if (_currentBlockIndex >= _flattenedPlan.length) {
-      _completeWorkout();
-    }
   }
 
   // ==========================================================================
@@ -665,16 +747,26 @@ class WorkoutPlayerService {
     }
   }
 
-  /// Updates the global elapsed time from the last resume time.
+  /// Calculates the current workout elapsed time in milliseconds.
   ///
-  /// Only updates if not paused and a resume time is set.
-  void _updateGlobalElapsedTime() {
-    if (!isPaused.value && _lastResumeTime != null) {
-      final now = clock.now();
-      final delta = now.difference(_lastResumeTime!).inMilliseconds;
-      _workoutElapsedTime += delta;
-      _lastResumeTime = now;
+  /// The elapsed time is calculated from the workout start time minus
+  /// any time spent paused. This approach ensures correct behavior
+  /// with large time jumps in tests.
+  int _calculateElapsedTime() {
+    if (_workoutStartTime == null) {
+      return 0;
     }
+
+    final now = clock.now();
+    final totalWallTime = now.difference(_workoutStartTime!).inMilliseconds;
+
+    // If currently paused, don't count time since pause started
+    int currentPauseDuration = 0;
+    if (_currentPauseStartTime != null) {
+      currentPauseDuration = now.difference(_currentPauseStartTime!).inMilliseconds;
+    }
+
+    return totalWallTime - _totalPausedDuration - currentPauseDuration;
   }
 
   /// Completes the workout.
