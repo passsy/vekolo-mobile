@@ -1,5 +1,4 @@
 import 'package:chirp/chirp.dart';
-import 'package:flutter/foundation.dart';
 import 'package:vekolo/ble/ble_permissions.dart';
 
 /// Web implementation of [BlePermissions].

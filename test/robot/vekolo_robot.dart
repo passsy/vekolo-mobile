@@ -9,7 +9,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:spot/spot.dart';
-import 'package:state_beacon/state_beacon.dart';
 import 'package:vekolo/app/app.dart';
 import 'package:vekolo/app/logger.dart';
 import 'package:vekolo/app/refs.dart';

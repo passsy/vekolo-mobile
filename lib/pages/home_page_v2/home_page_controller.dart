@@ -150,8 +150,12 @@ class HomePageController extends BeaconController {
     workoutTypeFilters.value = {};
   }
 
-  Future<void> loadActivities() async {
-    isLoadingActivities.value = true;
+  Future<void> loadActivities({bool isRefresh = false}) async {
+    // Only show loading indicator for initial load, not refresh
+    // (CupertinoSliverRefreshControl provides its own spinner)
+    if (!isRefresh) {
+      isLoadingActivities.value = true;
+    }
     activitiesError.value = null;
 
     try {
@@ -162,7 +166,9 @@ class HomePageController extends BeaconController {
       print('[HomePageController.loadActivities] Error loading activities: $e');
       print(stackTrace);
     } finally {
-      isLoadingActivities.value = false;
+      if (!isRefresh) {
+        isLoadingActivities.value = false;
+      }
     }
   }
 

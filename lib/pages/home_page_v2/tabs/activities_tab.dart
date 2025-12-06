@@ -77,7 +77,7 @@ class ActivitiesTab extends StatelessWidget {
     return CustomScrollView(
       slivers: [
         // Pull to refresh
-        CupertinoSliverRefreshControl(onRefresh: () => controller.loadActivities()),
+        CupertinoSliverRefreshControl(onRefresh: () => controller.loadActivities(isRefresh: true)),
 
         // Top Bar (not an AppBar, just padding with icons)
         const SliverToBoxAdapter(child: SizedBox(height: 120)),
@@ -161,6 +161,7 @@ class ActivitiesTab extends StatelessWidget {
             delegate: SliverChildBuilderDelegate((context, index) {
               final activity = activities[index];
               return WorkoutCardV2(
+                key: ValueKey(activity.id),
                 authorName: activity.user.name,
                 authorAvatarUrl: activity.user.avatar,
                 date: _formatDate(DateTime.parse(activity.createdAt)),

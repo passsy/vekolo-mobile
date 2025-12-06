@@ -149,7 +149,7 @@ class _VekoloAppState extends State<VekoloApp> {
             return VekoloApiClient(
               baseUrl: ApiConfig.baseUrl,
               interceptors: [
-                PrettyLogInterceptor(logMode: LogMode.all),
+                PrettyLogInterceptor(logMode: LogMode.unexpectedResponses),
                 authService.apiInterceptor,
               ],
             );

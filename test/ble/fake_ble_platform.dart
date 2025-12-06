@@ -1031,14 +1031,14 @@ class FakeDevice {
 
     // Add speed if present (uint16, resolution 0.01 km/h)
     if (speedKmh != null) {
-      final speedX100 = (speedKmh * 100).round();
+      final speedX100 = speedKmh * 100;
       buffer.add(speedX100 & 0xFF);
       buffer.add((speedX100 >> 8) & 0xFF);
     }
 
     // Add cadence if present (uint16, resolution 0.5 RPM)
     if (cadenceRpm != null) {
-      final cadenceX2 = (cadenceRpm * 2).round();
+      final cadenceX2 = cadenceRpm * 2;
       buffer.add(cadenceX2 & 0xFF);
       buffer.add((cadenceX2 >> 8) & 0xFF);
     }

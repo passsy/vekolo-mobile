@@ -192,7 +192,7 @@ class WorkoutSessionPersistence {
   /// Returns null if metadata file doesn't exist or is corrupted.
   /// Uses a lock to prevent reading while another operation is writing.
   Future<WorkoutSessionMetadata?> loadSessionMetadata(String workoutId) async {
-    return _getLock(workoutId).synchronized(() async {
+    return await _getLock(workoutId).synchronized(() async {
       final metadataFile = await getMetadataFile(workoutId);
 
       if (!await metadataFile.exists()) {
