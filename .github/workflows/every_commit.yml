@@ -44,4 +44,4 @@ jobs:
         run: ./vekolo deps
 
       - name: Run all tests
-        run: vekolo flutter test
+        run: ./vekolo flutter test
