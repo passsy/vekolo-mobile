@@ -18,7 +18,7 @@ jobs:
         run: ./vekolo deps
 
       - name: Analyze code
-        run: ./vekolo analyze --fatal-info
+        run: ./vekolo analyze --fatal-infos
 
   format:
     runs-on: ubuntu-latest

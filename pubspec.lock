@@ -76,10 +76,11 @@ packages:
   chirp:
     dependency: "direct main"
     description:
-      path: "/Users/pascalwelsch/Projects/passsy/chirp"
-      relative: false
-    source: path
-    version: "0.5.0"
+      name: chirp
+      sha256: f0cb22b916148372cdaa9f07aed163ebc198f9c1b8bc4400352e83986fb10ef7
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.6.0"
   ci:
     dependency: transitive
     description:

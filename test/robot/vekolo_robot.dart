@@ -965,12 +965,12 @@ class Aether {
   }
 }
 
-class SpotTimelineWriter implements ChirpWriter {
+class SpotTimelineWriter extends ChirpWriter {
   final formatter = SimpleConsoleMessageFormatter();
 
   @override
   void write(LogRecord record) {
-    final builder = ConsoleMessageBuffer(supportsColors: false);
+    final builder = ConsoleMessageBuffer(capabilities: TerminalCapabilities());
     formatter.format(record, builder);
     final msg = builder.toString();
     timeline.addEvent(details: msg, eventType: 'Robot');
